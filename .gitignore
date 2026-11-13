@@ -4,9 +4,17 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.env
-.env.production
-.env.staging
+
+# Environment files and secrets
+.env*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+service-account*.json
+firebase-adminsdk*.json
 
 # Flutter & Dart
 .dart_tool/
