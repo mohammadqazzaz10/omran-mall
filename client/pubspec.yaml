@@ -26,7 +26,6 @@ dependencies:
   
   # Location & Geofencing
   geolocator: ^11.0.0
-  qr_code_scanner: ^1.0.1
   mobile_scanner: ^5.1.1
   
   # UI & Design
