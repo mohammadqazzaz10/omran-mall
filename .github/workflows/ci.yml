@@ -140,7 +140,11 @@ jobs:
           GITHUB_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           mkdir -p client
-          tar -xzf client-generated/flutter-generated-foundation.tar.gz -C client
+          if tar -tzf client-generated/flutter-generated-foundation.tar.gz | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+            echo 'Unsafe path detected in generated Flutter artifact.'
+            exit 1
+          fi
+          tar --no-same-owner --no-same-permissions -xzf client-generated/flutter-generated-foundation.tar.gz -C client
           cp backend-lock/package-lock.json backend/package-lock.json
           git add client/android client/ios client/web client/.metadata client/.gitignore client/pubspec.lock backend/package-lock.json
           if git diff --cached --quiet; then
