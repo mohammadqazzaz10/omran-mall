@@ -61,7 +61,7 @@ jobs:
       - uses: actions/upload-artifact@v6
         with:
           name: backend-migration-config
-          path:
+          path: |
             backend/package.json
             backend/tsconfig.json
             backend/nest-cli.json
