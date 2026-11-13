@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  omran-postgres:
+    image: postgres:16-alpine
+    container_name: omran_postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: omran_admin
+      POSTGRES_PASSWORD: omran_secure_password_2026
+      POSTGRES_DB: omran_mall_db
+      TZ: Asia/Amman
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ../database/seeds.sql:/docker-entrypoint-initdb.d/02_seeds.sql
+    networks:
+      - omran-network
+
+  omran-redis:
+    image: redis:7-alpine
+    container_name: omran_redis_cache
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - omran-network
+
+  omran-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: omran_backend_api
+    restart: unless-stopped
+    depends_on:
+      - omran-postgres
+      - omran-redis
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DB_HOST: omran-postgres
+      DB_PORT: 5432
+      DB_USER: omran_admin
+      DB_PASSWORD: omran_secure_password_2026
+      DB_NAME: omran_mall_db
+      REDIS_HOST: omran-redis
+      REDIS_PORT: 6379
+      TIMEZONE: Asia/Amman
+    ports:
+      - "4000:4000"
+    networks:
+      - omran-network
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  omran-network:
+    driver: bridge
