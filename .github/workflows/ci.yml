@@ -62,7 +62,7 @@ jobs:
         run: |
           cp .env.example .env
           docker compose config --quiet
-          docker build -f backend/Dockerfile -t omran-mall-backend:ci ..
+          docker build -f Dockerfile -t omran-mall-backend:ci ..
 
   flutter:
     name: Flutter analyze and tests
