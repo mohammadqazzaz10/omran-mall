@@ -17,7 +17,8 @@ WORKDIR /app/backend
 COPY backend/package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder --chown=node:node /app/backend/dist ./dist
-COPY --from=builder --chown=node:node /app/database /app/database
+COPY --from=builder --chown=node:node /app/database/schema.sql /app/database/schema.sql
+COPY --from=builder --chown=node:node /app/database/migrations /app/database/migrations
 
 USER node
 EXPOSE 4000
