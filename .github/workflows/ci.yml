@@ -52,6 +52,7 @@ jobs:
           name: backend-lockfile
           path: backend/package-lock.json
           if-no-files-found: error
+      - run: npm run format
       - run: npm run build
       - name: Apply checksum migrations and verify guarded development seeds
         run: |
@@ -75,6 +76,11 @@ jobs:
           npm audit --json > npm-audit.json || true
           node -e 'const a=require("./npm-audit.json"); const v=a.metadata?.vulnerabilities; if (!v) { console.error("npm audit did not return a valid vulnerability report", a.error ?? ""); process.exit(2); } console.log("Dependency vulnerability summary:", JSON.stringify(v)); for (const [name, item] of Object.entries(a.vulnerabilities ?? {})) console.log(`${name}: ${item.severity}; direct=${item.isDirect}; fixAvailable=${JSON.stringify(item.fixAvailable)}`); if ((v.critical ?? 0) > 0) process.exit(1);'
       - run: npm run format:check
+      - uses: actions/upload-artifact@v6
+        with:
+          name: backend-formatted-source
+          path: backend/src/
+          if-no-files-found: error
       - run: npm test -- --runInBand
       - name: Validate Docker Compose and build production image
         run: |
@@ -134,6 +140,10 @@ jobs:
           path: backend-lock
       - uses: actions/download-artifact@v8
         with:
+          name: backend-formatted-source
+          path: backend-generated
+      - uses: actions/download-artifact@v8
+        with:
           name: flutter-generated-foundation
           path: client-generated
       - name: Commit generated project files
@@ -147,7 +157,8 @@ jobs:
           fi
           tar --no-same-owner --no-same-permissions -xzf client-generated/flutter-generated-foundation.tar.gz -C client
           cp backend-lock/package-lock.json backend/package-lock.json
-          git add client/android client/ios client/web client/.metadata client/.gitignore client/pubspec.lock backend/package-lock.json
+          cp -a backend-generated/. backend/src/
+          git add backend/src client/android client/ios client/web client/.metadata client/.gitignore client/pubspec.lock backend/package-lock.json
           if git diff --cached --quiet; then
             echo "No generated files changed."
             exit 0
