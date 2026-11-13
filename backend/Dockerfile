@@ -1,28 +1,25 @@
-# Multi-stage production Dockerfile for Omran Mall Backend
-FROM node:20-alpine AS builder
+# Multi-stage production image for Omran Mall API.
+FROM node:22-alpine AS builder
 
-WORKDIR /usr/src/app
-
+WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-
 COPY . .
 RUN npm run build
 
-# Production image
-FROM node:20-alpine
-
-WORKDIR /usr/src/app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY --from=builder /usr/src/app/dist ./dist
-
+FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
 ENV PORT=4000
 ENV TZ=Asia/Amman
 
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=builder --chown=node:node /app/dist ./dist
+
+USER node
 EXPOSE 4000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:4000/api/v1/health/live').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
 CMD ["node", "dist/main"]
