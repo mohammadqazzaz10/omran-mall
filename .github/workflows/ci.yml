@@ -70,7 +70,9 @@ jobs:
           channel: stable
           flutter-version: '3.50.0'
       - name: Generate missing Flutter platform projects
-        run: flutter create --platforms=android,ios,web --org com.omranmall --project-name omran_mall --no-pub .
+        run: |
+          flutter create --platforms=android,ios,web --org com.omranmall --project-name omran_mall --no-pub .
+          rm -f test/widget_test.dart
         working-directory: client
       - run: flutter pub get
         working-directory: client
