@@ -53,6 +53,7 @@ jobs:
           path: backend/package-lock.json
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
+        if: always()
         with:
           name: backend-security-audit
           path: backend/npm-audit.json
