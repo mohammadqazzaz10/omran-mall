@@ -104,7 +104,9 @@ jobs:
           flutter-version: '3.50.0'
       - name: Generate missing Flutter platform projects
         run: |
-          flutter create --platforms=android,ios,web --org com.omranmall --project-name omran_mall --no-pub .
+          if [ ! -d android ] || [ ! -d ios ] || [ ! -d web ] || [ ! -f android/gradlew ] || [ ! -f android/gradle/wrapper/gradle-wrapper.jar ]; then
+            flutter create --platforms=android,ios,web --org com.omranmall --project-name omran_mall --no-pub .
+          fi
           if [ -f test/widget_test.dart ] && grep -q 'material_ui' test/widget_test.dart && grep -q 'MyApp' test/widget_test.dart; then rm -f test/widget_test.dart; fi
           sed -i -e '/^gradle-wrapper\.jar$/d' -e '/^\/gradlew$/d' -e '/^\/gradlew\.bat$/d' android/.gitignore
         working-directory: client
