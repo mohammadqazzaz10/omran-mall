@@ -116,8 +116,6 @@ jobs:
         working-directory: client
       - run: flutter test
         working-directory: client
-      - run: flutter build web --release
-        working-directory: client
       - name: Archive generated Flutter platform files with permissions
         run: tar -czf flutter-generated-foundation.tar.gz -C client android ios web .metadata .gitignore pubspec.lock
       - uses: actions/upload-artifact@v6
@@ -126,6 +124,32 @@ jobs:
           path: flutter-generated-foundation.tar.gz
           if-no-files-found: error
 
+  web:
+    name: Flutter Web Release build
+    needs: [flutter]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.50.0'
+      - uses: actions/download-artifact@v8
+        with:
+          name: flutter-generated-foundation
+          path: client-generated
+      - name: Restore generated Flutter platform project
+        run: |
+          mkdir -p client
+          tar -xzf client-generated/flutter-generated-foundation.tar.gz -C client
+      - run: flutter pub get --enforce-lockfile
+        working-directory: client
+      - run: flutter build web --release
+        working-directory: client
+      - uses: actions/upload-artifact@v6
+        with:
+          name: flutter-web-release
+          path: client/build/web/
+          if-no-files-found: error
   android:
     name: Android debug build
     needs: [flutter]
