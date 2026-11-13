@@ -26,7 +26,7 @@ dependencies:
   
   # Location & Geofencing
   geolocator: ^11.0.0
-  mobile_scanner: ^5.1.1
+  mobile_scanner: ^7.5.0
   
   # UI & Design
   google_fonts: ^6.2.1
