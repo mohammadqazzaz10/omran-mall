@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  "appTitle": "Omran Mall — Employee and Operations Management",
+  "loginTitle": "Sign in — Omran Mall",
+  "employeeHome": "Employee home and self-service",
+  "supervisorHome": "Live supervisor dashboard and break timers",
+  "branchManagerHome": "Branch manager dashboard",
+  "hrHome": "Human resources and payroll",
+  "executiveHome": "Executive management and branch analytics",
+  "adminHome": "System administration"
+}
