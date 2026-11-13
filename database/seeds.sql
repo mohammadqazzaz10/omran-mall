@@ -116,4 +116,4 @@ VALUES
     '{"enforce_max_simultaneous": true, "default_max_absent_percentage": 20}'::jsonb,
     'سياسة منع تعارض خروج الموظفين في الاستراحات في الوقت نفسه'
 )
-ON CONFLICT (company_id, branch_id, setting_key) DO NOTHING;
+ON CONFLICT DO NOTHING;
