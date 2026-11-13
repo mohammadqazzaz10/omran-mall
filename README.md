@@ -329,7 +329,8 @@ gantt
 
 ## وثائق المشروع المرجعية
 
-- **[وثيقة المتطلبات الرئيسية والمواصفات الفنية – النسخة العربية](docs/MASTER_REQUIREMENTS_AR.md)** — المرجع الأساسي الكامل لنطاق المشروع ومتطلباته الوظيفية والفنية.
+- **[Master Requirements & Technical Specification — Arabic](docs/MASTER_REQUIREMENTS_AR.md)** — النسخة العربية الأصلية والمرجع الأساسي.
+- **[Master Requirements & Technical Specification — English](docs/MASTER_REQUIREMENTS_EN.md)** — complete English companion translation.
 - [خطة التنفيذ المرحلية](docs/IMPLEMENTATION_ROADMAP.md)
 - [ميثاق المشروع](docs/PROJECT_CHARTER.md)
 - [خط أساس الأمان](docs/SECURITY_BASELINE.md)
