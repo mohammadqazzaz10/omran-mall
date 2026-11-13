@@ -3,12 +3,12 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+} from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { Logger } from "@nestjs/common";
 
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000')
-  .split(',')
+const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000")
+  .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
@@ -17,13 +17,13 @@ const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000')
     origin: allowedOrigins,
     credentials: true,
   },
-  namespace: '/breaks',
+  namespace: "/breaks",
 })
 export class BreaksGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  private readonly logger = new Logger('BreaksGateway');
+  private readonly logger = new Logger("BreaksGateway");
 
   /**
    * Fail closed until the verified JWT/session authentication middleware and
@@ -42,24 +42,24 @@ export class BreaksGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   broadcastBreakStarted(branchId: string, sessionData: unknown): void {
-    this.server.to(`branch_${branchId}`).emit('break_started', {
-      event: 'BREAK_STARTED',
+    this.server.to(`branch_${branchId}`).emit("break_started", {
+      event: "BREAK_STARTED",
       timestamp: new Date().toISOString(),
       session: sessionData,
     });
   }
 
   broadcastBreakAlert(branchId: string, alertData: unknown): void {
-    this.server.to(`branch_${branchId}`).emit('break_alert', {
-      event: 'BREAK_OVERSTAY_ALERT',
+    this.server.to(`branch_${branchId}`).emit("break_alert", {
+      event: "BREAK_OVERSTAY_ALERT",
       timestamp: new Date().toISOString(),
       alert: alertData,
     });
   }
 
   broadcastBreakEnded(branchId: string, sessionData: unknown): void {
-    this.server.to(`branch_${branchId}`).emit('break_ended', {
-      event: 'BREAK_ENDED',
+    this.server.to(`branch_${branchId}`).emit("break_ended", {
+      event: "BREAK_ENDED",
       timestamp: new Date().toISOString(),
       session: sessionData,
     });

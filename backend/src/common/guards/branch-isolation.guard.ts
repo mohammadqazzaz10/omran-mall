@@ -3,7 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
-} from '@nestjs/common';
+} from "@nestjs/common";
 
 /**
  * Provisional request-scope branch guard.
@@ -20,30 +20,30 @@ export class BranchIsolationGuard implements CanActivate {
     const user = request.user;
 
     if (!user?.id) {
-      throw new ForbiddenException('المستخدم غير مسجل الدخول');
+      throw new ForbiddenException("المستخدم غير مسجل الدخول");
     }
 
     const requestedBranchId =
       request.params?.branchId ??
       request.query?.branchId ??
       request.body?.branchId ??
-      request.headers?.['x-branch-id'] ??
+      request.headers?.["x-branch-id"] ??
       user.primaryBranchId;
 
     if (!requestedBranchId) {
-      throw new ForbiddenException('لا يوجد فرع محدد لهذا الحساب');
+      throw new ForbiddenException("لا يوجد فرع محدد لهذا الحساب");
     }
 
     const targetBranchId = String(requestedBranchId);
-    const allowedBranchIds = new Set<string>([
-      ...(Array.isArray(user.allowedBranchIds) ? user.allowedBranchIds : []),
-      ...(user.primaryBranchId ? [user.primaryBranchId] : []),
-    ].map((id: unknown) => String(id)));
+    const allowedBranchIds = new Set<string>(
+      [
+        ...(Array.isArray(user.allowedBranchIds) ? user.allowedBranchIds : []),
+        ...(user.primaryBranchId ? [user.primaryBranchId] : []),
+      ].map((id: unknown) => String(id)),
+    );
 
     if (!allowedBranchIds.has(targetBranchId)) {
-      throw new ForbiddenException(
-        'غير مصرح لك بالوصول إلى بيانات هذا الفرع',
-      );
+      throw new ForbiddenException("غير مصرح لك بالوصول إلى بيانات هذا الفرع");
     }
 
     request.branchId = targetBranchId;

@@ -1,5 +1,5 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Injectable, OnModuleDestroy } from "@nestjs/common";
+import { Pool } from "pg";
 
 /**
  * Small PostgreSQL connection owner used by readiness checks and future
@@ -18,7 +18,7 @@ export class DatabaseService implements OnModuleDestroy {
           idleTimeoutMillis: 30_000,
           connectionTimeoutMillis: 5_000,
           ssl:
-            process.env.DATABASE_SSL === 'true'
+            process.env.DATABASE_SSL === "true"
               ? { rejectUnauthorized: true }
               : undefined,
         })
@@ -29,7 +29,7 @@ export class DatabaseService implements OnModuleDestroy {
     if (!this.pool) return false;
 
     try {
-      await this.pool.query('SELECT 1');
+      await this.pool.query("SELECT 1");
       return true;
     } catch {
       return false;
