@@ -623,7 +623,7 @@ CREATE TABLE task_assignments (
     task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
     employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
     assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (task_id, employee_id)
+    CONSTRAINT uq_task_employee_assignment UNIQUE (task_id, employee_id)
 );
 
 CREATE TABLE announcements (
