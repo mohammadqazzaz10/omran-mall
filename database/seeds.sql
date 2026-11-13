@@ -1,5 +1,8 @@
 -- ============================================================================
 -- OMRAN MALL MANAGEMENT SYSTEM (مشروع عمران مول)
+-- DEVELOPMENT ONLY: synthetic bootstrap data for a disposable local database.
+-- NEVER run this file in staging or production. It contains illustrative policy values.
+-- Do not add real employee, personal, financial, contact, or location data here.
 -- Initial Database Seeds & Default Enterprise Configurations
 -- Currency: JOD | Timezone: Asia/Amman
 -- ============================================================================
