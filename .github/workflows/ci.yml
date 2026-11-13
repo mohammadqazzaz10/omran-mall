@@ -22,7 +22,7 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run build
-      - run: npm test -- --runInBand --passWithNoTests
+      - run: npm test -- --runInBand
 
   flutter:
     name: Flutter analyze and tests
