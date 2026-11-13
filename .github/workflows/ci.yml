@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   backend:
@@ -34,7 +34,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - name: Install backend dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-lockfile
+          path: backend/package-lock.json
+          if-no-files-found: error
       - name: Apply database schema and verify development seeds
         run: |
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/schema.sql
@@ -57,9 +64,66 @@ jobs:
         with:
           channel: stable
           flutter-version: '3.50.0'
+      - name: Generate missing Flutter platform projects
+        run: flutter create --platforms=android,ios,web --org com.omranmall --project-name omran_mall --no-pub .
+        working-directory: client
       - run: flutter pub get
+        working-directory: client
+      - run: flutter pub get --enforce-lockfile
         working-directory: client
       - run: flutter analyze --no-fatal-infos
         working-directory: client
       - run: flutter test
         working-directory: client
+      - run: flutter build web --release
+        working-directory: client
+      - run: flutter build apk --debug
+        working-directory: client
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flutter-generated-foundation
+          path: |
+            client/android/
+            client/ios/
+            client/web/
+            client/.metadata
+            client/.gitignore
+            client/pubspec.lock
+          if-no-files-found: error
+
+  persist-generated-foundation:
+    name: Persist generated platforms and dependency lockfiles
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: [backend, flutter]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-lockfile
+          path: backend-lock
+      - uses: actions/download-artifact@v4
+        with:
+          name: flutter-generated-foundation
+          path: client-generated
+      - name: Commit generated project files
+        env:
+          GITHUB_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          mkdir -p client
+          cp -a client-generated/. client/
+          cp backend-lock/package-lock.json backend/package-lock.json
+          git add client/android client/ios client/web client/.metadata client/.gitignore client/pubspec.lock backend/package-lock.json
+          if git diff --cached --quiet; then
+            echo "No generated files changed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: add Flutter platforms and dependency lockfiles"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
