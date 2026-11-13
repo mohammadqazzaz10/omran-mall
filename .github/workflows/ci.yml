@@ -118,8 +118,6 @@ jobs:
         working-directory: client
       - run: flutter build web --release
         working-directory: client
-      - run: flutter build apk --debug
-        working-directory: client
       - name: Archive generated Flutter platform files with permissions
         run: tar -czf flutter-generated-foundation.tar.gz -C client android ios web .metadata .gitignore pubspec.lock
       - uses: actions/upload-artifact@v6
@@ -128,6 +126,32 @@ jobs:
           path: flutter-generated-foundation.tar.gz
           if-no-files-found: error
 
+  android:
+    name: Android debug build
+    needs: [flutter]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - uses: actions/download-artifact@v8
+        with:
+          name: flutter-generated-foundation
+          path: client-generated
+      - name: Restore generated Flutter platform project
+        run: |
+          mkdir -p client
+          tar -xzf client-generated/flutter-generated-foundation.tar.gz -C client
+      - run: flutter pub get --enforce-lockfile
+        working-directory: client
+      - run: flutter build apk --debug
+        working-directory: client
+      - uses: actions/upload-artifact@v6
+        with:
+          name: android-debug-apk
+          path: client/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
   persist-generated-foundation:
     name: Persist generated platforms and dependency lockfiles
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
