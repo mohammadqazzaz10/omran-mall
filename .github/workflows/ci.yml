@@ -52,6 +52,7 @@ jobs:
       - name: Apply checksum migrations and verify guarded development seeds
         run: |
           npm run db:migrate
+          npm run db:migrate
           npm run db:seed
           npm run db:seed
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/tests/schema_invariants.sql
