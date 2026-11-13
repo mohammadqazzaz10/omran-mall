@@ -16,16 +16,31 @@ function validateProductionConfig(): void {
     );
   }
 
+  const databaseUrl = new URL(process.env.DATABASE_URL as string);
+  if (!['postgres:', 'postgresql:'].includes(databaseUrl.protocol)) {
+    throw new Error('Production DATABASE_URL must use PostgreSQL');
+  }
+
   const origins = (process.env.CORS_ORIGINS || '')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
-  if (
-    origins.length === 0 ||
-    origins.some((origin) => origin === '*' || !/^https:\/\//i.test(origin))
-  ) {
+  const invalidOrigins = origins.filter((origin) => {
+    try {
+      const parsed = new URL(origin);
+      return (
+        parsed.protocol !== 'https:' ||
+        parsed.origin !== origin ||
+        parsed.hostname.includes('*') ||
+        Boolean(parsed.username || parsed.password)
+      );
+    } catch {
+      return true;
+    }
+  });
+  if (origins.length === 0 || invalidOrigins.length > 0) {
     throw new Error(
-      'Production CORS_ORIGINS must contain explicit HTTPS origins; wildcard and HTTP origins are forbidden.',
+      'Production CORS_ORIGINS must contain exact HTTPS origins without wildcards, paths, or credentials.',
     );
   }
 }
@@ -70,6 +85,9 @@ async function bootstrap() {
   }
 
   const port = Number(process.env.PORT || 4000);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('PORT must be an integer between 1 and 65535');
+  }
   app.enableShutdownHooks();
   await app.listen(port);
   logger.log(`Omran Mall API listening on port ${port}`);
