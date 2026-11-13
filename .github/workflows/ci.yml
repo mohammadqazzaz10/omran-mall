@@ -60,6 +60,16 @@ jobs:
           npm run db:seed
           npm run db:seed
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/tests/schema_invariants.sql
+          createdb -h 127.0.0.1 -U omran_test omran_existing_schema_test
+          PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_existing_schema_test -v ON_ERROR_STOP=1 -c 'CREATE TABLE sentinel (id INTEGER PRIMARY KEY)'
+          if output=$(DATABASE_URL=postgresql://omran_test:omran_test_password@127.0.0.1:5432/omran_existing_schema_test npm run db:migrate 2>&1); then
+            echo 'Migration runner unexpectedly accepted an untracked existing schema.'
+            exit 1
+          else
+            echo "$output"
+            echo "$output" | grep -q 'existing database schema was found without a migration ledger'
+          fi
+          PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_existing_schema_test -tAc "SELECT to_regclass('public.sentinel') IS NOT NULL" | grep -q t
       - name: Audit resolved backend dependencies
         run: |
           npm audit --json > npm-audit.json || true
