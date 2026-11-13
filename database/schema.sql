@@ -155,13 +155,27 @@ CREATE TABLE users (
 );
 
 CREATE TABLE user_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    branch_id UUID REFERENCES branches(id) ON DELETE CASCADE, -- specific branch scope if compound
+    branch_id UUID REFERENCES branches(id) ON DELETE CASCADE,
     department_id UUID REFERENCES departments(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, role_id, branch_id)
+    CONSTRAINT chk_user_role_department_requires_branch
+        CHECK (department_id IS NULL OR branch_id IS NOT NULL)
 );
+
+-- NULL branch_id represents a company-wide assignment. Partial unique indexes
+-- avoid PostgreSQL's default NULL-distinct behavior allowing duplicate grants.
+CREATE UNIQUE INDEX uq_user_roles_company_scope
+    ON user_roles(user_id, role_id)
+    WHERE branch_id IS NULL AND department_id IS NULL;
+CREATE UNIQUE INDEX uq_user_roles_branch_scope
+    ON user_roles(user_id, role_id, branch_id)
+    WHERE branch_id IS NOT NULL AND department_id IS NULL;
+CREATE UNIQUE INDEX uq_user_roles_department_scope
+    ON user_roles(user_id, role_id, branch_id, department_id)
+    WHERE department_id IS NOT NULL;
 
 -- ============================================================================
 -- 4. EMPLOYEES & PROFILES (الموظفون والملفات الوظيفية)
@@ -792,6 +806,107 @@ CREATE TABLE system_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_setting_key UNIQUE (company_id, branch_id, setting_key)
 );
+
+-- Generate employee numbers inside PostgreSQL so concurrent requests cannot
+-- allocate the same number. Sequence gaps after transaction rollback are normal.
+CREATE OR REPLACE FUNCTION assign_employee_code()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $
+DECLARE
+    v_company_id UUID;
+    v_setting JSONB;
+    v_prefix TEXT := 'OM-';
+    v_padding INT := 4;
+    v_padding_text TEXT;
+BEGIN
+    SELECT company_id INTO v_company_id
+    FROM branches
+    WHERE id = NEW.branch_id;
+
+    SELECT setting_value INTO v_setting
+    FROM system_settings
+    WHERE company_id = v_company_id
+      AND setting_key = 'employee_id_format'
+      AND (branch_id = NEW.branch_id OR branch_id IS NULL)
+    ORDER BY (branch_id IS NOT NULL) DESC
+    LIMIT 1;
+
+    IF v_setting IS NOT NULL THEN
+        v_prefix := COALESCE(NULLIF(v_setting->>'prefix', ''), v_prefix);
+        v_padding_text := v_setting->>'padding_digits';
+        IF v_padding_text ~ '^[1-9][0-9]?
+
+-- ============================================================================
+-- 15. PERFORMANCE INDEXES (فهارس الأداء وتعدد الفروع)
+-- ============================================================================
+
+CREATE INDEX idx_branches_company ON branches(company_id);
+CREATE INDEX idx_departments_branch ON departments(branch_id);
+CREATE INDEX idx_employees_branch ON employees(branch_id);
+CREATE INDEX idx_employees_dept ON employees(department_id);
+CREATE INDEX idx_employees_status ON employees(status);
+CREATE INDEX idx_attendance_branch_date ON attendance_records(branch_id, work_date);
+CREATE INDEX idx_attendance_emp_date ON attendance_records(employee_id, work_date);
+CREATE INDEX idx_shifts_branch ON shifts(branch_id);
+CREATE INDEX idx_shift_assignments_date ON shift_assignments(branch_id, work_date);
+CREATE INDEX idx_break_sessions_active ON break_sessions(employee_id, actual_end_time);
+CREATE INDEX idx_leave_requests_branch ON leave_requests(branch_id, start_date, end_date);
+CREATE INDEX idx_payroll_records_branch ON payroll_records(branch_id, payroll_period_id);
+CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp);
+CREATE INDEX idx_audit_logs_table_record ON audit_logs(table_name, record_id);
+CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read);
+
+-- ============================================================================
+-- 16. AUDIT TRIGGER FUNCTION (دالة سجل التدقيق التلقائي)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION process_audit_log()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        INSERT INTO audit_logs (table_name, record_id, action, old_values)
+        VALUES (TG_TABLE_NAME, OLD.id, 'DELETE', to_jsonb(OLD));
+        RETURN OLD;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO audit_logs (table_name, record_id, action, old_values, new_values)
+        VALUES (TG_TABLE_NAME, NEW.id, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW));
+        RETURN NEW;
+    ELSIF (TG_OP = 'INSERT') THEN
+        INSERT INTO audit_logs (table_name, record_id, action, new_values)
+        VALUES (TG_TABLE_NAME, NEW.id, 'INSERT', to_jsonb(NEW));
+        RETURN NEW;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply audit triggers to critical operational tables
+CREATE TRIGGER audit_attendance_trigger
+AFTER INSERT OR UPDATE OR DELETE ON attendance_records
+FOR EACH ROW EXECUTE FUNCTION process_audit_log();
+
+CREATE TRIGGER audit_payroll_trigger
+AFTER INSERT OR UPDATE OR DELETE ON payroll_records
+FOR EACH ROW EXECUTE FUNCTION process_audit_log();
+
+CREATE TRIGGER audit_employees_trigger
+AFTER INSERT OR UPDATE OR DELETE ON employees
+FOR EACH ROW EXECUTE FUNCTION process_audit_log();
+ THEN
+            v_padding := LEAST(v_padding_text::INT, 12);
+        END IF;
+    END IF;
+
+    NEW.employee_code := v_prefix || LPAD(nextval('employee_seq')::TEXT, v_padding, '0');
+    RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER trg_assign_employee_code
+BEFORE INSERT ON employees
+FOR EACH ROW
+EXECUTE FUNCTION assign_employee_code();
 
 -- ============================================================================
 -- 15. PERFORMANCE INDEXES (فهارس الأداء وتعدد الفروع)
