@@ -34,14 +34,14 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Install backend dependencies
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: backend-lockfile
           path: backend/package-lock.json
@@ -68,7 +68,7 @@ jobs:
     name: Flutter analyze and tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -92,7 +92,7 @@ jobs:
         working-directory: client
       - name: Archive generated Flutter platform files with permissions
         run: tar -czf flutter-generated-foundation.tar.gz -C client android ios web .metadata .gitignore pubspec.lock
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: flutter-generated-foundation
           path: flutter-generated-foundation.tar.gz
@@ -106,15 +106,15 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: backend-lockfile
           path: backend-lock
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: flutter-generated-foundation
           path: client-generated
