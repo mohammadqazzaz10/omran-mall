@@ -40,6 +40,7 @@ jobs:
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/schema.sql
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/seeds.sql
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/seeds.sql
+          PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/tests/schema_invariants.sql
       - name: Audit resolved backend dependencies
         run: |
           npm audit --json > npm-audit.json || true
