@@ -96,9 +96,9 @@ async function applyMigrations(client: PoolClient): Promise<void> {
 
       if (migration.version === '001_initial_schema') {
         const existingSchema = await client.query(
-          "SELECT to_regclass('public.companies') AS companies",
+          "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name <> 'schema_migrations') AS has_tables",
         );
-        if (existingSchema.rows[0].companies) {
+        if (existingSchema.rows[0].has_tables) {
           throw new Error(
             'An existing database schema was found without a migration ledger. Back up and verify it, then perform an explicit baseline adoption; migrations will not overwrite existing tables.',
           );
