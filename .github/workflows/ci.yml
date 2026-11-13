@@ -76,7 +76,7 @@ jobs:
           npm audit --json > npm-audit.json || true
           node -e 'const a=require("./npm-audit.json"); const v=a.metadata?.vulnerabilities; if (!v) { console.error("npm audit did not return a valid vulnerability report", a.error ?? ""); process.exit(2); } console.log("Dependency vulnerability summary:", JSON.stringify(v)); for (const [name, item] of Object.entries(a.vulnerabilities ?? {})) console.log(`${name}: ${item.severity}; direct=${item.isDirect}; fixAvailable=${JSON.stringify(item.fixAvailable)}`); if ((v.critical ?? 0) > 0) process.exit(1);'
       - uses: actions/upload-artifact@v6
-        if: always()
+        if: always() && hashFiles('backend/npm-audit.json') != ''
         with:
           name: backend-security-audit
           path: backend/npm-audit.json
