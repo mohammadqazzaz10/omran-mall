@@ -8,3 +8,8 @@
 !**/.env.example
 .git
 **/*.log
+client/
+docs/
+.github/
+README.md
+CONTRIBUTING.md
