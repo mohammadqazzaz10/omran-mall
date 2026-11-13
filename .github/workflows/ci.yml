@@ -106,6 +106,7 @@ jobs:
         run: |
           flutter create --platforms=android,ios,web --org com.omranmall --project-name omran_mall --no-pub .
           if [ -f test/widget_test.dart ] && grep -q 'material_ui' test/widget_test.dart && grep -q 'MyApp' test/widget_test.dart; then rm -f test/widget_test.dart; fi
+          sed -i -e '/^gradle-wrapper\.jar$/d' -e '/^\/gradlew$/d' -e '/^\/gradlew\.bat$/d' android/.gitignore
         working-directory: client
       - run: flutter pub get
         working-directory: client
@@ -188,6 +189,7 @@ jobs:
           cp backend-lock/package-lock.json backend/package-lock.json
           cp -a backend-generated/. backend/src/
           git add backend/src client/android client/ios client/web client/.metadata client/.gitignore client/pubspec.lock backend/package-lock.json
+          git add -f client/android/gradlew client/android/gradlew.bat client/android/gradle/wrapper/gradle-wrapper.jar
           if git diff --cached --quiet; then
             echo "No generated files changed."
             exit 0
