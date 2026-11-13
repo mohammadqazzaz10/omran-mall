@@ -818,7 +818,7 @@ CREATE UNIQUE INDEX uq_system_settings_branch_scope
 CREATE OR REPLACE FUNCTION assign_employee_code()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-AS $
+AS $employee_code$
 DECLARE
     v_company_id UUID;
     v_setting JSONB;
@@ -841,65 +841,7 @@ BEGIN
     IF v_setting IS NOT NULL THEN
         v_prefix := COALESCE(NULLIF(v_setting->>'prefix', ''), v_prefix);
         v_padding_text := v_setting->>'padding_digits';
-        IF v_padding_text ~ '^[1-9][0-9]?
-
--- ============================================================================
--- 15. PERFORMANCE INDEXES (فهارس الأداء وتعدد الفروع)
--- ============================================================================
-
-CREATE INDEX idx_branches_company ON branches(company_id);
-CREATE INDEX idx_departments_branch ON departments(branch_id);
-CREATE INDEX idx_employees_branch ON employees(branch_id);
-CREATE INDEX idx_employees_dept ON employees(department_id);
-CREATE INDEX idx_employees_status ON employees(status);
-CREATE INDEX idx_attendance_branch_date ON attendance_records(branch_id, work_date);
-CREATE INDEX idx_attendance_emp_date ON attendance_records(employee_id, work_date);
-CREATE INDEX idx_shifts_branch ON shifts(branch_id);
-CREATE INDEX idx_shift_assignments_date ON shift_assignments(branch_id, work_date);
-CREATE INDEX idx_break_sessions_active ON break_sessions(employee_id, actual_end_time);
-CREATE INDEX idx_leave_requests_branch ON leave_requests(branch_id, start_date, end_date);
-CREATE INDEX idx_payroll_records_branch ON payroll_records(branch_id, payroll_period_id);
-CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp);
-CREATE INDEX idx_audit_logs_table_record ON audit_logs(table_name, record_id);
-CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read);
-
--- ============================================================================
--- 16. AUDIT TRIGGER FUNCTION (دالة سجل التدقيق التلقائي)
--- ============================================================================
-
-CREATE OR REPLACE FUNCTION process_audit_log()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        INSERT INTO audit_logs (table_name, record_id, action, old_values)
-        VALUES (TG_TABLE_NAME, OLD.id, 'DELETE', to_jsonb(OLD));
-        RETURN OLD;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO audit_logs (table_name, record_id, action, old_values, new_values)
-        VALUES (TG_TABLE_NAME, NEW.id, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW));
-        RETURN NEW;
-    ELSIF (TG_OP = 'INSERT') THEN
-        INSERT INTO audit_logs (table_name, record_id, action, new_values)
-        VALUES (TG_TABLE_NAME, NEW.id, 'INSERT', to_jsonb(NEW));
-        RETURN NEW;
-    END IF;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- Apply audit triggers to critical operational tables
-CREATE TRIGGER audit_attendance_trigger
-AFTER INSERT OR UPDATE OR DELETE ON attendance_records
-FOR EACH ROW EXECUTE FUNCTION process_audit_log();
-
-CREATE TRIGGER audit_payroll_trigger
-AFTER INSERT OR UPDATE OR DELETE ON payroll_records
-FOR EACH ROW EXECUTE FUNCTION process_audit_log();
-
-CREATE TRIGGER audit_employees_trigger
-AFTER INSERT OR UPDATE OR DELETE ON employees
-FOR EACH ROW EXECUTE FUNCTION process_audit_log();
- THEN
+        IF v_padding_text ~ '^[1-9][0-9]?$' THEN
             v_padding := LEAST(v_padding_text::INT, 12);
         END IF;
     END IF;
@@ -907,7 +849,7 @@ FOR EACH ROW EXECUTE FUNCTION process_audit_log();
     NEW.employee_code := v_prefix || LPAD(nextval('employee_seq')::TEXT, v_padding, '0');
     RETURN NEW;
 END;
-$;
+$employee_code$;
 
 CREATE TRIGGER trg_assign_employee_code
 BEFORE INSERT ON employees
