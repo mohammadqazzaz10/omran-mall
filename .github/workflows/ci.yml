@@ -83,7 +83,7 @@ jobs:
       - name: Generate missing Flutter platform projects
         run: |
           flutter create --platforms=android,ios,web --org com.omranmall --project-name omran_mall --no-pub .
-          rm -f test/widget_test.dart
+          if [ -f test/widget_test.dart ] && grep -q 'material_ui' test/widget_test.dart && grep -q 'MyApp' test/widget_test.dart; then rm -f test/widget_test.dart; fi
         working-directory: client
       - run: flutter pub get
         working-directory: client
