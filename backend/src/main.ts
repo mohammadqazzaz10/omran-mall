@@ -4,6 +4,7 @@ import { AppModule } from "./app.module";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 
 function validateProductionConfig(): void {
   if (process.env.NODE_ENV !== "production") return;
@@ -56,13 +57,16 @@ async function bootstrap() {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     cors: {
       origin: allowedOrigins,
       methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
       credentials: true,
     },
   });
+
+  // Preserve the previous Express query parser behavior after the Express 5 upgrade.
+  app.set("query parser", "extended");
 
   app.useGlobalPipes(
     new ValidationPipe({
