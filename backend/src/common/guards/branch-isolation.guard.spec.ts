@@ -26,7 +26,7 @@ describe('BranchIsolationGuard', () => {
     };
 
     expect(guard.canActivate(makeContext(request))).toBe(true);
-    expect(request.branchId).toBe('branch-a');
+    expect((request as Record<string, any>).branchId).toBe('branch-a');
   });
 
   it('allows an explicitly assigned additional branch', () => {
@@ -43,7 +43,7 @@ describe('BranchIsolationGuard', () => {
     };
 
     expect(guard.canActivate(makeContext(request))).toBe(true);
-    expect(request.branchId).toBe('branch-b');
+    expect((request as Record<string, any>).branchId).toBe('branch-b');
   });
 
   it('rejects access to a branch outside the authenticated membership list', () => {
