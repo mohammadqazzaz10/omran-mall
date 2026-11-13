@@ -12,6 +12,20 @@ jobs:
   backend:
     name: Backend build and test command
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: omran_test
+          POSTGRES_USER: omran_test
+          POSTGRES_PASSWORD: omran_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U omran_test -d omran_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -21,6 +35,11 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - name: Apply database schema and verify development seeds
+        run: |
+          PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/schema.sql
+          PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/seeds.sql
+          PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/seeds.sql
       - name: Audit resolved backend dependencies
         run: |
           npm audit --json > npm-audit.json || true
