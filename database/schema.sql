@@ -803,9 +803,15 @@ CREATE TABLE system_settings (
     setting_key VARCHAR(100) NOT NULL,
     setting_value JSONB NOT NULL,
     description TEXT,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_setting_key UNIQUE (company_id, branch_id, setting_key)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX uq_system_settings_company_scope
+    ON system_settings(company_id, setting_key)
+    WHERE branch_id IS NULL;
+CREATE UNIQUE INDEX uq_system_settings_branch_scope
+    ON system_settings(company_id, branch_id, setting_key)
+    WHERE branch_id IS NOT NULL;
 
 -- Generate employee numbers inside PostgreSQL so concurrent requests cannot
 -- allocate the same number. Sequence gaps after transaction rollback are normal.
