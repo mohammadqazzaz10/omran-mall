@@ -44,8 +44,8 @@ jobs:
           node-version: 22
       - name: Resolve backend dependencies
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-          npm audit fix || true
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit fix --package-lock-only --ignore-scripts || true
           npm ci
       - uses: actions/upload-artifact@v6
         with:
