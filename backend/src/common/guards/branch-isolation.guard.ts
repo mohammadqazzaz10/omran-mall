@@ -4,50 +4,45 @@ import {
   ExecutionContext,
   ForbiddenException,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 
+/**
+ * Provisional request-scope branch guard.
+ *
+ * Authentication must run before this guard and populate request.user from a
+ * verified server-side identity. This guard deliberately grants no implicit
+ * cross-branch access based on role names. Company-wide access must be
+ * represented by explicit branch memberships issued by the trusted auth layer.
+ */
 @Injectable()
 export class BranchIsolationGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
-
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    if (!user) {
+    if (!user?.id) {
       throw new ForbiddenException('المستخدم غير مسجل الدخول');
     }
 
-    // Super Admin and General Managers have cross-branch authority
-    const isGlobalAdmin = user.roles?.some(
-      (role: string) => role === 'SUPER_ADMIN' || role === 'GENERAL_MANAGER',
-    );
+    const requestedBranchId =
+      request.params?.branchId ??
+      request.query?.branchId ??
+      request.body?.branchId ??
+      request.headers?.['x-branch-id'] ??
+      user.primaryBranchId;
 
-    if (isGlobalAdmin) {
-      return true;
+    if (!requestedBranchId) {
+      throw new ForbiddenException('لا يوجد فرع محدد لهذا الحساب');
     }
 
-    // Get requested branch_id from params, query, or body
-    const targetBranchId =
-      request.params?.branchId ||
-      request.query?.branchId ||
-      request.body?.branchId ||
-      request.headers['x-branch-id'];
+    const targetBranchId = String(requestedBranchId);
+    const allowedBranchIds = new Set<string>([
+      ...(Array.isArray(user.allowedBranchIds) ? user.allowedBranchIds : []),
+      ...(user.primaryBranchId ? [user.primaryBranchId] : []),
+    ].map((id: unknown) => String(id)));
 
-    if (!targetBranchId) {
-      // If no branch specified, inject the user's primary assigned branch
-      request.branchId = user.primaryBranchId;
-      return true;
-    }
-
-    // Verify user belongs to the target branch
-    const hasBranchAccess =
-      user.primaryBranchId === targetBranchId ||
-      user.allowedBranchIds?.includes(targetBranchId);
-
-    if (!hasBranchAccess) {
+    if (!allowedBranchIds.has(targetBranchId)) {
       throw new ForbiddenException(
-        'غير مصرح لك بالوصول أو التعديل على بيانات هذا الفرع (عزل الفروع مفروض)',
+        'غير مصرح لك بالوصول إلى بيانات هذا الفرع',
       );
     }
 
