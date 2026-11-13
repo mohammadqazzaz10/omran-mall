@@ -38,9 +38,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Install backend dependencies
+      - name: Resolve backend dependencies
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm audit fix || true
+          npm ci
       - uses: actions/upload-artifact@v6
         with:
           name: backend-lockfile
