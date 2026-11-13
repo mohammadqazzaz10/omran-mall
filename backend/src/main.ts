@@ -69,6 +69,9 @@ async function bootstrap() {
     }),
   );
 
+  const swaggerEnabled = process.env.NODE_ENV !== 'production' || process.env.SWAGGER_ENABLED === 'true';
+  app.use(helmet({ contentSecurityPolicy: swaggerEnabled ? false : undefined }));
+
   const apiPrefix = process.env.API_PREFIX || 'api/v1';
   app.setGlobalPrefix(apiPrefix);
 
