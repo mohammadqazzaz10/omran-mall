@@ -15,10 +15,10 @@ INSERT INTO companies (
     'OMRAN-CORP',
     'شركة عمران مول للمجمعات التجارية ذ.م.م',
     'Omran Mall Commercial Complexes LLC',
-    '100234567',
-    'عمان - شارع وصفي التل (الجاردنز)',
-    '+96265000000',
-    'management@omranmall.com',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
     'JOD',
     'Asia/Amman'
 ) ON CONFLICT (code) DO NOTHING;
@@ -33,25 +33,12 @@ INSERT INTO branches (
     'BR-MAIN',
     'عمران مول - فرع عمان الرئيسي',
     'Omran Mall - Main Amman Branch',
-    'عمان - شارع المدينة المنورة',
-    '+96265000001',
-    'amman-main@omranmall.com',
-    31.985600,
-    35.859200,
+    'DEVELOPMENT SAMPLE ONLY - replace with approved branch data',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
     150
-),
-(
-    'b0000000-0000-0000-0000-000000000002',
-    'a0000000-0000-0000-0000-000000000001',
-    'BR-WEST',
-    'عمران مول - فرع غرب عمان',
-    'Omran Mall - West Amman Branch',
-    'عمان - دابوق',
-    '+96265000002',
-    'west-amman@omranmall.com',
-    31.998000,
-    35.820000,
-    200
 ) ON CONFLICT (company_id, code) DO NOTHING;
 
 -- 3. Insert Core Departments for Main Branch
