@@ -64,6 +64,7 @@ jobs:
           path: |
             backend/package.json
             backend/tsconfig.json
+            backend/tsconfig.build.json
             backend/nest-cli.json
             backend/jest.config.js
           if-no-files-found: error
@@ -236,10 +237,11 @@ jobs:
           cp backend-lock/package-lock.json backend/package-lock.json
           cp backend-config/package.json backend/package.json
           cp backend-config/tsconfig.json backend/tsconfig.json
+          cp backend-config/tsconfig.build.json backend/tsconfig.build.json
           cp backend-config/nest-cli.json backend/nest-cli.json
           cp backend-config/jest.config.js backend/jest.config.js
           cp -a backend-generated/. backend/src/
-          git add backend/src client/android client/ios client/web client/.metadata client/.gitignore client/pubspec.lock backend/package-lock.json backend/package.json backend/tsconfig.json backend/nest-cli.json backend/jest.config.js
+          git add backend/src client/android client/ios client/web client/.metadata client/.gitignore client/pubspec.lock backend/package-lock.json backend/package.json backend/tsconfig.json backend/tsconfig.build.json backend/nest-cli.json backend/jest.config.js
           git add -f client/android/gradlew client/android/gradlew.bat client/android/gradle/wrapper/gradle-wrapper.jar
           if git diff --cached --quiet; then
             echo "No generated files changed."
