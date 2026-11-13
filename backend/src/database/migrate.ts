@@ -63,7 +63,21 @@ async function applyMigrations(client: PoolClient): Promise<void> {
   await client.query("SELECT pg_advisory_lock(hashtext('omran_mall_schema_migrations'))");
 
   try {
-    for (const migration of await discoverMigrations()) {
+    const migrations = await discoverMigrations();
+    const availableVersions = new Set(migrations.map((migration) => migration.version));
+    const appliedVersions = await client.query(
+      'SELECT version FROM schema_migrations',
+    );
+    const removedMigrations = appliedVersions.rows
+      .map((row: { version: string }) => row.version)
+      .filter((version: string) => !availableVersions.has(version));
+    if (removedMigrations.length > 0) {
+      throw new Error(
+        `Applied migrations are missing from the repository: ${removedMigrations.join(', ')}`,
+      );
+    }
+
+    for (const migration of migrations) {
       const sql = await readFile(migration.filePath, 'utf8');
       const checksum = createHash('sha256').update(sql).digest('hex');
       const existing = await client.query(
