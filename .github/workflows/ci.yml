@@ -90,6 +90,7 @@ jobs:
             client/.gitignore
             client/pubspec.lock
           if-no-files-found: error
+          include-hidden-files: true
 
   persist-generated-foundation:
     name: Persist generated platforms and dependency lockfiles
