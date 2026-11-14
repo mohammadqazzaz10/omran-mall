@@ -574,7 +574,6 @@ export class OrganizationService {
       );
   }
 
-
   /**
    * Move an employee between branches in the same company. Historical
    * attendance and other branch-stamped records are intentionally untouched.
@@ -830,8 +829,7 @@ export class OrganizationService {
         from: oldSnapshot,
         to: newSnapshot,
         effectiveDate,
-        note:
-          "لم تُنسخ صلاحيات الفرع القديم؛ يجب إسناد صلاحيات الفرع الجديد بشكل مستقل.",
+        note: "لم تُنسخ صلاحيات الفرع القديم؛ يجب إسناد صلاحيات الفرع الجديد بشكل مستقل.",
       };
     });
   }
