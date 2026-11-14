@@ -5,8 +5,10 @@ describe("OrganizationService branch integrity", () => {
   const query = jest.fn();
   const db = {
     query,
-    transaction: jest.fn(async (work: (client: { query: typeof query }) => Promise<unknown>) =>
-      work({ query }),
+    transaction: jest.fn(
+      async (work: (client: { query: typeof query }) => Promise<unknown>) =>
+        work({ query }),
+    ),
   };
   const service = new OrganizationService(db as any);
   const user = {
