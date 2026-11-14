@@ -47,6 +47,36 @@ export class AttendanceQrService {
     return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
+  async assertDirectCheckInAllowed(
+    branchId: string,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    const result = await this.db.query<{
+      latitude: string | null;
+      longitude: string | null;
+    }>(
+      `SELECT latitude::text, longitude::text
+       FROM branches
+       WHERE id = $1 AND company_id = $2 AND is_active = TRUE AND deleted_at IS NULL`,
+      [branchId, user.companyId],
+    );
+    if (!result.rowCount) {
+      throw new NotFoundException("الفرع غير موجود أو غير فعال");
+    }
+    const hasLatitude = result.rows[0].latitude !== null;
+    const hasLongitude = result.rows[0].longitude !== null;
+    if (hasLatitude !== hasLongitude) {
+      throw new ServiceUnavailableException(
+        "إعدادات النطاق الجغرافي للفرع غير مكتملة",
+      );
+    }
+    if (hasLatitude && hasLongitude) {
+      throw new ForbiddenException(
+        "هذا الفرع يتطلب تسجيل الحضور عبر QR مع التحقق من الموقع",
+      );
+    }
+  }
+
   async createChallenge(branchId: string, user: AuthenticatedUser) {
     const branch = await this.db.query<{
       id: string;
