@@ -259,7 +259,7 @@ export class AuthService {
       accessToken: await this.accessToken(result, sessionId),
       refreshToken: `${sessionId}.${nextSecret}`,
       tokenType: "Bearer",
-      expiresIn: 900,
+      expiresIn: durationToSeconds(process.env.JWT_EXPIRATION, 900, 60 * 60),
     };
   }
 

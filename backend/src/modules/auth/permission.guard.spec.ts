@@ -46,7 +46,7 @@ describe("PermissionGuard", () => {
         }),
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(db.query).not.toHaveBeenCalled();
+    expect(db.query).toHaveBeenCalledTimes(1);
   });
 
   it("allows explicitly public routes without querying permissions", async () => {
@@ -83,6 +83,40 @@ describe("PermissionGuard", () => {
     ]);
   });
 
+  it("allows a company-scoped grant to operate on another active branch in the same company", async () => {
+    const companyUser = {
+      ...user,
+      primaryBranchId: null,
+      allowedBranchIds: [],
+    };
+    const branchId = "55555555-5555-4555-8555-555555555555";
+    const db = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rowCount: 1 })
+        .mockResolvedValueOnce({ rowCount: 1 }),
+    } as any;
+    const reflector = makeReflector({
+      "omran:requiredPermission": "attendance.view.company",
+    });
+    const guard = new PermissionGuard(db, reflector as any);
+    const request: Record<string, any> = {
+      user: companyUser,
+      headers: { "x-branch-id": branchId },
+    };
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(request.branchId).toBe(branchId);
+    expect(db.query).toHaveBeenCalledTimes(2);
+    expect(db.query.mock.calls[1][1]).toEqual([
+      companyUser.id,
+      companyUser.companyId,
+      branchId,
+      "attendance.view.company",
+      false,
+    ]);
+  });
+
   it("does not grant branch permissions when no branch is selected", async () => {
     const companyUser = {
       ...user,
@@ -115,6 +149,7 @@ describe("PermissionGuard", () => {
       user.companyId,
       user.primaryBranchId,
       "attendance.view.branch",
+      true,
     ]);
   });
 });

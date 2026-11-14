@@ -57,8 +57,22 @@ export class PermissionGuard implements CanActivate {
       requestedBranch === null || requestedBranch === undefined
         ? null
         : String(requestedBranch);
-    if (branchId && !user.allowedBranchIds.includes(branchId)) {
-      throw new ForbiddenException("لا توجد عضوية فعالة لهذا الفرع");
+    const hasBranchMembership =
+      branchId !== null && user.allowedBranchIds.includes(branchId);
+
+    // A company-scoped permission may operate on any active branch in the
+    // same company. Branch/department permissions still require membership.
+    if (branchId && !hasBranchMembership) {
+      const branch = await this.db.query(
+        `SELECT 1 FROM branches
+         WHERE id = $1 AND company_id = $2
+           AND is_active = TRUE AND deleted_at IS NULL
+         LIMIT 1`,
+        [branchId, user.companyId],
+      );
+      if (branch.rowCount !== 1) {
+        throw new ForbiddenException("الفرع غير موجود ضمن الشركة أو غير فعال");
+      }
     }
 
     const grant = await this.db.query(
@@ -75,11 +89,11 @@ export class PermissionGuard implements CanActivate {
          AND (
            (ur.branch_id IS NULL AND ur.department_id IS NULL AND p.scope = 'company')
            OR
-           (ur.branch_id = $3 AND ur.department_id IS NULL
-             AND p.scope = 'branch')
+           ($5::boolean = TRUE AND ur.branch_id = $3
+             AND ur.department_id IS NULL AND p.scope = 'branch')
            OR
-           (ur.branch_id = $3 AND ur.department_id IS NOT NULL
-             AND p.scope = 'department'
+           ($5::boolean = TRUE AND ur.branch_id = $3
+             AND ur.department_id IS NOT NULL AND p.scope = 'department'
              AND EXISTS (
                SELECT 1 FROM employees e
                WHERE e.user_id = ur.user_id
@@ -89,7 +103,7 @@ export class PermissionGuard implements CanActivate {
              ))
          )
        LIMIT 1`,
-      [user.id, user.companyId, branchId, permissionCode],
+      [user.id, user.companyId, branchId, permissionCode, hasBranchMembership],
     );
 
     if (grant.rowCount !== 1) {
