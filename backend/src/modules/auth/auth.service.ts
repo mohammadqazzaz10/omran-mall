@@ -9,6 +9,7 @@ import { createHash, randomBytes } from "crypto";
 import type { Request } from "express";
 import { DatabaseService } from "../../database/database.service";
 import { LoginDto } from "./auth.dto";
+import { durationToSeconds } from "./auth.config";
 import { AccessTokenPayload } from "./auth.types";
 
 type UserRow = {
@@ -103,7 +104,12 @@ export class AuthService {
     }
 
     const refreshToken = randomBytes(48).toString("base64url");
-    const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const refreshTtlSeconds = durationToSeconds(
+      process.env.JWT_REFRESH_EXPIRATION,
+      7 * 24 * 60 * 60,
+      90 * 24 * 60 * 60,
+    );
+    const refreshExpiresAt = new Date(Date.now() + refreshTtlSeconds * 1000);
     const clientIp = request.ip || null;
     const userAgent = request.headers["user-agent"] || null;
 
@@ -152,7 +158,7 @@ export class AuthService {
       accessToken: await this.accessToken(user, session.id),
       refreshToken: `${session.id}.${refreshToken}`,
       tokenType: "Bearer",
-      expiresIn: 900,
+      expiresIn: durationToSeconds(process.env.JWT_EXPIRATION, 900, 60 * 60),
       user: {
         id: user.id,
         username: user.username,
