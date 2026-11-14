@@ -15,6 +15,7 @@ DECLARE
     v_other_employee_id UUID;
     v_break_type_id UUID;
     v_first_branch_employee_id UUID;
+    v_qr_challenge_id UUID;
 BEGIN
 
     -- The migration must create a usable least-privilege permission catalogue.
@@ -371,5 +372,55 @@ BEGIN
         RAISE EXCEPTION 'Cross-branch break request was accepted';
     EXCEPTION
         WHEN foreign_key_violation THEN NULL;
+    END;
+
+    -- QR replay and branch isolation must be enforced by PostgreSQL constraints.
+    IF NOT EXISTS (
+        SELECT 1 FROM roles r
+        JOIN role_permissions rp ON rp.role_id = r.id
+        JOIN permissions p ON p.id = rp.permission_id
+        WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+          AND r.code = 'BRANCH_MANAGER'
+          AND p.code = 'attendance.qr.manage.branch'
+    ) THEN
+        RAISE EXCEPTION 'BRANCH_MANAGER is missing branch QR management permission';
+    END IF;
+
+    INSERT INTO attendance_qr_challenges (
+        branch_id, nonce_hash, expires_at, created_by_user_id
+    ) VALUES (
+        'b0000000-0000-0000-0000-000000000001',
+        repeat('a', 64),
+        CURRENT_TIMESTAMP + INTERVAL '45 seconds',
+        v_user_id
+    ) RETURNING id INTO v_qr_challenge_id;
+
+    INSERT INTO attendance_qr_uses (challenge_id, employee_id, branch_id)
+    VALUES (
+        v_qr_challenge_id,
+        v_first_branch_employee_id,
+        'b0000000-0000-0000-0000-000000000001'
+    );
+
+    BEGIN
+        INSERT INTO attendance_qr_uses (challenge_id, employee_id, branch_id)
+        VALUES (
+            v_qr_challenge_id,
+            v_first_branch_employee_id,
+            'b0000000-0000-0000-0000-000000000001'
+        );
+        RAISE EXCEPTION 'An employee reused the same QR challenge';
+    EXCEPTION WHEN unique_violation THEN NULL;
+    END;
+
+    BEGIN
+        INSERT INTO attendance_qr_uses (challenge_id, employee_id, branch_id)
+        VALUES (
+            v_qr_challenge_id,
+            v_other_employee_id,
+            'b0000000-0000-0000-0000-000000000001'
+        );
+        RAISE EXCEPTION 'A QR challenge was used by an employee from another branch';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
     END;
 END;$$;
