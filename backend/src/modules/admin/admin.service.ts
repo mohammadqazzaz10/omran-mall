@@ -174,8 +174,12 @@ export class AdminService {
     if (result.rows.length !== uniqueCodes.length) {
       throw new BadRequestException("تتضمن القائمة صلاحية غير موجودة");
     }
+    const scopes = new Set(result.rows.map((permission: any) => permission.scope));
+    if (scopes.size > 1) {
+      throw new BadRequestException("يجب أن تكون صلاحيات الدور المخصص ضمن نطاق واحد متجانس");
+    }
     const blocked = result.rows.filter((permission: any) =>
-      permission.scope === "company" ||
+      !["branch", "department", "own"].includes(permission.scope) ||
       ["companies", "users", "roles", "sessions"].includes(permission.code.split(".")[0]) ||
       ["branches.manage.company", "employees.transfer.company"].includes(permission.code),
     );
