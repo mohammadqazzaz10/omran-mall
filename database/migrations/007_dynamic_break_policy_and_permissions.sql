@@ -27,6 +27,9 @@ ALTER TABLE break_types
   ADD CONSTRAINT chk_break_type_notify_before_end
     CHECK (notify_before_end_minutes BETWEEN 0 AND 60);
 
+ALTER TABLE break_types
+  ADD CONSTRAINT uq_break_types_id_branch UNIQUE (id, branch_id);
+
 ALTER TABLE break_requests
   ADD COLUMN decided_at TIMESTAMPTZ,
   ADD COLUMN cancelled_at TIMESTAMPTZ;
@@ -42,8 +45,25 @@ FROM employees e
 WHERE e.id = s.employee_id
   AND s.department_id IS NULL;
 
+ALTER TABLE break_requests
+  ADD CONSTRAINT fk_break_request_employee_branch
+    FOREIGN KEY (employee_id, branch_id)
+    REFERENCES employees(id, branch_id) ON DELETE RESTRICT,
+  ADD CONSTRAINT fk_break_request_department_branch
+    FOREIGN KEY (department_id, branch_id)
+    REFERENCES departments(id, branch_id) ON DELETE RESTRICT,
+  ADD CONSTRAINT fk_break_request_type_branch
+    FOREIGN KEY (break_type_id, branch_id)
+    REFERENCES break_types(id, branch_id) ON DELETE RESTRICT;
+
 ALTER TABLE break_sessions
   ALTER COLUMN department_id SET NOT NULL,
+  ADD CONSTRAINT fk_break_session_employee_branch
+    FOREIGN KEY (employee_id, branch_id)
+    REFERENCES employees(id, branch_id) ON DELETE RESTRICT,
+  ADD CONSTRAINT fk_break_session_type_branch
+    FOREIGN KEY (break_type_id, branch_id)
+    REFERENCES break_types(id, branch_id) ON DELETE RESTRICT,
   ADD CONSTRAINT fk_break_session_department_branch
     FOREIGN KEY (department_id, branch_id)
     REFERENCES departments(id, branch_id)
