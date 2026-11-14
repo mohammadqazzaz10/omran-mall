@@ -5,11 +5,16 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "crypto";
 import { DatabaseService } from "../../database/database.service";
 import { AuthenticatedUser } from "../auth/auth.types";
-import { AttendanceService } from "./attendance.service";
 import { AttendanceQrCheckInDto } from "./attendance.dto";
+import { AttendanceService } from "./attendance.service";
 
 type QrPayload = { v: 1; b: string; n: string; e: number };
 
@@ -23,7 +28,9 @@ export class AttendanceQrService {
   private signingKey(branchSalt: string): Buffer {
     const secret = process.env.ATTENDANCE_QR_SECRET;
     if (!branchSalt) {
-      throw new ServiceUnavailableException("ملح توقيع QR غير مضبوط لهذا الفرع");
+      throw new ServiceUnavailableException(
+        "ملح توقيع QR غير مضبوط لهذا الفرع",
+      );
     }
     if (!secret || Buffer.byteLength(secret, "utf8") < 32) {
       throw new ServiceUnavailableException(
@@ -60,7 +67,8 @@ export class AttendanceQrService {
     }>(
       `SELECT latitude::text, longitude::text
        FROM branches
-       WHERE id = $1 AND company_id = $2 AND is_active = TRUE AND deleted_at IS NULL`,
+       WHERE id = $1 AND company_id = $2
+         AND is_active = TRUE AND deleted_at IS NULL`,
       [branchId, user.companyId],
     );
     if (!result.rowCount) {
@@ -89,7 +97,8 @@ export class AttendanceQrService {
       `SELECT id, qr_secret_salt,
               EXTRACT(EPOCH FROM CURRENT_TIMESTAMP + INTERVAL '45 seconds')::bigint::text AS expires_epoch
        FROM branches
-       WHERE id = $1 AND company_id = $2 AND is_active = TRUE AND deleted_at IS NULL`,
+       WHERE id = $1 AND company_id = $2
+         AND is_active = TRUE AND deleted_at IS NULL`,
       [branchId, user.companyId],
     );
     if (!branch.rowCount) {
@@ -158,7 +167,9 @@ export class AttendanceQrService {
       !Number.isInteger(payload.e) ||
       payload.e <= Math.floor(Date.now() / 1000)
     ) {
-      throw new ForbiddenException("رمز QR منتهي الصلاحية أو لا يخص هذا الفرع");
+      throw new ForbiddenException(
+        "رمز QR منتهي الصلاحية أو لا يخص هذا الفرع",
+      );
     }
 
     const branch = await this.db.query<{
@@ -171,7 +182,8 @@ export class AttendanceQrService {
       `SELECT id, qr_secret_salt, latitude::text, longitude::text,
               geofence_radius_meters
        FROM branches
-       WHERE id = $1 AND company_id = $2 AND is_active = TRUE AND deleted_at IS NULL`,
+       WHERE id = $1 AND company_id = $2
+         AND is_active = TRUE AND deleted_at IS NULL`,
       [branchId, user.companyId],
     );
     if (!branch.rowCount) {
@@ -199,11 +211,14 @@ export class AttendanceQrService {
 
     const employee = await this.db.query<{ id: string }>(
       `SELECT id FROM employees
-       WHERE user_id = $1 AND branch_id = $2 AND deleted_at IS NULL AND status = 'active'`,
+       WHERE user_id = $1 AND branch_id = $2
+         AND deleted_at IS NULL AND status = 'active'`,
       [user.id, branchId],
     );
     if (!employee.rowCount) {
-      throw new ForbiddenException("لا يوجد ملف موظف فعال مرتبط بهذا الفرع");
+      throw new ForbiddenException(
+        "لا يوجد ملف موظف فعال مرتبط بهذا الفرع",
+      );
     }
 
     const fence = branch.rows[0];
@@ -211,6 +226,7 @@ export class AttendanceQrService {
     let longitude: number | null = null;
     const geofenceConfigured =
       fence.latitude !== null || fence.longitude !== null;
+
     if (geofenceConfigured) {
       if (fence.latitude === null || fence.longitude === null) {
         throw new ServiceUnavailableException(
@@ -222,7 +238,9 @@ export class AttendanceQrService {
         dto.longitude === undefined ||
         dto.accuracyMeters === undefined
       ) {
-        throw new ForbiddenException("يلزم إرسال الموقع للتحقق من نطاق الفرع");
+        throw new ForbiddenException(
+          "يلزم إرسال الموقع للتحقق من نطاق الفرع",
+        );
       }
       if (
         dto.accuracyMeters < 0 ||
@@ -230,8 +248,11 @@ export class AttendanceQrService {
         !Number.isFinite(dto.latitude) ||
         !Number.isFinite(dto.longitude)
       ) {
-        throw new ForbiddenException("دقة الموقع غير كافية للتحقق من الحضور");
+        throw new ForbiddenException(
+          "دقة الموقع غير كافية للتحقق من الحضور",
+        );
       }
+
       const radius = fence.geofence_radius_meters ?? 150;
       if (!Number.isInteger(radius) || radius < 25 || radius > 1000) {
         throw new ServiceUnavailableException(
@@ -247,7 +268,9 @@ export class AttendanceQrService {
         longitude,
       );
       if (distance > radius) {
-        throw new ForbiddenException("أنت خارج النطاق الجغرافي المسموح للفرع");
+        throw new ForbiddenException(
+          "أنت خارج النطاق الجغرافي المسموح للفرع",
+        );
       }
     }
 
@@ -261,7 +284,9 @@ export class AttendanceQrService {
         [branchId, nonceHash],
       );
       if (!challenge.rowCount) {
-        throw new ForbiddenException("رمز QR غير موجود أو انتهت صلاحيته");
+        throw new ForbiddenException(
+          "رمز QR غير موجود أو انتهت صلاحيته",
+        );
       }
       try {
         await client.query(
@@ -271,7 +296,9 @@ export class AttendanceQrService {
         );
       } catch (error) {
         if ((error as { code?: string })?.code === "23505") {
-          throw new ConflictException("تم استخدام رمز QR هذا لتسجيل حضورك مسبقاً");
+          throw new ConflictException(
+            "تم استخدام رمز QR هذا لتسجيل حضورك مسبقاً",
+          );
         }
         throw error;
       }
@@ -295,7 +322,7 @@ export class AttendanceQrService {
           user.id,
           branchId,
           record.id,
-          JSON.stringify({ check_in_method: 'mobile_app' }),
+          JSON.stringify({ check_in_method: "mobile_app" }),
           JSON.stringify(updated.rows[0]),
         ],
       );
