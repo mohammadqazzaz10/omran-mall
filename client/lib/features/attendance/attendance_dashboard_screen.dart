@@ -163,7 +163,11 @@ class _AttendanceDashboardScreenState
                 final late = records.where((r) => r['status'] == 'late').length;
                 final review = records.where((r) => r['status'] == 'needs_review').length;
                 return RefreshIndicator(
-                  onRefresh: () async => _reload(),
+                  onRefresh: () async {
+                    final refresh = _load();
+                    setState(() => _records = refresh);
+                    await refresh;
+                  },
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
