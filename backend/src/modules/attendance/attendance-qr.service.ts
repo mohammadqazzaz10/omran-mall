@@ -260,62 +260,14 @@ export class AttendanceQrService {
     }
 
     const nonceHash = createHash("sha256").update(payload.n).digest("hex");
-    await this.db.transaction(async (client) => {
-      const challenge = await client.query<{ id: string }>(
-        `SELECT id FROM attendance_qr_challenges
-         WHERE branch_id = $1 AND nonce_hash = $2
-           AND expires_at > CURRENT_TIMESTAMP AND revoked_at IS NULL
-         FOR UPDATE`,
-        [branchId, nonceHash],
-      );
-      if (!challenge.rowCount) {
-        throw new ForbiddenException("رمز QR غير موجود أو انتهت صلاحيته");
-      }
-      try {
-        await client.query(
-          `INSERT INTO attendance_qr_uses (challenge_id, employee_id)
-           VALUES ($1, $2)`,
-          [challenge.rows[0].id, employee.rows[0].id],
-        );
-      } catch (error) {
-        if ((error as { code?: string })?.code === "23505") {
-          throw new ConflictException(
-            "تم استخدام رمز QR هذا لتسجيل حضورك مسبقاً",
-          );
-        }
-        throw error;
-      }
-    });
-
-    const record = await this.attendance.checkIn(branchId, user);
-    await this.db.transaction(async (client) => {
-      const updated = await client.query(
-        `UPDATE attendance_records
-         SET check_in_method = 'qr_code', check_in_lat = $2, check_in_lng = $3,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $1 AND branch_id = $4
-         RETURNING id, check_in_method, check_in_lat, check_in_lng`,
-        [record.id, latitude, longitude, branchId],
-      );
-      await client.query(
-        `INSERT INTO audit_logs
-         (user_id, branch_id, table_name, record_id, action, old_values, new_values)
-         VALUES ($1, $2, 'attendance_records', $3, 'UPDATE', $4::jsonb, $5::jsonb)`,
-        [
-          user.id,
-          branchId,
-          record.id,
-          JSON.stringify({ check_in_method: "mobile_app" }),
-          JSON.stringify(updated.rows[0]),
-        ],
-      );
-    });
-
-    return {
-      ...record,
-      check_in_method: "qr_code",
-      check_in_lat: latitude,
-      check_in_lng: longitude,
-    };
+    // AttendanceService owns the transaction so challenge use, attendance,
+    // location metadata, and audit history either all commit or all roll back.
+    return this.attendance.checkInWithQr(
+      branchId,
+      user,
+      nonceHash,
+      latitude,
+      longitude,
+    );
   }
 }
