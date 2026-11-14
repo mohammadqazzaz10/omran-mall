@@ -19,12 +19,12 @@ BEGIN
     RAISE EXCEPTION 'Cannot add same-branch department manager constraint: cross-branch manager exists';
   END IF;
   IF EXISTS (
-    SELECT 1 FROM positions p
-    JOIN departments d ON d.id = p.department_id
-    GROUP BY p.id, p.department_id
-    HAVING COUNT(*) <> 1
+    SELECT 1 FROM positions
+    WHERE deleted_at IS NULL
+    GROUP BY department_id, code
+    HAVING COUNT(*) > 1
   ) THEN
-    RAISE EXCEPTION 'Invalid position department relation';
+    RAISE EXCEPTION 'Cannot add active position code uniqueness: duplicate codes exist in a department';
   END IF;
   IF EXISTS (
     SELECT 1 FROM employees e
@@ -39,6 +39,12 @@ BEGIN
     WHERE e.department_id <> p.department_id
   ) THEN
     RAISE EXCEPTION 'Cannot add employee position department constraint: position belongs to another department';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM employees e
+    WHERE e.direct_manager_id = e.id
+  ) THEN
+    RAISE EXCEPTION 'Cannot add employee manager constraint: self-management reference exists';
   END IF;
   IF EXISTS (
     SELECT 1 FROM employees e
