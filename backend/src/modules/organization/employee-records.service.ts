@@ -218,6 +218,17 @@ export class EmployeeRecordsService {
         oldResult.rowCount ? safe(old) : null,
         safe(result.rows[0]),
       );
+      await client.query(
+        `INSERT INTO employee_history
+         (employee_id,event_type,old_data,new_data,effective_date,reason,action_by_user_id)
+         VALUES ($1,'profile_update',$2::jsonb,$3::jsonb,CURRENT_DATE,'تحديث البيانات الإضافية للملف الوظيفي',$4)`,
+        [
+          employeeId,
+          oldResult.rowCount ? JSON.stringify(safe(old)) : null,
+          JSON.stringify(safe(result.rows[0])),
+          user.id,
+        ],
+      );
       return result.rows[0];
     });
   }
@@ -305,6 +316,12 @@ export class EmployeeRecordsService {
         null,
         result.rows[0],
       );
+      await client.query(
+        `INSERT INTO employee_history
+         (employee_id,event_type,new_data,effective_date,reason,action_by_user_id)
+         VALUES ($1,'document_added',$2::jsonb,CURRENT_DATE,'إضافة وثيقة وظيفية',$3)`,
+        [employeeId, JSON.stringify(result.rows[0]), user.id],
+      );
       return result.rows[0];
     });
   }
@@ -341,6 +358,17 @@ export class EmployeeRecordsService {
         "UPDATE",
         oldResult.rows[0],
         result.rows[0],
+      );
+      await client.query(
+        `INSERT INTO employee_history
+         (employee_id,event_type,old_data,new_data,effective_date,reason,action_by_user_id)
+         VALUES ($1,'document_archived',$2::jsonb,$3::jsonb,CURRENT_DATE,'أرشفة وثيقة وظيفية',$4)`,
+        [
+          employeeId,
+          JSON.stringify(oldResult.rows[0]),
+          JSON.stringify(result.rows[0]),
+          user.id,
+        ],
       );
       return result.rows[0];
     });
