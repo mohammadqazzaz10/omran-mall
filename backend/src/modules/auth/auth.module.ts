@@ -1,7 +1,9 @@
-import { Module } from "@nestjs/common";\nimport { APP_GUARD } from "@nestjs/core";
+import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { JwtModule } from "@nestjs/jwt";
 import { DatabaseModule } from "../../database/database.module";
-import { AccessTokenGuard } from "./access-token.guard";\nimport { PermissionGuard } from "./permission.guard";
+import { AccessTokenGuard } from "./access-token.guard";
+import { PermissionGuard } from "./permission.guard";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 
@@ -27,7 +29,13 @@ if (!jwtSecret || jwtSecret.length < 32) {
     }),
   ],
   controllers: [AuthController],
-  providers: [\n    AuthService,\n    AccessTokenGuard,\n    PermissionGuard,\n    { provide: APP_GUARD, useExisting: AccessTokenGuard },\n    { provide: APP_GUARD, useExisting: PermissionGuard },\n  ],
+  providers: [
+    AuthService,
+    AccessTokenGuard,
+    PermissionGuard,
+    { provide: APP_GUARD, useExisting: AccessTokenGuard },
+    { provide: APP_GUARD, useExisting: PermissionGuard },
+  ],
   exports: [AuthService, AccessTokenGuard, PermissionGuard, JwtModule],
 })
 export class AuthModule {}
