@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/auth_controller.dart';
+import '../admin/admin_repository.dart';
 import '../../l10n/app_localizations.dart';
 import 'breaks_realtime_service.dart';
 import 'breaks_repository.dart';
@@ -20,6 +21,8 @@ class _BreaksManagementScreenState
     extends ConsumerState<BreaksManagementScreen> {
   late Future<_BreakManagementData> _data;
   StreamSubscription<Map<String, dynamic>>? _events;
+  List<Map<String, dynamic>> _availableBranches = [];
+  String? _selectedBranchId;
 
   @override
   void initState() {
@@ -34,7 +37,17 @@ class _BreaksManagementScreenState
     });
   }
 
+  bool _hasCompanyWideBranchAccess() {
+    final user = ref.read(authProvider).user ?? {};
+    final roles = (user['roles'] as List? ?? const []).whereType<Map>();
+    return roles.any((role) =>
+        ['SUPER_ADMIN', 'GENERAL_MANAGER'].contains(role['code']) &&
+        role['branchId'] == null &&
+        role['departmentId'] == null);
+  }
+
   String? _branchId() {
+    if (_hasCompanyWideBranchAccess()) return _selectedBranchId;
     final user = ref.read(authProvider).user ?? {};
     final primary = user['primaryBranchId']?.toString();
     if (primary != null && primary.isNotEmpty) return primary;
@@ -47,6 +60,23 @@ class _BreaksManagementScreenState
   }
 
   Future<_BreakManagementData> _load() async {
+    if (_hasCompanyWideBranchAccess()) {
+      _availableBranches =
+          await ref.read(adminRepositoryProvider).listBranches();
+      if (_selectedBranchId == null ||
+          !_availableBranches.any((branch) =>
+              branch['id'].toString() == _selectedBranchId)) {
+        final user = ref.read(authProvider).user ?? {};
+        final primary = user['primaryBranchId']?.toString();
+        _selectedBranchId = _availableBranches.any(
+          (branch) => branch['id'].toString() == primary,
+        )
+            ? primary
+            : (_availableBranches.isEmpty
+                ? null
+                : _availableBranches.first['id'].toString());
+      }
+    }
     final branchId = _branchId();
     if (branchId == null) {
       return const _BreakManagementData(
@@ -437,6 +467,7 @@ class _BreaksManagementScreenState
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
+                      _branchSelector(data.branchId!),
                       Text(
                         strings.pendingBreakRequestsTitle,
                         style: Theme.of(context).textTheme.titleMedium,
@@ -560,6 +591,32 @@ class _BreaksManagementScreenState
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _branchSelector(String branchId) {
+    if (_availableBranches.length < 2) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DropdownButtonFormField<String>(
+        value: branchId,
+        decoration: InputDecoration(
+          labelText: AppLocalizations.of(context).branchesTitle,
+          border: const OutlineInputBorder(),
+        ),
+        items: _availableBranches
+            .map((branch) => DropdownMenuItem<String>(
+                  value: branch['id'].toString(),
+                  child: Text(branch['name_ar']?.toString() ??
+                      branch['code'].toString()),
+                ))
+            .toList(),
+        onChanged: (value) {
+          if (value == null) return;
+          setState(() => _selectedBranchId = value);
+          _reload();
+        },
       ),
     );
   }
