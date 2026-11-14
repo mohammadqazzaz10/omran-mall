@@ -294,4 +294,14 @@ BEGIN
     ) THEN
       RAISE EXCEPTION 'EMPLOYEE is missing self-service employee profile permission';
     END IF;
-END;$$;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM roles r
+      JOIN role_permissions rp ON rp.role_id=r.id
+      JOIN permissions p ON p.id=rp.permission_id
+      WHERE r.company_id='a0000000-0000-0000-0000-000000000001'
+        AND r.code='HR_MANAGER' AND p.code='branches.view.company'
+    ) THEN
+      RAISE EXCEPTION 'HR_MANAGER is missing read-only branch directory access';
+    END IF;
+END;$;
