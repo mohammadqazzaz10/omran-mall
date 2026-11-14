@@ -48,5 +48,6 @@
   "sessionRevokedMessage": "تم إنهاء الجلسة",
   "homeTitle": "الرئيسية",
   "welcomeTitle": "مرحباً بك في عمران مول",
-  "networkError": "تعذر الاتصال بالخادم. تحقق من الاتصال وإعداد عنوان API."
+  "networkError": "تعذر الاتصال بالخادم. تحقق من الاتصال وإعداد عنوان API.",
+  "mobilePhoneLabel": "رقم الهاتف"
 }
