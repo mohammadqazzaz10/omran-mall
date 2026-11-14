@@ -40,6 +40,18 @@ class AdminRepository {
     return Map<String, dynamic>.from(response.data as Map);
   }
 
+  Future<List<Map<String, dynamic>>> listEmployees(String branchId) async {
+    final response = await client.dio.get<dynamic>(
+      'branches/' + branchId + '/employees',
+      queryParameters: {'page': 1, 'limit': 100, 'status': 'active'},
+    );
+    final data = response.data;
+    if (data is! Map || data['items'] is! List) return const [];
+    return (data['items'] as List)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
   Future<Map<String, dynamic>> listUsers({
     String? search,
     String? active,
