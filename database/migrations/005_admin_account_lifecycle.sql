@@ -14,3 +14,12 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p ON p.code='users.assign_roles.company'
 WHERE r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER', 'HR_MANAGER')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Self-service permissions are safe only through endpoints that bind records to
+-- the authenticated user ID. Cashier and employee roles receive no branch-wide access.
+INSERT INTO role_permissions(role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.code IN ('employees.view.own', 'employees.edit.own')
+WHERE r.code IN ('CASHIER', 'EMPLOYEE')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
