@@ -108,7 +108,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                           value: profile['position_title_ar']?.toString() ?? '—',
                         ),
                         _InfoRow(
-                          label: strings.passwordLabel,
+                          label: strings.mobilePhoneLabel,
                           value: profile['mobile_phone']?.toString() ?? '—',
                         ),
                       ],
