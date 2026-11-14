@@ -2,7 +2,7 @@ import {
   ForbiddenException,
   ServiceUnavailableException,
 } from "@nestjs/common";
-import { createHmac } from "crypto";
+import { createHash, createHmac } from "crypto";
 import { AttendanceQrService } from "./attendance-qr.service";
 
 describe("AttendanceQrService", () => {
@@ -164,13 +164,15 @@ describe("AttendanceQrService", () => {
       query: jest
         .fn()
         .mockResolvedValueOnce({
-          rows: [{
-            id: branchId,
-            qr_secret_salt: "branch-salt",
-            latitude: null,
-            longitude: null,
-            geofence_radius_meters: null,
-          }],
+          rows: [
+            {
+              id: branchId,
+              qr_secret_salt: "branch-salt",
+              latitude: null,
+              longitude: null,
+              geofence_radius_meters: null,
+            },
+          ],
           rowCount: 1,
         })
         .mockResolvedValueOnce({
@@ -179,7 +181,9 @@ describe("AttendanceQrService", () => {
         }),
       transaction: jest.fn(),
     };
-    const attendance = { checkInWithQr: jest.fn().mockResolvedValue({ id: "record-id" }) };
+    const attendance = {
+      checkInWithQr: jest.fn().mockResolvedValue({ id: "record-id" }),
+    };
     const service = new AttendanceQrService(db as any, attendance as any);
 
     await expect(
