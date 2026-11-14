@@ -80,11 +80,18 @@ export class CreateRoleDto {
 }
 
 export class UpdateRoleDto {
-  @IsOptional() @IsString() @MinLength(2) @MaxLength(100)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
   nameAr?: string;
-  @IsOptional() @IsString() @MaxLength(100)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
   nameEn?: string | null;
-  @IsOptional() @IsString() @MaxLength(500)
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   description?: string | null;
   @IsOptional()
   @IsArray()
