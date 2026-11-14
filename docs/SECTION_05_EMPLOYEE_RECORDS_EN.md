@@ -10,7 +10,8 @@ Extend the employee record beyond core identity and hiring data into a structure
 - Added APIs to list document metadata, register document metadata, and soft-archive documents. The document list does not return a file URL or storage key.
 - Validated that a storage key belongs to the exact company/branch/employee namespace and rejected traversal paths. Allowed MIME types are PDF, JPEG, PNG, and WebP; recorded file size is capped at 25 MiB.
 - Added contract listing and creation APIs. Only one current contract is allowed; creating another current contract is rejected while one exists.
-- Added paginated employee history and records contract creation as a history event.
+- Added paginated employee history and records profile-extension changes, document add/archive actions, and contract creation as history events, with sensitive identifiers masked.
+- Enforced one current contract per employee across the whole company, not one per branch; a new current contract cannot be opened after transfer until the previous contract is explicitly closed.
 - Verified employee company and branch ownership in the service before reads and writes.
 - Added migration 012 and indexes for document, contract, and history access.
 
@@ -35,7 +36,7 @@ All routes are under:
 - Public URLs and direct provider URLs must not be supplied as `storageKey`.
 - Contract permissions are limited to HR_MANAGER and SUPER_ADMIN because contract records expose salary.
 - History access is limited to HR_MANAGER and SUPER_ADMIN because historical snapshots may contain personal or financial data.
-- A second current contract is rejected until an explicit contract close/termination workflow exists. Existing contracts are never silently closed or rewritten.
+- A second current contract for the employee is rejected until an explicit close/termination workflow exists, including after a branch transfer. Existing contracts are never silently closed or rewritten.
 - Documents and contracts retain their original branch attribution, while HR authorized for the employee's current branch can still retrieve the employee's historical records after a transfer.
 - A bilingual Flutter HR screen is now available for profile extensions, document metadata, contracts, and employment history; HR can edit profile extensions and create a contract.
 - An employee-submitted change request/approval workflow, binary document upload/download, and photo management are still missing.
