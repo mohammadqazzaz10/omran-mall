@@ -1,6 +1,11 @@
-import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
-import { AttendanceService } from "./attendance.service";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 import { AuthenticatedUser } from "../auth/auth.types";
+import { AttendanceService } from "./attendance.service";
 
 describe("AttendanceService", () => {
   const user: AuthenticatedUser = {
@@ -16,20 +21,27 @@ describe("AttendanceService", () => {
 
   const serviceWithClient = (client: any) => {
     const db = {
-      transaction: jest.fn(async (work: (client: any) => Promise<any>) => work(client)),
+      transaction: jest.fn(
+        async (work: (client: any) => Promise<any>) => work(client),
+      ),
       query: jest.fn(),
     };
     return { service: new AttendanceService(db as any), db };
   };
 
   it("rejects a branch outside the authenticated company", async () => {
-    const client = { query: jest.fn().mockResolvedValueOnce({ rows: [], rowCount: 0 }) };
+    const client = {
+      query: jest.fn().mockResolvedValueOnce({ rows: [], rowCount: 0 }),
+    };
     const { service } = serviceWithClient(client);
-    await expect(service.checkIn(branchId, user)).rejects.toBeInstanceOf(NotFoundException);
+
+    await expect(service.checkIn(branchId, user)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
     expect(client.query).toHaveBeenCalledTimes(1);
   });
 
-  it("uses PostgreSQL server time and the employee's own branch record for check-in", async () => {
+  it("uses PostgreSQL server time and the employee's own branch record", async () => {
     const employeeId = "66666666-6666-4666-8666-666666666666";
     const record = {
       id: "77777777-7777-4777-8777-777777777777",
@@ -41,50 +53,80 @@ describe("AttendanceService", () => {
       status: "present",
     };
     const client = {
-      query: jest.fn()
+      query: jest
+        .fn()
         .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [{ id: employeeId, status: "active" }], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [{ work_date: "2026-11-14", local_time: "08:00" }] })
+        .mockResolvedValueOnce({
+          rows: [{ id: employeeId, status: "active" }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          rows: [{ work_date: "2026-11-14", local_time: "08:00" }],
+        })
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
     };
     const { service } = serviceWithClient(client);
+
     await expect(service.checkIn(branchId, user)).resolves.toEqual(record);
     const insert = client.query.mock.calls[4];
     expect(insert[0]).toContain("CURRENT_TIMESTAMP");
-    expect(insert[1]).toEqual([employeeId, branchId, null, "2026-11-14", 0, "present"]);
+    expect(insert[1]).toEqual([
+      employeeId,
+      branchId,
+      null,
+      "2026-11-14",
+      0,
+      "present",
+    ]);
   });
 
-  it("does not expose another employee's records through the self-service endpoint", async () => {
+  it("does not expose another employee's records through self-service", async () => {
     const client = {
-      query: jest.fn()
+      query: jest
+        .fn()
         .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }),
     };
     const { service, db } = serviceWithClient(client);
-    await expect(service.myRecords(branchId, user)).rejects.toBeInstanceOf(ForbiddenException);
+
+    await expect(service.myRecords(branchId, user)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
     expect(db.query).not.toHaveBeenCalled();
   });
 
-  it("rejects malformed branch report dates before querying attendance", async () => {
+  it("rejects malformed report dates before querying attendance", async () => {
     const db = { query: jest.fn() };
     const service = new AttendanceService(db as any);
-    await expect(service.branchRecords(branchId, "14-11-2026", user)).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      service.branchRecords(branchId, "14-11-2026", user),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(db.query).not.toHaveBeenCalled();
   });
 
   it("maps duplicate daily check-ins to a safe conflict response", async () => {
     const employeeId = "66666666-6666-4666-8666-666666666666";
     const client = {
-      query: jest.fn()
+      query: jest
+        .fn()
         .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [{ id: employeeId, status: "active" }], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [{ work_date: "2026-11-14", local_time: "08:00" }] })
+        .mockResolvedValueOnce({
+          rows: [{ id: employeeId, status: "active" }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          rows: [{ work_date: "2026-11-14", local_time: "08:00" }],
+        })
         .mockResolvedValueOnce({ rows: [] })
         .mockRejectedValueOnce({ code: "23505" }),
     };
     const { service } = serviceWithClient(client);
-    await expect(service.checkIn(branchId, user)).rejects.toBeInstanceOf(ConflictException);
+
+    await expect(service.checkIn(branchId, user)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 });
