@@ -222,4 +222,48 @@ describe("AttendanceService", () => {
       ),
     ).toBe(false);
   });
+
+  it("rejects a pending correction with reviewer notes and an audit record", async () => {
+    const correctionId = "99999999-9999-4999-8999-999999999999";
+    const correction = {
+      id: correctionId,
+      attendance_record_id: "77777777-7777-4777-8777-777777777777",
+      branch_id: branchId,
+      status: "pending",
+      reason: "Forgot to check out",
+    };
+    const rejected = {
+      ...correction,
+      status: "rejected",
+      review_notes: "Insufficient evidence",
+    };
+    const client = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [correction], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [rejected], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+    };
+    const { service, db } = serviceWithClient(client);
+
+    await expect(
+      service.rejectCorrection(
+        branchId,
+        correctionId,
+        "  Insufficient evidence  ",
+        user,
+      ),
+    ).resolves.toMatchObject({ correctionId, status: "rejected" });
+
+    expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(client.query.mock.calls[2][0]).toContain("status = 'rejected'");
+    expect(client.query.mock.calls[2][1]).toEqual([
+      correctionId,
+      "Insufficient evidence",
+      user.id,
+      branchId,
+    ]);
+    expect(client.query.mock.calls[3][0]).toContain("audit_logs");
+  });
 });
