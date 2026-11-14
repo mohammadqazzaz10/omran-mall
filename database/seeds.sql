@@ -160,6 +160,33 @@ WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
   AND r.code IN ('CASHIER', 'EMPLOYEE')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
+-- Operational break permissions are granted after seed roles are created.
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON
+  (r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER', 'BRANCH_MANAGER')
+    AND p.code IN (
+      'breaks.view.branch',
+      'breaks.types.view.branch',
+      'breaks.manage.branch',
+      'breaks.approve.branch'
+    ))
+  OR
+  (r.code = 'SUPERVISOR' AND p.code IN (
+    'breaks.view.branch',
+    'breaks.types.view.branch',
+    'breaks.approve.branch'
+  ))
+  OR
+  (r.code IN ('EMPLOYEE', 'CASHIER') AND p.code IN (
+    'breaks.types.view.branch',
+    'breaks.request.own',
+    'breaks.end.own'
+  ))
+WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
 -- 7. Insert Default Standard Shifts for Retail Operation
 INSERT INTO shifts (
     id, branch_id, code, name_ar, name_en, start_time, end_time, grace_period_late_minutes, grace_period_early_leave_minutes, color_hex
