@@ -55,10 +55,12 @@ BEGIN
         SELECT 1
         FROM roles r
         JOIN role_permissions rp ON rp.role_id = r.id
+        JOIN permissions p ON p.id = rp.permission_id
         WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
           AND r.code IN ('CASHIER', 'EMPLOYEE')
+          AND p.code NOT IN ('employees.view.own', 'employees.edit.own')
     ) THEN
-        RAISE EXCEPTION 'Self-service roles must not receive unimplemented grants';
+        RAISE EXCEPTION 'Self-service roles received permissions outside their owner-bound profile endpoints';
     END IF;
     INSERT INTO positions (department_id, code, title_ar)
     VALUES (
