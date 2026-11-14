@@ -207,5 +207,4 @@ describe("PermissionGuard", () => {
     expect(request.branchId).toBe(inactiveBranchId);
     expect(db.query).toHaveBeenCalledTimes(2);
   });
-
 });
