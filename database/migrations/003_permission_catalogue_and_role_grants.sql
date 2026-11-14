@@ -68,3 +68,31 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- No permissions are assigned to cashier/employee roles here until own-record
 -- enforcement is implemented in the corresponding service layer.
+
+-- Explicitly materialize company-wide administrator access as branch grants
+-- for each currently active branch. This is limited to named global admin roles.
+INSERT INTO user_branch_memberships (user_id, branch_id, company_id)
+SELECT DISTINCT ur.user_id, b.id, r.company_id
+FROM user_roles ur
+JOIN roles r ON r.id = ur.role_id
+JOIN branches b ON b.company_id = r.company_id
+WHERE ur.branch_id IS NULL
+  AND ur.department_id IS NULL
+  AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER')
+  AND r.is_active = TRUE
+  AND b.is_active = TRUE
+  AND b.deleted_at IS NULL
+ON CONFLICT (user_id, branch_id) WHERE revoked_at IS NULL DO NOTHING;
+
+INSERT INTO user_roles (user_id, role_id, branch_id)
+SELECT DISTINCT ur.user_id, ur.role_id, b.id
+FROM user_roles ur
+JOIN roles r ON r.id = ur.role_id
+JOIN branches b ON b.company_id = r.company_id
+WHERE ur.branch_id IS NULL
+  AND ur.department_id IS NULL
+  AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER')
+  AND r.is_active = TRUE
+  AND b.is_active = TRUE
+  AND b.deleted_at IS NULL
+ON CONFLICT DO NOTHING;
