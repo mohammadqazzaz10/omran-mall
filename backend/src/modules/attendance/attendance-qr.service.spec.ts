@@ -144,4 +144,59 @@ describe("AttendanceQrService", () => {
       service.createChallenge(branchId, user),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
+
+  it("delegates a verified QR token to the atomic attendance transaction", async () => {
+    const nonce = "c".repeat(64);
+    const payload = {
+      v: 1 as const,
+      b: branchId,
+      n: nonce,
+      e: Math.floor(Date.now() / 1000) + 45,
+    };
+    const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+    const key = createHmac("sha256", process.env.ATTENDANCE_QR_SECRET!)
+      .update("branch-salt")
+      .digest();
+    const signature = createHmac("sha256", key)
+      .update(encoded)
+      .digest("base64url");
+    const db = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          rows: [{
+            id: branchId,
+            qr_secret_salt: "branch-salt",
+            latitude: null,
+            longitude: null,
+            geofence_radius_meters: null,
+          }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          rows: [{ id: "66666666-6666-4666-8666-666666666666" }],
+          rowCount: 1,
+        }),
+      transaction: jest.fn(),
+    };
+    const attendance = { checkInWithQr: jest.fn().mockResolvedValue({ id: "record-id" }) };
+    const service = new AttendanceQrService(db as any, attendance as any);
+
+    await expect(
+      service.checkInWithQr(
+        branchId,
+        { qrToken: encoded + "." + signature },
+        user,
+      ),
+    ).resolves.toEqual({ id: "record-id" });
+
+    expect(attendance.checkInWithQr).toHaveBeenCalledWith(
+      branchId,
+      user,
+      createHash("sha256").update(nonce).digest("hex"),
+      null,
+      null,
+    );
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
 });
