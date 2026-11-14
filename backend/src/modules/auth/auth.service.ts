@@ -33,7 +33,10 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  private async hasCompanyRole(userId: string, companyId: string): Promise<boolean> {
+  private async hasCompanyRole(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
     const result = await this.db.query(
       `SELECT 1
        FROM user_roles ur

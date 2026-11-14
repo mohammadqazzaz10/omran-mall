@@ -83,7 +83,9 @@ describe("PermissionGuard", () => {
     ]);
   });
 
-  it("allows a company-scoped grant to operate on another active branch in the same company", async () => {
+  it(
+    "allows a company-scoped grant to operate on another active branch in the same company",
+    async () => {
     const companyUser = {
       ...user,
       primaryBranchId: null,
@@ -108,14 +110,15 @@ describe("PermissionGuard", () => {
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
     expect(request.branchId).toBe(branchId);
     expect(db.query).toHaveBeenCalledTimes(2);
-    expect(db.query.mock.calls[1][1]).toEqual([
-      companyUser.id,
-      companyUser.companyId,
-      branchId,
-      "attendance.view.company",
-      false,
-    ]);
-  });
+      expect(db.query.mock.calls[1][1]).toEqual([
+        companyUser.id,
+        companyUser.companyId,
+        branchId,
+        "attendance.view.company",
+        false,
+      ]);
+    },
+  );
 
   it("does not grant branch permissions when no branch is selected", async () => {
     const companyUser = {
