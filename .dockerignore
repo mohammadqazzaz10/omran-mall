@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/build
+**/.dart_tool
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+.git
+**/*.log
+client/
+docs/
+.github/
+README.md
+CONTRIBUTING.md

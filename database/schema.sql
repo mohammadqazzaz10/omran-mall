@@ -155,13 +155,27 @@ CREATE TABLE users (
 );
 
 CREATE TABLE user_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    branch_id UUID REFERENCES branches(id) ON DELETE CASCADE, -- specific branch scope if compound
+    branch_id UUID REFERENCES branches(id) ON DELETE CASCADE,
     department_id UUID REFERENCES departments(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, role_id, branch_id)
+    CONSTRAINT chk_user_role_department_requires_branch
+        CHECK (department_id IS NULL OR branch_id IS NOT NULL)
 );
+
+-- NULL branch_id represents a company-wide assignment. Partial unique indexes
+-- avoid PostgreSQL's default NULL-distinct behavior allowing duplicate grants.
+CREATE UNIQUE INDEX uq_user_roles_company_scope
+    ON user_roles(user_id, role_id)
+    WHERE branch_id IS NULL AND department_id IS NULL;
+CREATE UNIQUE INDEX uq_user_roles_branch_scope
+    ON user_roles(user_id, role_id, branch_id)
+    WHERE branch_id IS NOT NULL AND department_id IS NULL;
+CREATE UNIQUE INDEX uq_user_roles_department_scope
+    ON user_roles(user_id, role_id, branch_id, department_id)
+    WHERE department_id IS NOT NULL;
 
 -- ============================================================================
 -- 4. EMPLOYEES & PROFILES (الموظفون والملفات الوظيفية)
@@ -789,9 +803,58 @@ CREATE TABLE system_settings (
     setting_key VARCHAR(100) NOT NULL,
     setting_value JSONB NOT NULL,
     description TEXT,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_setting_key UNIQUE (company_id, branch_id, setting_key)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX uq_system_settings_company_scope
+    ON system_settings(company_id, setting_key)
+    WHERE branch_id IS NULL;
+CREATE UNIQUE INDEX uq_system_settings_branch_scope
+    ON system_settings(company_id, branch_id, setting_key)
+    WHERE branch_id IS NOT NULL;
+
+-- Generate employee numbers inside PostgreSQL so concurrent requests cannot
+-- allocate the same number. Sequence gaps after transaction rollback are normal.
+CREATE OR REPLACE FUNCTION assign_employee_code()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $employee_code$
+DECLARE
+    v_company_id UUID;
+    v_setting JSONB;
+    v_prefix TEXT := 'OM-';
+    v_padding INT := 4;
+    v_padding_text TEXT;
+BEGIN
+    SELECT company_id INTO v_company_id
+    FROM branches
+    WHERE id = NEW.branch_id;
+
+    SELECT setting_value INTO v_setting
+    FROM system_settings
+    WHERE company_id = v_company_id
+      AND setting_key = 'employee_id_format'
+      AND (branch_id = NEW.branch_id OR branch_id IS NULL)
+    ORDER BY (branch_id IS NOT NULL) DESC
+    LIMIT 1;
+
+    IF v_setting IS NOT NULL THEN
+        v_prefix := COALESCE(NULLIF(v_setting->>'prefix', ''), v_prefix);
+        v_padding_text := v_setting->>'padding_digits';
+        IF v_padding_text ~ '^[1-9][0-9]?$' THEN
+            v_padding := LEAST(v_padding_text::INT, 12);
+        END IF;
+    END IF;
+
+    NEW.employee_code := v_prefix || LPAD(nextval('employee_seq')::TEXT, v_padding, '0');
+    RETURN NEW;
+END;
+$employee_code$;
+
+CREATE TRIGGER trg_assign_employee_code
+BEFORE INSERT ON employees
+FOR EACH ROW
+EXECUTE FUNCTION assign_employee_code();
 
 -- ============================================================================
 -- 15. PERFORMANCE INDEXES (فهارس الأداء وتعدد الفروع)

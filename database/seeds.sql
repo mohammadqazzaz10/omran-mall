@@ -1,5 +1,8 @@
 -- ============================================================================
 -- OMRAN MALL MANAGEMENT SYSTEM (مشروع عمران مول)
+-- DEVELOPMENT ONLY: synthetic bootstrap data for a disposable local database.
+-- NEVER run this file in staging or production. It contains illustrative policy values.
+-- Do not add real employee, personal, financial, contact, or location data here.
 -- Initial Database Seeds & Default Enterprise Configurations
 -- Currency: JOD | Timezone: Asia/Amman
 -- ============================================================================
@@ -12,10 +15,10 @@ INSERT INTO companies (
     'OMRAN-CORP',
     'شركة عمران مول للمجمعات التجارية ذ.م.م',
     'Omran Mall Commercial Complexes LLC',
-    '100234567',
-    'عمان - شارع وصفي التل (الجاردنز)',
-    '+96265000000',
-    'management@omranmall.com',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
     'JOD',
     'Asia/Amman'
 ) ON CONFLICT (code) DO NOTHING;
@@ -30,25 +33,12 @@ INSERT INTO branches (
     'BR-MAIN',
     'عمران مول - فرع عمان الرئيسي',
     'Omran Mall - Main Amman Branch',
-    'عمان - شارع المدينة المنورة',
-    '+96265000001',
-    'amman-main@omranmall.com',
-    31.985600,
-    35.859200,
+    'DEVELOPMENT SAMPLE ONLY - replace with approved branch data',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
     150
-),
-(
-    'b0000000-0000-0000-0000-000000000002',
-    'a0000000-0000-0000-0000-000000000001',
-    'BR-WEST',
-    'عمران مول - فرع غرب عمان',
-    'Omran Mall - West Amman Branch',
-    'عمان - دابوق',
-    '+96265000002',
-    'west-amman@omranmall.com',
-    31.998000,
-    35.820000,
-    200
 ) ON CONFLICT (company_id, code) DO NOTHING;
 
 -- 3. Insert Core Departments for Main Branch
@@ -87,22 +77,22 @@ ON CONFLICT (company_id, code) DO NOTHING;
 INSERT INTO roles (
     id, company_id, code, name_ar, name_en, description, is_system_role
 ) VALUES
-('r0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'SUPER_ADMIN', 'مدير النظام الأعلى', 'Super Administrator', TRUE),
-('r0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'GENERAL_MANAGER', 'المدير العام / الإدارة العليا', 'General Manager', TRUE),
-('r0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001', 'BRANCH_MANAGER', 'مدير فرع', 'Branch Manager', TRUE),
-('r0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001', 'HR_MANAGER', 'مسؤول الموارد البشرية وشؤون الموظفين', 'HR Manager', TRUE),
-('r0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001', 'SUPERVISOR', 'مشرف قسم / مشرف وردية', 'Department / Shift Supervisor', TRUE),
-('r0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000001', 'CASHIER', 'أمين صندوق / كاشير', 'Cashier', TRUE),
-('r0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000001', 'EMPLOYEE', 'موظف تشغيلي', 'Employee', TRUE)
+('f0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'SUPER_ADMIN', 'مدير النظام الأعلى', 'Super Administrator', NULL, TRUE),
+('f0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'GENERAL_MANAGER', 'المدير العام / الإدارة العليا', 'General Manager', NULL, TRUE),
+('f0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001', 'BRANCH_MANAGER', 'مدير فرع', 'Branch Manager', NULL, TRUE),
+('f0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001', 'HR_MANAGER', 'مسؤول الموارد البشرية وشؤون الموظفين', 'HR Manager', NULL, TRUE),
+('f0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001', 'SUPERVISOR', 'مشرف قسم / مشرف وردية', 'Department / Shift Supervisor', NULL, TRUE),
+('f0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000001', 'CASHIER', 'أمين صندوق / كاشير', 'Cashier', NULL, TRUE),
+('f0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000001', 'EMPLOYEE', 'موظف تشغيلي', 'Employee', NULL, TRUE)
 ON CONFLICT (company_id, code) DO NOTHING;
 
 -- 7. Insert Default Standard Shifts for Retail Operation
 INSERT INTO shifts (
     id, branch_id, code, name_ar, name_en, start_time, end_time, grace_period_late_minutes, grace_period_early_leave_minutes, color_hex
 ) VALUES
-('s0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'MORNING', 'الوردية الصباحية', 'Morning Shift', '08:00:00', '16:00:00', 15, 10, '#2E7D32'),
-('s0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001', 'EVENING', 'الوردية المسائية', 'Evening Shift', '16:00:00', '00:00:00', 15, 10, '#E65100'),
-('s0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001', 'NIGHT', 'وردية الجرد الليلي', 'Inventory Night Shift', '00:00:00', '08:00:00', 15, 10, '#4A148C')
+('80000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'MORNING', 'الوردية الصباحية', 'Morning Shift', '08:00:00', '16:00:00', 15, 10, '#2E7D32'),
+('80000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001', 'EVENING', 'الوردية المسائية', 'Evening Shift', '16:00:00', '00:00:00', 15, 10, '#E65100'),
+('80000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001', 'NIGHT', 'وردية الجرد الليلي', 'Inventory Night Shift', '00:00:00', '08:00:00', 15, 10, '#4A148C')
 ON CONFLICT (branch_id, code) DO NOTHING;
 
 -- 8. Default System Settings
@@ -126,4 +116,4 @@ VALUES
     '{"enforce_max_simultaneous": true, "default_max_absent_percentage": 20}'::jsonb,
     'سياسة منع تعارض خروج الموظفين في الاستراحات في الوقت نفسه'
 )
-ON CONFLICT (company_id, branch_id, setting_key) DO NOTHING;
+ON CONFLICT DO NOTHING;

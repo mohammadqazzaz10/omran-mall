@@ -316,12 +316,15 @@ gantt
 
 ## تشغيل بيئة التطوير المحلية
 
-1. انسخ `backend/.env.example` إلى `backend/.env`، وغيّر كل قيمة placeholder إلى قيمة محلية قوية وفريدة.
-2. من مجلد `backend` شغّل `docker compose up -d omran-postgres omran-redis`.
-3. شغّل Backend بعد تثبيت الاعتماديات: `npm install` ثم `npm run start:dev`.
-4. من مجلد `client` شغّل `flutter pub get` ثم `flutter run` على المنصة المطلوبة.
+1. انسخ `backend/.env.example` إلى `backend/.env`. غيّر `DB_PASSWORD` واجعل كلمة المرور نفسها داخل `DATABASE_URL` و`DATABASE_URL_DOCKER`. أنشئ قيماً عشوائية مستقلة لأسرار JWT قبل استخدامها.
+2. من مجلد `backend` شغّل `docker compose up -d --build`. سيبدأ PostgreSQL وRedis ثم يشغّل Backend بعد جاهزية الخدمات، ويطبق ترحيلات قاعدة البيانات ذات البصمة المسجلة قبل تشغيل API.
+3. افحص `http://localhost:4000/api/v1/health/live` و`http://localhost:4000/api/v1/health/ready`. الثاني لا ينجح إلا عند اتصال قاعدة البيانات.
+4. بيانات التهيئة التجريبية لا تعمل تلقائياً. إذا احتجتها في قاعدة تطوير فارغة، شغّل يدوياً `docker compose exec omran-backend npm run db:seed`. يتطلب ذلك `ALLOW_DEVELOPMENT_SEEDS=true`، وهو ممنوع في الإنتاج.
+5. لتشغيل Flutter من مجلد `client` شغّل `flutter pub get` ثم `flutter run` على جهاز/محاكي متاح.
 
-هذه خطوات تهيئة أولية وليست دليلاً على نجاح التشغيل؛ يجب أولاً إكمال مراجعة قاعدة البيانات وإضافة الاختبارات والـ migrations. لا تستخدم هذه البيئة أو بيانات seed كنظام إنتاج.
+للتشغيل دون Docker: شغّل PostgreSQL وRedis محلياً، اضبط `DATABASE_URL` على `localhost`، ثم من مجلد `backend` نفّذ `npm install` و`npm run db:migrate:dev` و`npm run start:dev`.
+
+هذه بيئة تطوير وليست إصدار إنتاج. اجتياز CI أو إنشاء ملفات المنصات لا يعني اكتمال المصادقة أو عزل الفروع على مستوى قاعدة البيانات أو جاهزية النشر. لا تستخدم بيانات seed مع بيانات موظفين حقيقية.
 
 ## تنبيه
 لا ترفع `.env` أو مفاتيح Firebase/APNs أو S3 أو أي بيانات موظفين إلى Git. لا تنشر النظام قبل إغلاق الفجوات المسجلة في [حالة المستودع](docs/CURRENT_STATE_AND_BLOCKERS.md).

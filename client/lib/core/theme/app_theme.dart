@@ -18,7 +18,6 @@ class AppTheme {
         secondary: primaryBlue,
         tertiary: accentGreen,
         error: alertRed,
-        background: const Color(0xFFF8F9FA),
         surface: Colors.white,
       ),
       scaffoldBackgroundColor: const Color(0xFFF4F6F9),
@@ -32,7 +31,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
@@ -65,7 +64,6 @@ class AppTheme {
         brightness: Brightness.dark,
         primary: primaryBlue,
         secondary: accentGreen,
-        background: const Color(0xFF111827),
         surface: const Color(0xFF1F2937),
       ),
       scaffoldBackgroundColor: const Color(0xFF0F172A),
