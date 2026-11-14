@@ -29,33 +29,35 @@ describe("AttendanceQrService", () => {
   it(
     "issues a signed 45-second QR token and stores only the nonce digest",
     async () => {
-    const db = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: branchId,
-              qr_secret_salt: "branch-salt",
-              expires_epoch: String(Math.floor(Date.now() / 1000) + 45),
-            },
-          ],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
-      transaction: jest.fn(),
-    };
-    const attendance = { checkIn: jest.fn() };
-    const service = new AttendanceQrService(db as any, attendance as any);
+      const db = {
+        query: jest
+          .fn()
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                id: branchId,
+                qr_secret_salt: "branch-salt",
+                expires_epoch: String(Math.floor(Date.now() / 1000) + 45),
+              },
+            ],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+        transaction: jest.fn(),
+      };
+      const attendance = { checkIn: jest.fn() };
+      const service = new AttendanceQrService(db as any, attendance as any);
 
-    const result = await service.createChallenge(branchId, user);
+      const result = await service.createChallenge(branchId, user);
 
-    expect(result.expiresInSeconds).toBe(45);
-    expect(result.branchId).toBe(branchId);
-    expect(result.token.split(".")).toHaveLength(2);
-    expect(db.query.mock.calls[1][0]).toContain("attendance_qr_challenges");
-    expect(db.query.mock.calls[1][0]).toContain("nonce_hash");
-    expect(db.query.mock.calls[1][1][1]).toMatch(/^[a-f0-9]{64}$/);
+      expect(result.expiresInSeconds).toBe(45);
+      expect(result.branchId).toBe(branchId);
+      expect(result.token.split(".")).toHaveLength(2);
+      expect(db.query.mock.calls[1][0]).toContain(
+        "attendance_qr_challenges",
+      );
+      expect(db.query.mock.calls[1][0]).toContain("nonce_hash");
+      expect(db.query.mock.calls[1][1][1]).toMatch(/^[a-f0-9]{64}$/);
     },
   );
 
@@ -87,53 +89,55 @@ describe("AttendanceQrService", () => {
   it(
     "requires accurate location when branch geofence is configured",
     async () => {
-    const nonce = "b".repeat(64);
-    const payload = {
-      v: 1 as const,
-      b: branchId,
-      n: nonce,
-      e: Math.floor(Date.now() / 1000) + 45,
-    };
-    const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
-    const key = createHmac("sha256", process.env.ATTENDANCE_QR_SECRET!)
-      .update("branch-salt")
-      .digest();
-    const signature = createHmac("sha256", key)
-      .update(encoded)
-      .digest("base64url");
-    const db = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: branchId,
-              qr_secret_salt: "branch-salt",
-              latitude: "31.95",
-              longitude: "35.91",
-              geofence_radius_meters: 150,
-            },
-          ],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({
-          rows: [{ id: "66666666-6666-4666-8666-666666666666" }],
-          rowCount: 1,
-        }),
-      transaction: jest.fn(),
-    };
-    const attendance = { checkIn: jest.fn() };
-    const service = new AttendanceQrService(db as any, attendance as any);
+      const nonce = "b".repeat(64);
+      const payload = {
+        v: 1 as const,
+        b: branchId,
+        n: nonce,
+        e: Math.floor(Date.now() / 1000) + 45,
+      };
+      const encoded = Buffer.from(JSON.stringify(payload)).toString(
+        "base64url",
+      );
+      const key = createHmac("sha256", process.env.ATTENDANCE_QR_SECRET!)
+        .update("branch-salt")
+        .digest();
+      const signature = createHmac("sha256", key)
+        .update(encoded)
+        .digest("base64url");
+      const db = {
+        query: jest
+          .fn()
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                id: branchId,
+                qr_secret_salt: "branch-salt",
+                latitude: "31.95",
+                longitude: "35.91",
+                geofence_radius_meters: 150,
+              },
+            ],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({
+            rows: [{ id: "66666666-6666-4666-8666-666666666666" }],
+            rowCount: 1,
+          }),
+        transaction: jest.fn(),
+      };
+      const attendance = { checkIn: jest.fn() };
+      const service = new AttendanceQrService(db as any, attendance as any);
 
-    await expect(
-      service.checkInWithQr(
-        branchId,
-        { qrToken: encoded + "." + signature },
-        user,
-      ),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(db.transaction).not.toHaveBeenCalled();
-    expect(attendance.checkIn).not.toHaveBeenCalled();
+      await expect(
+        service.checkInWithQr(
+          branchId,
+          { qrToken: encoded + "." + signature },
+          user,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(db.transaction).not.toHaveBeenCalled();
+      expect(attendance.checkIn).not.toHaveBeenCalled();
     },
   );
 
