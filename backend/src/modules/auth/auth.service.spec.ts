@@ -88,14 +88,23 @@ describe("AuthService refresh rotation", () => {
       query: jest
         .fn()
         .mockResolvedValueOnce({
-          rows: [{
-            id: user.id,
-            username: user.username,
-            email: null,
-            company_id: user.company_id,
-            primary_branch_id: user.primary_branch_id,
-            roles: [{ code: "EMPLOYEE", nameAr: "موظف", branchId: user.primary_branch_id, departmentId: null }],
-          }],
+          rows: [
+            {
+              id: user.id,
+              username: user.username,
+              email: null,
+              company_id: user.company_id,
+              primary_branch_id: user.primary_branch_id,
+              roles: [
+                {
+                  code: "EMPLOYEE",
+                  nameAr: "موظف",
+                  branchId: user.primary_branch_id,
+                  departmentId: null,
+                },
+              ],
+            },
+          ],
         })
         .mockResolvedValueOnce({
           rows: [{ branch_id: user.primary_branch_id }],
@@ -117,5 +126,4 @@ describe("AuthService refresh rotation", () => {
     expect(db.query.mock.calls[0][0]).toContain("jsonb_agg");
     expect(db.query.mock.calls[1][1]).toEqual([user.id]);
   });
-
 });
