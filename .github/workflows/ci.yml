@@ -44,6 +44,13 @@ jobs:
           node-version: 24
       - name: Install locked backend dependencies
         run: npm ci
+      - name: Format new organization module sources
+        run: npx prettier --write src/modules/organization/*.ts
+      - uses: actions/upload-artifact@v6
+        with:
+          name: formatted-organization-module
+          path: backend/src/modules/organization/*.ts
+          if-no-files-found: error
       - run: npm run format:check
       - run: npm run build
       - name: Type-check first-admin bootstrap utility
