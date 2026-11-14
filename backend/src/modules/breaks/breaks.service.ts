@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { PoolClient } from "pg";
 import { DatabaseService } from "../../database/database.service";
+import { BreaksGateway } from "./breaks.gateway";
 import { AuthenticatedUser } from "../auth/auth.types";
 import {
   CreateBreakTypeDto,
@@ -45,7 +46,10 @@ type BreakTypeRow = {
 
 @Injectable()
 export class BreaksService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly gateway: BreaksGateway,
+  ) {}
 
   private async assertBranch(
     client: PoolClient,
@@ -430,7 +434,7 @@ export class BreaksService {
     dto: RequestBreakDto,
     user: AuthenticatedUser,
   ) {
-    return this.db.transaction(async (client) => {
+    const result = await this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
       const employee = await this.employeeForUser(client, branchId, user.id);
       const type = await this.breakType(client, branchId, dto.breakTypeId);
@@ -480,6 +484,10 @@ export class BreaksService {
       );
       return { request, session };
     });
+    if (result.session) {
+      this.gateway.broadcastBreakStarted(branchId, result.session);
+    }
+    return result;
   }
 
   async listRequests(
@@ -509,7 +517,7 @@ export class BreaksService {
     requestId: string,
     user: AuthenticatedUser,
   ) {
-    return this.db.transaction(async (client) => {
+    const result = await this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
       const requestResult = await client.query(
         `SELECT * FROM break_requests
@@ -563,6 +571,8 @@ export class BreaksService {
       );
       return { request: updated.rows[0], session };
     });
+    this.gateway.broadcastBreakStarted(branchId, result.session);
+    return result;
   }
 
   async rejectRequest(
@@ -606,7 +616,7 @@ export class BreaksService {
     sessionId: string,
     user: AuthenticatedUser,
   ) {
-    return this.db.transaction(async (client) => {
+    const result = await this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
       const sessionResult = await client.query(
         `SELECT s.*, t.allow_early_return, e.user_id
@@ -651,6 +661,8 @@ export class BreaksService {
       );
       return ended.rows[0];
     });
+    this.gateway.broadcastBreakEnded(branchId, result);
+    return result;
   }
 
   async live(branchId: string, user: AuthenticatedUser) {
