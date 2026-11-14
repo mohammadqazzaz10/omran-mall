@@ -89,27 +89,50 @@ describe("OrganizationService branch integrity", () => {
   });
   it("blocks an employee transfer while attendance is still open", async () => {
     query
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: user.primaryBranchId }] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: user.primaryBranchId }],
+      })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "target-branch" }] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{
-        id: "employee-1", user_id: null, branch_id: user.primaryBranchId,
-        department_id: "old-dept", position_id: "old-position",
-        direct_manager_id: null,
-      }] })
-      .mockResolvedValueOnce({ rows: [{ is_not_future: true }] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [
+          {
+            id: "employee-1",
+            user_id: null,
+            branch_id: user.primaryBranchId,
+            department_id: "old-dept",
+            position_id: "old-position",
+            direct_manager_id: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ today: "2026-11-14" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "target-dept" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "target-position" }] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ "?column?": 1 }] });
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "open-attendance" }] });
 
-    await expect(service.transferEmployee(user.primaryBranchId, "employee-1", {
-      targetBranchId: "00000000-0000-4000-8000-000000000006",
-      targetDepartmentId: "00000000-0000-4000-8000-000000000007",
-      targetPositionId: "00000000-0000-4000-8000-000000000008",
-      reason: "نقل تنظيمي معتمد إلى الفرع الجديد",
-    } as any, user as any)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.transferEmployee(
+        user.primaryBranchId,
+        "employee-1",
+        {
+          targetBranchId: "00000000-0000-4000-8000-000000000006",
+          targetDepartmentId: "00000000-0000-4000-8000-000000000007",
+          targetPositionId: "00000000-0000-4000-8000-000000000008",
+          effectiveDate: "2026-11-14",
+          reason: "نقل تنظيمي معتمد إلى الفرع الجديد",
+        } as any,
+        user as any,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(query).toHaveBeenCalledTimes(7);
-    expect(query.mock.calls.some((call) => String(call[0]).includes("UPDATE employees"))).toBe(false);
+    expect(
+      query.mock.calls.some((call) =>
+        String(call[0]).includes("UPDATE employees"),
+      ),
+    ).toBe(false);
   });
 
   it("loads only the employee record linked to the authenticated user", async () => {
