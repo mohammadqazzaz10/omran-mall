@@ -1,6 +1,4 @@
-import {
-  BranchIsolationGuard,
-} from "../../common/guards/branch-isolation.guard";
+import { BranchIsolationGuard } from "../../common/guards/branch-isolation.guard";
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { BreaksController } from "./breaks.controller";
