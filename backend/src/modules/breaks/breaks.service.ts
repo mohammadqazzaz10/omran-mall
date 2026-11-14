@@ -91,6 +91,39 @@ export class BreaksService {
     return employee;
   }
 
+  private async accessScope(
+    client: PoolClient,
+    branchId: string,
+    user: AuthenticatedUser,
+  ): Promise<{ branchWide: boolean; departmentIds: string[] }> {
+    const result = await client.query<{ department_id: string | null }>(
+      `SELECT DISTINCT ur.department_id
+       FROM user_roles ur
+       JOIN roles r ON r.id = ur.role_id AND r.company_id = $2
+       JOIN role_permissions rp ON rp.role_id = r.id
+       JOIN permissions p ON p.id = rp.permission_id
+       WHERE ur.user_id = $1
+         AND (ur.branch_id = $3 OR ur.branch_id IS NULL)
+         AND p.code IN ('breaks.view.branch', 'breaks.approve.branch')
+         AND r.is_active = TRUE`,
+      [user.id, user.companyId, branchId],
+    );
+    const branchWide = result.rows.some((row) => row.department_id === null);
+    const departmentIds = result.rows
+      .map((row) => row.department_id)
+      .filter((id): id is string => id !== null);
+    return { branchWide, departmentIds };
+  }
+
+  private assertDepartmentAccess(
+    scope: { branchWide: boolean; departmentIds: string[] },
+    departmentId: string,
+  ): void {
+    if (!scope.branchWide && !scope.departmentIds.includes(departmentId)) {
+      throw new ForbiddenException("لا تملك صلاحية إدارة استراحات هذا القسم");
+    }
+  }
+
   private async breakType(
     client: PoolClient,
     branchId: string,
@@ -497,16 +530,19 @@ export class BreaksService {
   ) {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
+      const scope = await this.accessScope(client, branchId, user);
       const result = await client.query(
         `SELECT r.*, e.employee_code, e.first_name_ar, e.second_name_ar,
                 e.last_name_ar, t.name_ar AS break_type_name_ar
          FROM break_requests r
          JOIN employees e ON e.id = r.employee_id
          JOIN break_types t ON t.id = r.break_type_id
-         WHERE r.branch_id = $1 AND ($2::text IS NULL OR r.status = $2)
+         WHERE r.branch_id = $1
+           AND ($2::text IS NULL OR r.status = $2)
+           AND ($3::boolean = TRUE OR r.department_id = ANY($4::uuid[]))
          ORDER BY r.created_at DESC
          LIMIT 200`,
-        [branchId, status ?? null],
+        [branchId, status ?? null, scope.branchWide, scope.departmentIds],
       );
       return result.rows;
     });
@@ -527,6 +563,8 @@ export class BreaksService {
       );
       const request = requestResult.rows[0];
       if (!request) throw new NotFoundException("طلب الاستراحة غير موجود");
+      const scope = await this.accessScope(client, branchId, user);
+      this.assertDepartmentAccess(scope, request.department_id);
       if (request.status !== "pending") {
         throw new ConflictException("تمت معالجة هذا الطلب مسبقاً");
       }
@@ -592,6 +630,12 @@ export class BreaksService {
       if (!current.rowCount) {
         throw new NotFoundException("طلب الاستراحة غير موجود أو تمت معالجته");
       }
+      const request = await client.query<{ department_id: string }>(
+        "SELECT department_id FROM break_requests WHERE id = $1 AND branch_id = $2",
+        [requestId, branchId],
+      );
+      const scope = await this.accessScope(client, branchId, user);
+      this.assertDepartmentAccess(scope, request.rows[0].department_id);
       const result = await client.query(
         `UPDATE break_requests
          SET status = 'rejected', rejection_reason = $3,
@@ -668,6 +712,7 @@ export class BreaksService {
   async live(branchId: string, user: AuthenticatedUser) {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
+      const scope = await this.accessScope(client, branchId, user);
       const [sessions, requests] = await Promise.all([
         client.query(
         `SELECT s.id, s.employee_id, s.department_id, s.break_type_id,
@@ -680,8 +725,9 @@ export class BreaksService {
          JOIN break_types t ON t.id = s.break_type_id
          JOIN departments d ON d.id = s.department_id
          WHERE s.branch_id = $1 AND s.actual_end_time IS NULL
+           AND ($2::boolean = TRUE OR s.department_id = ANY($3::uuid[]))
          ORDER BY s.expected_end_time ASC`,
-        [branchId],
+        [branchId, scope.branchWide, scope.departmentIds],
       ),
       client.query(
         `SELECT r.id, r.employee_id, r.department_id, r.break_type_id,
@@ -693,8 +739,9 @@ export class BreaksService {
          JOIN break_types t ON t.id = r.break_type_id
          JOIN departments d ON d.id = r.department_id
          WHERE r.branch_id = $1 AND r.status = 'pending'
+           AND ($2::boolean = TRUE OR r.department_id = ANY($3::uuid[]))
          ORDER BY r.created_at ASC`,
-        [branchId],
+        [branchId, scope.branchWide, scope.departmentIds],
       ),
       ]);
       return { activeSessions: sessions.rows, pendingRequests: requests.rows };
