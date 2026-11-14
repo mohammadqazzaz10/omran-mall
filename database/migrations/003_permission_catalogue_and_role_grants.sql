@@ -1,3 +1,20 @@
+-- Create the built-in role catalogue for every existing company. These are
+-- templates; assignments remain explicit and scoped to a company/branch.
+INSERT INTO roles (company_id, code, name_ar, name_en, description, is_system_role)
+SELECT c.id, v.code, v.name_ar, v.name_en, v.description, TRUE
+FROM companies c
+CROSS JOIN (VALUES
+  ('SUPER_ADMIN', 'مدير النظام الأعلى', 'Super Administrator', 'صلاحيات إدارة النظام والشركة والفروع'),
+  ('GENERAL_MANAGER', 'المدير العام', 'General Manager', 'إدارة ومتابعة الشركة والفروع'),
+  ('BRANCH_MANAGER', 'مدير فرع', 'Branch Manager', 'إدارة العمليات ضمن الفرع المحدد'),
+  ('HR_MANAGER', 'مسؤول الموارد البشرية', 'HR Manager', 'إدارة شؤون الموظفين ضمن النطاق الممنوح'),
+  ('SUPERVISOR', 'مشرف قسم', 'Department Supervisor', 'إدارة العمل ضمن القسم المحدد'),
+  ('CASHIER', 'أمين صندوق', 'Cashier', 'صلاحيات أمين الصندوق'),
+  ('EMPLOYEE', 'موظف', 'Employee', 'صلاحيات الموظف الذاتية')
+) AS v(code, name_ar, name_en, description)
+WHERE c.deleted_at IS NULL
+ON CONFLICT (company_id, code) DO NOTHING;
+
 -- Permission catalogue and deterministic role grants for Phase 1.
 -- This migration is safe on an existing database and contains no user credentials.
 
