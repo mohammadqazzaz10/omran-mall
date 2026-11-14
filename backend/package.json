@@ -20,7 +20,8 @@
     "db:migrate:dev": "tsx --require dotenv/config src/database/migrate.ts",
     "db:seed:dev": "tsx --require dotenv/config src/database/seed.ts",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "db:bootstrap-admin": "tsx --require dotenv/config scripts/bootstrap-admin.ts"
+    "db:bootstrap-admin": "tsx --require dotenv/config scripts/bootstrap-admin.ts",
+    "db:bootstrap-admin:check": "tsc --noEmit --target ES2022 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck scripts/bootstrap-admin.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.0",
