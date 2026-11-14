@@ -113,13 +113,20 @@ describe("BreaksService", () => {
     };
     const { service } = serviceWithClient(client);
 
-    await expect(service.listRequests(branchId, "pending", user)).resolves.toEqual([]);
+    await expect(
+      service.listRequests(branchId, "pending", user),
+    ).resolves.toEqual([]);
 
     const listQuery = client.query.mock.calls[2];
     expect(listQuery[0]).toContain(
       "($3::boolean = TRUE OR r.department_id = ANY($4::uuid[]))",
     );
-    expect(listQuery[1]).toEqual([branchId, "pending", false, [departmentId]]);
+    expect(listQuery[1]).toEqual([
+      branchId,
+      "pending",
+      false,
+      [departmentId],
+    ]);
   });
 
   it("allows branch-wide managers to view all branch requests", async () => {
