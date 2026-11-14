@@ -63,7 +63,7 @@ async function main(): Promise<void> {
       if (companyNameAr.length > 255 || branchNameAr.length > 255) {
         throw new Error("Arabic company and branch names must not exceed 255 characters");
       }
-      if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         throw new Error("BOOTSTRAP_ADMIN_EMAIL is not a valid email address");
       }
 
