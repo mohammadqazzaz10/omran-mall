@@ -699,8 +699,7 @@ class _EmployeeRecordsScreenState extends ConsumerState<EmployeeRecordsScreen> {
             leading: const Icon(Icons.history),
             title: Text(item['event_type']?.toString() ?? '—'),
             subtitle: Text(
-              '${item['effective_date'] ?? '—'}
-${item['reason'] ?? ''}',
+              '${item['effective_date'] ?? '—'}\n${item['reason'] ?? ''}',
             ),
             isThreeLine: true,
           ),
