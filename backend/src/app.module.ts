@@ -4,6 +4,7 @@ import { BreaksGateway } from "./modules/breaks/breaks.gateway";
 import { DatabaseModule } from "./database/database.module";
 import { HealthController } from "./health/health.controller";
 import { AuthModule } from "./modules/auth/auth.module";
+import { OrganizationModule } from "./modules/organization/organization.module";
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { AuthModule } from "./modules/auth/auth.module";
     }),
     DatabaseModule,
     AuthModule,
+    OrganizationModule,
   ],
   controllers: [HealthController],
   providers: [BreaksGateway],
