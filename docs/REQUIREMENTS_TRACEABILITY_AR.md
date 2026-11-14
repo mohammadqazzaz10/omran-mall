@@ -5,7 +5,17 @@
 **الأساس البرمجي الذي تمت مراجعته:** `phase-2/break-engine`، commit `222dc5da04ef2195d2e3dc8789505376e941e1b1`  
 **تاريخ التدقيق:** 2026-11-14
 
-## تحديث القسم 02 — البنية التقنية والهندسية\n\nوثائق القسم:\n- العربية: `docs/SECTION_02_TECHNICAL_ARCHITECTURE_AR.md`\n- English: `docs/SECTION_02_TECHNICAL_ARCHITECTURE_EN.md`\n\nتم توحيد وصف البنية مع الكود الفعلي: Backend بنمط Modular Monolith على NestJS، وPostgreSQL عبر `pg` لا Prisma/TypeORM، وFlutter تحت `client/`، وDocker/Compose وOpenAPI وCI. تم توضيح أن Redis وSocket.IO وS3 وFCM/APNs/Web Push قدرات متفاوتة ولا تعتبر متكاملة لمجرد وجود اعتماديات أو وثائق.\n\n**الحالة: جزئي — القرارات موثقة وبعض البنية موجودة؛ لا تزال اختبارات iOS الفعلية، وتكامل S3 وPush والـ workers، وعزل قاعدة البيانات ضمن المعاملة، واختبارات التكامل متعددة المنصات مطلوبة.**\n\n## تحديث القسم 01 — الرؤية والمبادئ الملزمة
+## تحديث القسم 02 — البنية التقنية والهندسية
+
+وثائق القسم:
+- العربية: `docs/SECTION_02_TECHNICAL_ARCHITECTURE_AR.md`
+- English: `docs/SECTION_02_TECHNICAL_ARCHITECTURE_EN.md`
+
+تم توحيد وصف البنية مع الكود الفعلي: Backend بنمط Modular Monolith على NestJS، وPostgreSQL عبر `pg` لا Prisma/TypeORM، وFlutter تحت `client/`، وDocker/Compose وOpenAPI وCI. تم توضيح أن Redis وSocket.IO وS3 وFCM/APNs/Web Push قدرات متفاوتة ولا تعتبر متكاملة لمجرد وجود اعتماديات أو وثائق.
+
+**الحالة: جزئي — القرارات موثقة وبعض البنية موجودة؛ لا تزال اختبارات iOS الفعلية، وتكامل S3 وPush والـ workers، وعزل قاعدة البيانات ضمن المعاملة، واختبارات التكامل متعددة المنصات مطلوبة.**
+
+## تحديث القسم 01 — الرؤية والمبادئ الملزمة
 
 وثائق القسم:
 - العربية: `docs/SECTION_01_VISION_AND_PRINCIPLES.md`
@@ -105,6 +115,7 @@
 | 2026-11-14 | إنشاء فرع مستقل للتدقيق والتوسعة انطلاقاً من فرع محرك الاستراحات | `phase-3/requirements-audit` |
 | 2026-11-14 | إنشاء هذه المصفوفة لتتبع الأقسام الأربعين دون اعتبار جداول البيانات تنفيذاً وظيفياً | هذا الملف |
 | 2026-11-14 | إضافة أساس API وواجهة موظف للحضور والانصراف وطلبات تصحيح مع صلاحيات ومراجعة فرعية | PR #20، وCI قيد التحقق |
-| 2026-11-14 | تحويل القسم 01 إلى ضوابط VSN-01..10 وإضافتها إلى مراجعة Pull Request | `docs/SECTION_01_VISION_AND_PRINCIPLES.md` وقالب PR؛ PR #21 مدمج في فرع التدقيق commit `7178894` |\n| 2026-11-14 | توحيد قرارات القسم 02 مع التنفيذ الفعلي وتوثيق حدود المنصات والتكاملات | `docs/SECTION_02_TECHNICAL_ARCHITECTURE_AR.md`, `docs/SECTION_02_TECHNICAL_ARCHITECTURE_EN.md`, ADR-009 |
+| 2026-11-14 | تحويل القسم 01 إلى ضوابط VSN-01..10 وإضافتها إلى مراجعة Pull Request | `docs/SECTION_01_VISION_AND_PRINCIPLES.md` وقالب PR؛ PR #21 مدمج في فرع التدقيق commit `7178894` |
+| 2026-11-14 | توحيد قرارات القسم 02 مع التنفيذ الفعلي وتوثيق حدود المنصات والتكاملات | `docs/SECTION_02_TECHNICAL_ARCHITECTURE_AR.md`, `docs/SECTION_02_TECHNICAL_ARCHITECTURE_EN.md`, ADR-009 |
 
 **تحذير تسليم:** لا تعتمد هذه النسخة للإنتاج ولا تصفها بأنها «بقي الربط فقط». هذه المصفوفة هي خط أساس للتنفيذ والتحقق، ويجب تحديث حالة كل بند وإرفاق أدلة CI والاختبارات قبل إعلان الاكتمال.
