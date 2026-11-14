@@ -26,6 +26,54 @@ describe("AttendanceQrService", () => {
     delete process.env.ATTENDANCE_QR_SECRET;
   });
 
+  it("reports when branch geofencing is disabled without requiring device location", async () => {
+    const db = {
+      query: jest.fn().mockResolvedValueOnce({
+        rows: [
+          {
+            latitude: null,
+            longitude: null,
+            geofence_radius_meters: null,
+          },
+        ],
+        rowCount: 1,
+      }),
+    };
+    const service = new AttendanceQrService(
+      db as any,
+      { checkIn: jest.fn() } as any,
+    );
+
+    await expect(service.geofenceStatus(branchId, user)).resolves.toEqual({
+      enabled: false,
+      radiusMeters: null,
+    });
+  });
+
+  it("reports the configured geofence radius when branch location is enabled", async () => {
+    const db = {
+      query: jest.fn().mockResolvedValueOnce({
+        rows: [
+          {
+            latitude: "31.95",
+            longitude: "35.91",
+            geofence_radius_meters: 200,
+          },
+        ],
+        rowCount: 1,
+      }),
+    };
+    const service = new AttendanceQrService(
+      db as any,
+      { checkIn: jest.fn() } as any,
+    );
+
+    await expect(service.geofenceStatus(branchId, user)).resolves.toEqual({
+      enabled: true,
+      radiusMeters: 200,
+    });
+  });
+
   it("issues a signed 45-second QR token and stores only the nonce digest", async () => {
     const db = {
       query: jest
