@@ -5,6 +5,7 @@ export interface AuthenticatedUser {
   allowedBranchIds: string[];
   sessionId: string;
   username: string;
+  mustChangePassword: boolean;
 }
 
 export interface AccessTokenPayload {
