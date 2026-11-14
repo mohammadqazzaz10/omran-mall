@@ -35,6 +35,17 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'BRANCH_MANAGER received an unintended company-wide grant';
     END IF;
+    IF EXISTS (
+        SELECT 1
+        FROM roles r
+        JOIN role_permissions rp ON rp.role_id = r.id
+        JOIN permissions p ON p.id = rp.permission_id
+        WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+          AND r.code = 'GENERAL_MANAGER'
+          AND p.code IN ('users.manage.company', 'roles.manage.company', 'companies.manage.company')
+    ) THEN
+        RAISE EXCEPTION 'GENERAL_MANAGER received an unintended security-administration grant';
+    END IF;
 
     IF EXISTS (
         SELECT 1
