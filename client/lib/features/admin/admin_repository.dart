@@ -11,7 +11,7 @@ class AdminRepository {
   final dynamic client;
 
   Future<List<Map<String, dynamic>>> listBranches() async {
-    final response = await client.dio.get<dynamic>('/admin/branches');
+    final response = await client.dio.get<dynamic>('admin/branches');
     final data = response.data;
     if (data is! List) return const [];
     return data.map((item) => Map<String, dynamic>.from(item as Map)).toList();
@@ -22,7 +22,7 @@ class AdminRepository {
     required String nameAr,
   }) async {
     final response = await client.dio.post<dynamic>(
-      '/admin/branches',
+      'admin/branches',
       data: {'code': code, 'nameAr': nameAr},
     );
     return Map<String, dynamic>.from(response.data as Map);
@@ -33,7 +33,7 @@ class AdminRepository {
     Map<String, dynamic> changes,
   ) async {
     final response = await client.dio.patch<dynamic>(
-      '/admin/branches/' + branchId,
+      'admin/branches/' + branchId,
       data: changes,
     );
     return Map<String, dynamic>.from(response.data as Map);
@@ -46,7 +46,7 @@ class AdminRepository {
     int limit = 25,
   }) async {
     final response = await client.dio.get<dynamic>(
-      '/admin/users',
+      'admin/users',
       queryParameters: {
         if (search != null && search.isNotEmpty) 'search': search,
         if (active != null) 'active': active,
@@ -65,7 +65,7 @@ class AdminRepository {
     String? primaryBranchId,
   }) async {
     final response = await client.dio.post<dynamic>(
-      '/admin/users',
+      'admin/users',
       data: {
         'username': username,
         'roleCode': roleCode,
@@ -80,14 +80,14 @@ class AdminRepository {
   }
 
   Future<List<Map<String, dynamic>>> listRoles() async {
-    final response = await client.dio.get<dynamic>('/admin/roles');
+    final response = await client.dio.get<dynamic>('admin/roles');
     final data = response.data;
     if (data is! List) return const [];
     return data.map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
   Future<List<Map<String, dynamic>>> listPermissions() async {
-    final response = await client.dio.get<dynamic>('/admin/permissions');
+    final response = await client.dio.get<dynamic>('admin/permissions');
     final data = response.data;
     if (data is! List) return const [];
     return data.map((item) => Map<String, dynamic>.from(item as Map)).toList();
