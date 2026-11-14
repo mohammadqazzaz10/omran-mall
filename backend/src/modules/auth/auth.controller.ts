@@ -34,7 +34,6 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(AccessTokenGuard)
   @SkipPermissionCheck()
   @Get("me")
   me(@Req() request: AuthenticatedRequest) {
