@@ -95,9 +95,9 @@ async function main(): Promise<void> {
         [companyId],
       );
       const permissionCatalog = await client.query(
-        "SELECT code FROM permissions WHERE code IN ('employees.view.branch', 'branches.view.company', 'users.manage.company', 'employees.transfer.company')",
+        "SELECT code FROM permissions WHERE code IN ('employees.view.branch', 'branches.view.company', 'users.manage.company', 'employees.transfer.company', 'users.assign_roles.company')",
       );
-      if (permissionCatalog.rowCount !== 4) {
+      if (permissionCatalog.rowCount !== 5) {
         throw new Error("Permission catalogue is incomplete. Apply the latest database migrations first.");
       }
 
