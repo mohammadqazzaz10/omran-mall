@@ -254,8 +254,13 @@ export class AuthService {
       branchIds.length === 0 &&
       !(await this.hasCompanyRole(result.id, result.company_id))
     ) {
-      await this.revokeSession(sessionId, "no_branch_membership_or_company_role");
-      throw new ForbiddenException("لا توجد عضوية فرع أو صلاحية إدارية على مستوى الشركة");
+      await this.revokeSession(
+        sessionId,
+        "no_branch_membership_or_company_role",
+      );
+      throw new ForbiddenException(
+        "لا توجد عضوية فرع أو صلاحية إدارية على مستوى الشركة",
+      );
     }
 
     return {

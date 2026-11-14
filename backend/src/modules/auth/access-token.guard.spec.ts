@@ -57,7 +57,9 @@ describe("AccessTokenGuard", () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  it("accepts a company-scoped administrator without branch memberships", async () => {
+  it(
+    "accepts a company-scoped administrator without branch memberships",
+    async () => {
     const jwt = { verifyAsync: jest.fn().mockResolvedValue(claims) } as any;
     const db = {
       query: jest
@@ -87,8 +89,9 @@ describe("AccessTokenGuard", () => {
       primaryBranchId: null,
       allowedBranchIds: [],
     });
-    expect(db.query).toHaveBeenCalledTimes(3);
-  });
+      expect(db.query).toHaveBeenCalledTimes(3);
+    },
+  );
 
   it("loads current branch memberships from the database", async () => {
     const jwt = { verifyAsync: jest.fn().mockResolvedValue(claims) } as any;
