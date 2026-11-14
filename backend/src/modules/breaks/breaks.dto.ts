@@ -16,7 +16,7 @@ import {
 import { Type } from "class-transformer";
 import { PartialType } from "@nestjs/swagger";
 
-const timePattern = /^([01]\\d|2[0-3]):[0-5]\\d$/;
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export class BreakBlackoutPeriodDto {
   @IsString()
