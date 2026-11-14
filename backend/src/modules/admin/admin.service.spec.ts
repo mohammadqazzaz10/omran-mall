@@ -110,7 +110,9 @@ describe("AdminService privilege boundaries", () => {
     };
     const db = {
       query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [] }),
-      transaction: jest.fn((callback: (tx: any) => unknown) => callback(client)),
+      transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(client),
+      ),
     };
     const service = new AdminService(db as any);
     await expect(
@@ -139,7 +141,9 @@ describe("AdminService privilege boundaries", () => {
     };
     const db = {
       query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [] }),
-      transaction: jest.fn((callback: (tx: any) => unknown) => callback(client)),
+      transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(client),
+      ),
     };
     const service = new AdminService(db as any);
     await expect(
