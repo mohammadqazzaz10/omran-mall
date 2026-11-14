@@ -83,7 +83,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           !hasRole(auth, 'SUPER_ADMIN') &&
           !hasRole(auth, 'GENERAL_MANAGER') &&
           !hasRole(auth, 'HR_MANAGER') &&
+          !hasRole(auth, 'HR_OFFICER') &&
+          !hasRole(auth, 'PERSONNEL_OFFICER') &&
           !hasRole(auth, 'BRANCH_MANAGER') &&
+          !hasRole(auth, 'ASSISTANT_MANAGER') &&
           !hasRole(auth, 'SUPERVISOR')) {
         return homeFor(auth);
       }
