@@ -51,3 +51,10 @@ export class AttendanceQrCheckInDto {
   @Max(1000)
   accuracyMeters?: number;
 }
+
+export class AttendanceCorrectionRejectionDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  reviewNotes?: string;
+}
