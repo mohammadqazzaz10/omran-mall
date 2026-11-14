@@ -94,7 +94,10 @@ describe("OrganizationService branch integrity", () => {
         rowCount: 1,
         rows: [{ id: user.primaryBranchId }],
       })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "target-branch" }] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: "target-branch" }],
+      })
       .mockResolvedValueOnce({
         rowCount: 1,
         rows: [
@@ -109,8 +112,14 @@ describe("OrganizationService branch integrity", () => {
         ],
       })
       .mockResolvedValueOnce({ rows: [{ today: "2026-11-14" }] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "target-dept" }] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "target-position" }] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: "target-dept" }],
+      })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: "target-position" }],
+      })
       .mockResolvedValueOnce({
         rowCount: 1,
         rows: [{ id: "open-attendance" }],
@@ -147,7 +156,10 @@ describe("OrganizationService branch integrity", () => {
         rowCount: 1,
         rows: [{ id: user.primaryBranchId }],
       })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: targetBranchId }] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: targetBranchId }],
+      })
       .mockResolvedValueOnce({
         rowCount: 1,
         rows: [
