@@ -14,12 +14,12 @@ Record attendance using trusted server time, support branch QR verification and 
 ## Implemented in this increment
 1. **Rotating signed QR:** The backend issues a branch-bound HMAC-SHA256 token with a 45-second lifetime. Signing uses a dedicated `ATTENDANCE_QR_SECRET` environment variable combined with the branch salt stored in PostgreSQL.
 2. **Atomic consistency:** QR consumption, attendance insertion, location persistence, and audit logging run in one PostgreSQL transaction; any failure rolls back the complete operation.
-2. **No plaintext token storage:** Only a SHA-256 digest of the nonce is stored.
-3. **Replay protection:** A unique database key records each employee's use of a given QR challenge.
-4. **Branch binding:** Tokens from another branch, expired tokens, and invalid signatures are rejected.
-5. **Optional geofence:** When branch coordinates are configured, QR check-in requires latitude, longitude, and GPS accuracy of at most 100 meters. The backend computes distance from the configured branch center and checks the branch radius.
-6. **No geofence bypass:** Direct app check-in is rejected when branch geofencing is enabled; the QR route must be used.
-7. **Audit trail:** QR check-ins are recorded with method `qr_code` and verified coordinates, with an additional audit event.
+3. **No plaintext token storage:** Only a SHA-256 digest of the nonce is stored.
+4. **Replay protection:** A unique database key records each employee's use of a given QR challenge.
+5. **Branch binding:** Tokens from another branch, expired tokens, and invalid signatures are rejected.
+6. **Optional geofence:** When branch coordinates are configured, QR check-in requires latitude, longitude, and GPS accuracy of at most 100 meters. The backend computes distance from the configured branch center and checks the branch radius.
+7. **No geofence bypass:** Direct app check-in is rejected when branch geofencing is enabled; the QR route must be used.
+8. **Audit trail:** QR check-ins are recorded with method `qr_code` and verified coordinates, with an additional audit event.
 
 ## API routes
 All routes are under `/branches/:branchId/attendance` and require an authenticated session, branch membership, and the listed permission.
