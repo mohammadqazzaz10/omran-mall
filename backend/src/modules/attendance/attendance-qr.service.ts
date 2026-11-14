@@ -51,8 +51,10 @@ export class AttendanceQrService {
     const branch = await this.db.query<{
       id: string;
       qr_secret_salt: string;
+      expires_epoch: string;
     }>(
-      `SELECT id, qr_secret_salt
+      `SELECT id, qr_secret_salt,
+              EXTRACT(EPOCH FROM CURRENT_TIMESTAMP + INTERVAL '45 seconds')::bigint::text AS expires_epoch
        FROM branches
        WHERE id = $1 AND company_id = $2 AND is_active = TRUE AND deleted_at IS NULL`,
       [branchId, user.companyId],
@@ -62,7 +64,7 @@ export class AttendanceQrService {
     }
 
     const nonce = randomBytes(32).toString("hex");
-    const expiresAt = Math.floor(Date.now() / 1000) + 45;
+    const expiresAt = Number(branch.rows[0].expires_epoch);
     const payload: QrPayload = {
       v: 1,
       b: branchId,
@@ -172,7 +174,14 @@ export class AttendanceQrService {
     const fence = branch.rows[0];
     let latitude: number | null = null;
     let longitude: number | null = null;
-    if (fence.latitude !== null && fence.longitude !== null) {
+    const geofenceConfigured =
+      fence.latitude !== null || fence.longitude !== null;
+    if (geofenceConfigured) {
+      if (fence.latitude === null || fence.longitude === null) {
+        throw new ServiceUnavailableException(
+          "إعدادات النطاق الجغرافي للفرع غير مكتملة",
+        );
+      }
       if (
         dto.latitude === undefined ||
         dto.longitude === undefined ||
@@ -228,13 +237,28 @@ export class AttendanceQrService {
     });
 
     const record = await this.attendance.checkIn(branchId, user);
-    await this.db.query(
-      `UPDATE attendance_records
-       SET check_in_method = 'qr_code', check_in_lat = $2, check_in_lng = $3,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1 AND branch_id = $4`,
-      [record.id, latitude, longitude, branchId],
-    );
+    await this.db.transaction(async (client) => {
+      const updated = await client.query(
+        `UPDATE attendance_records
+         SET check_in_method = 'qr_code', check_in_lat = $2, check_in_lng = $3,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND branch_id = $4
+         RETURNING id, check_in_method, check_in_lat, check_in_lng`,
+        [record.id, latitude, longitude, branchId],
+      );
+      await client.query(
+        `INSERT INTO audit_logs
+         (user_id, branch_id, table_name, record_id, action, old_values, new_values)
+         VALUES ($1, $2, 'attendance_records', $3, 'UPDATE', $4::jsonb, $5::jsonb)`,
+        [
+          user.id,
+          branchId,
+          record.id,
+          JSON.stringify({ check_in_method: 'mobile_app' }),
+          JSON.stringify(updated.rows[0]),
+        ],
+      );
+    });
 
     return {
       ...record,
