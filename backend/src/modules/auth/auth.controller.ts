@@ -4,9 +4,8 @@ import { SkipPermissionCheck } from "../../common/decorators/permission.decorato
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { AuthService } from "./auth.service";
-import { ChangePasswordDto } from "./auth.dto";
 import { AllowPasswordChangeOnly } from "../../common/decorators/password-change.decorator";
-import { LoginDto, RefreshDto } from "./auth.dto";
+import { ChangePasswordDto, LoginDto, RefreshDto } from "./auth.dto";
 import { AuthenticatedUser } from "./auth.types";
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
