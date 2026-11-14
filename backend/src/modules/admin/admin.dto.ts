@@ -1,4 +1,7 @@
 import {
+  ArrayMaxSize,
+  ArrayNotEmpty,
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsEmail,
@@ -50,16 +53,36 @@ export class CreateUserDto {
   @IsOptional() @IsUUID() departmentId?: string;
   @IsOptional() @IsUUID() employeeId?: string;
 }
+export class CreateRoleDto {
+  @IsString() @Matches(/^CUSTOM_[A-Z0-9_]{1,43}$/) @MaxLength(50)
+  code!: string;
+  @IsString() @MinLength(2) @MaxLength(100)
+  nameAr!: string;
+  @IsOptional() @IsString() @MaxLength(100)
+  nameEn?: string;
+  @IsOptional() @IsString() @MaxLength(500)
+  description?: string;
+  @IsArray() @ArrayNotEmpty() @ArrayUnique() @ArrayMaxSize(100)
+  @IsString({ each: true }) @MaxLength(100, { each: true })
+  permissionCodes!: string[];
+}
+
+export class UpdateRoleDto {
+  @IsOptional() @IsString() @MinLength(2) @MaxLength(100)
+  nameAr?: string;
+  @IsOptional() @IsString() @MaxLength(100)
+  nameEn?: string | null;
+  @IsOptional() @IsString() @MaxLength(500)
+  description?: string | null;
+  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(100)
+  @IsString({ each: true }) @MaxLength(100, { each: true })
+  permissionCodes?: string[];
+}
+
 export class AssignUserRoleDto {
-  @IsIn([
-    "SUPER_ADMIN",
-    "GENERAL_MANAGER",
-    "BRANCH_MANAGER",
-    "HR_MANAGER",
-    "SUPERVISOR",
-    "CASHIER",
-    "EMPLOYEE",
-  ])
+  @IsString()
+  @Matches(/^(SUPER_ADMIN|GENERAL_MANAGER|BRANCH_MANAGER|HR_MANAGER|SUPERVISOR|CASHIER|EMPLOYEE|CUSTOM_[A-Z0-9_]{1,43})$/)
+  @MaxLength(50)
   roleCode!: string;
   @IsOptional() @IsArray() @IsUUID("4", { each: true }) branchIds?: string[];
   @IsOptional() @IsUUID() departmentId?: string;
