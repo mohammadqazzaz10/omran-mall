@@ -104,10 +104,28 @@ async function main(): Promise<void> {
         `INSERT INTO role_permissions (role_id, permission_id)
          SELECT r.id, p.id
          FROM roles r
+         JOIN permissions p ON p.scope IN ('company', 'branch')
+         WHERE r.company_id = $1 AND r.code = 'SUPER_ADMIN'
+         ON CONFLICT (role_id, permission_id) DO NOTHING`,
+        [companyId],
+      );
+      await client.query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT r.id, p.id
+         FROM roles r
          JOIN permissions p ON
-           (p.scope = 'company' AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER'))
-           OR (p.scope = 'branch' AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER'))
-         WHERE r.company_id = $1
+           p.scope = 'branch'
+           OR (
+             p.scope = 'company'
+             AND p.code IN (
+               'companies.view.company',
+               'branches.view.company',
+               'branches.manage.company',
+               'users.view.company',
+               'roles.view.company'
+             )
+           )
+         WHERE r.company_id = $1 AND r.code = 'GENERAL_MANAGER'
          ON CONFLICT (role_id, permission_id) DO NOTHING`,
         [companyId],
       );
