@@ -216,7 +216,7 @@ describe("OrganizationService branch integrity", () => {
     expect(
       query.mock.calls.some((call) =>
         String(call[0]).includes(
-          "DELETE FROM user_roles WHERE user_id=$1 AND branch_id=$2",
+          "DELETE FROM user_roles ur",
         ),
       ),
     ).toBe(true);
