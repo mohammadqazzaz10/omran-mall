@@ -16,7 +16,7 @@ export class ChangePasswordDto {
   @IsString()
   @MinLength(14)
   @MaxLength(72)
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).+$/, {
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/, {
     message: "كلمة المرور الجديدة يجب أن تحتوي على أحرف كبيرة وصغيرة ورقم ورمز",
   })
   newPassword!: string;
