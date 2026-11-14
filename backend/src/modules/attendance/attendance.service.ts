@@ -415,7 +415,9 @@ export class AttendanceService {
       }
       const row = record.rows[0];
       if (!dto.requestedCheckIn && !dto.requestedCheckOut) {
-        throw new BadRequestException("يجب تحديد وقت حضور أو انصراف مطلوب تصحيحه");
+        throw new BadRequestException(
+          "يجب تحديد وقت حضور أو انصراف مطلوب تصحيحه",
+        );
       }
       const effectiveCheckIn = dto.requestedCheckIn
         ? new Date(dto.requestedCheckIn)
@@ -432,7 +434,9 @@ export class AttendanceService {
         effectiveCheckOut &&
         effectiveCheckOut.getTime() <= effectiveCheckIn.getTime()
       ) {
-        throw new BadRequestException("وقت الانصراف يجب أن يكون بعد وقت الحضور");
+        throw new BadRequestException(
+          "وقت الانصراف يجب أن يكون بعد وقت الحضور",
+        );
       }
       const result = await client.query(
         `INSERT INTO attendance_corrections
