@@ -60,18 +60,18 @@ export class PermissionGuard implements CanActivate {
     const hasBranchMembership =
       branchId !== null && user.allowedBranchIds.includes(branchId);
 
-    // A company-scoped permission may operate on any active branch in the
-    // same company. Branch/department permissions still require membership.
+    // Company-scoped administrators may operate on inactive branches to reactivate them.
+    // Branch/department permissions still require an active membership.
     if (branchId && !hasBranchMembership) {
       const branch = await this.db.query(
         `SELECT 1 FROM branches
          WHERE id = $1 AND company_id = $2
-           AND is_active = TRUE AND deleted_at IS NULL
+           AND deleted_at IS NULL
          LIMIT 1`,
         [branchId, user.companyId],
       );
       if (branch.rowCount !== 1) {
-        throw new ForbiddenException("الفرع غير موجود ضمن الشركة أو غير فعال");
+        throw new ForbiddenException("الفرع غير موجود ضمن الشركة");
       }
     }
 
