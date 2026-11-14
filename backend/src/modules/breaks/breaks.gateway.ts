@@ -79,6 +79,7 @@ export class BreaksGateway
            AND s.revoked_at IS NULL
            AND s.refresh_expires_at > CURRENT_TIMESTAMP
            AND u.is_active = TRUE AND u.deleted_at IS NULL
+           AND u.must_change_password = FALSE
          LIMIT 1`,
         [payload.sid, payload.sub, payload.companyId],
       );
@@ -96,18 +97,36 @@ export class BreaksGateway
            AND b.is_active = TRUE AND b.deleted_at IS NULL`,
         [payload.sub, payload.companyId],
       );
-      const branchIds = new Set(memberships.rows.map((row) => row.branch_id));
+      const membershipIds = memberships.rows.map((row) => row.branch_id);
+      const branchIds = new Set<string>();
+
+      if (membershipIds.length > 0) {
+        const branchGrants = await this.db.query<{ branch_id: string }>(
+          `SELECT DISTINCT ur.branch_id
+           FROM user_roles ur
+           JOIN roles r ON r.id = ur.role_id AND r.company_id = $2
+           JOIN role_permissions rp ON rp.role_id = r.id
+           JOIN permissions p ON p.id = rp.permission_id
+           WHERE ur.user_id = $1
+             AND ur.branch_id = ANY($3::uuid[])
+             AND ur.department_id IS NULL
+             AND r.is_active = TRUE
+             AND p.code = 'breaks.view.branch'`,
+          [payload.sub, payload.companyId, membershipIds],
+        );
+        for (const row of branchGrants.rows) branchIds.add(row.branch_id);
+      }
 
       const companyBreakAccess = await this.db.query(
         `SELECT 1
          FROM user_roles ur
-         JOIN roles r ON r.id = ur.role_id
+         JOIN roles r ON r.id = ur.role_id AND r.company_id = $2
          JOIN role_permissions rp ON rp.role_id = r.id
          JOIN permissions p ON p.id = rp.permission_id
-         WHERE ur.user_id = $1 AND r.company_id = $2
+         WHERE ur.user_id = $1
            AND ur.branch_id IS NULL AND ur.department_id IS NULL
            AND r.is_active = TRUE
-           AND p.code IN ('breaks.view.branch', 'breaks.approve.branch')
+           AND p.code = 'breaks.view.branch'
          LIMIT 1`,
         [payload.sub, payload.companyId],
       );
@@ -121,7 +140,15 @@ export class BreaksGateway
         for (const branch of companyBranches.rows) branchIds.add(branch.id);
       }
 
-      if (branchIds.size === 0) {
+      const employees = await this.db.query<{ id: string }>(
+        `SELECT id FROM employees
+         WHERE user_id = $1 AND branch_id = ANY($2::uuid[])
+           AND status = 'active' AND deleted_at IS NULL`,
+        [payload.sub, membershipIds],
+      );
+      const employeeIds = employees.rows.map((row) => row.id);
+
+      if (branchIds.size === 0 && employeeIds.length === 0) {
         this.reject(client);
         return;
       }
@@ -129,7 +156,11 @@ export class BreaksGateway
       client.data.userId = payload.sub;
       client.data.companyId = payload.companyId;
       client.data.branchIds = [...branchIds];
-      await client.join([...branchIds].map((id) => `branch_${id}`));
+      client.data.employeeIds = employeeIds;
+      await client.join([
+        ...[...branchIds].map((id) => `branch_${id}`),
+        ...employeeIds.map((id) => `employee_${id}`),
+      ]);
     } catch (error) {
       this.logger.error(
         `Failed to authenticate breaks socket ${client.id}`,
@@ -143,27 +174,44 @@ export class BreaksGateway
     this.logger.log(`Breaks socket disconnected: ${client.id}`);
   }
 
+  private employeeRoom(data: unknown): string | null {
+    if (!data || typeof data !== "object" || !("employee_id" in data)) {
+      return null;
+    }
+    const employeeId = (data as { employee_id?: unknown }).employee_id;
+    return typeof employeeId === "string" ? `employee_${employeeId}` : null;
+  }
+
   broadcastBreakStarted(branchId: string, sessionData: unknown): void {
-    this.server?.to(`branch_${branchId}`).emit("break_started", {
+    const payload = {
       event: "BREAK_STARTED",
       timestamp: new Date().toISOString(),
       session: sessionData,
-    });
+    };
+    this.server?.to(`branch_${branchId}`).emit("break_started", payload);
+    const room = this.employeeRoom(sessionData);
+    if (room) this.server?.to(room).emit("break_started", payload);
   }
 
   broadcastBreakAlert(branchId: string, alertData: unknown): void {
-    this.server?.to(`branch_${branchId}`).emit("break_alert", {
+    const payload = {
       event: "BREAK_OVERSTAY_ALERT",
       timestamp: new Date().toISOString(),
       alert: alertData,
-    });
+    };
+    this.server?.to(`branch_${branchId}`).emit("break_alert", payload);
+    const room = this.employeeRoom(alertData);
+    if (room) this.server?.to(room).emit("break_alert", payload);
   }
 
   broadcastBreakEnded(branchId: string, sessionData: unknown): void {
-    this.server?.to(`branch_${branchId}`).emit("break_ended", {
+    const payload = {
       event: "BREAK_ENDED",
       timestamp: new Date().toISOString(),
       session: sessionData,
-    });
+    };
+    this.server?.to(`branch_${branchId}`).emit("break_ended", payload);
+    const room = this.employeeRoom(sessionData);
+    if (room) this.server?.to(room).emit("break_ended", payload);
   }
 }
