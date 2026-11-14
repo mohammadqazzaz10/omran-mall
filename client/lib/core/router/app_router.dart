@@ -9,6 +9,7 @@ import '../../features/auth/login_screen.dart';
 import '../../features/auth/role_landing_screen.dart';
 import '../../features/auth/session_management_screen.dart';
 import '../../features/employee/employee_home_screen.dart';
+import '../../features/employee/employee_records_screen.dart';
 import '../../features/breaks/breaks_home_screen.dart';
 import '../../features/breaks/breaks_management_screen.dart';
 import '../../features/attendance/attendance_screen.dart';
@@ -64,6 +65,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (path == '/hr' && !hasRole(auth, 'HR_MANAGER')) {
         return homeFor(auth);
       }
+      if (path == '/employee-records' &&
+          !hasRole(auth, 'SUPER_ADMIN') &&
+          !hasRole(auth, 'HR_MANAGER')) {
+        return homeFor(auth);
+      }
       if (path == '/branch-manager' && !hasRole(auth, 'BRANCH_MANAGER')) {
         return homeFor(auth);
       }
@@ -109,6 +115,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/employee',
         builder: (context, state) => const EmployeeHomeScreen(),
+      ),
+      GoRoute(
+        path: '/employee-records',
+        builder: (context, state) => const EmployeeRecordsScreen(),
       ),
       GoRoute(
         path: '/admin',
