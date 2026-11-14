@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { BreaksGateway } from "./modules/breaks/breaks.gateway";
 import { BreaksModule } from "./modules/breaks/breaks.module";
 import { DatabaseModule } from "./database/database.module";
 import { HealthController } from "./health/health.controller";
@@ -21,6 +20,5 @@ import { AdminModule } from "./modules/admin/admin.module";
     BreaksModule,
   ],
   controllers: [HealthController],
-  providers: [BreaksGateway],
 })
 export class AppModule {}
