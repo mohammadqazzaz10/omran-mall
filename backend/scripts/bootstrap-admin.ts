@@ -22,13 +22,13 @@ async function main(): Promise<void> {
   const password = process.env.BOOTSTRAP_ADMIN_PASSWORD as string;
   if (
     password.length < 14 ||
-    password.length > 128 ||
+    password.length > 72 ||
     !/[a-z]/.test(password) ||
     !/[A-Z]/.test(password) ||
     !/[0-9]/.test(password) ||
     !/[^A-Za-z0-9]/.test(password)
   ) {
-    throw new Error("BOOTSTRAP_ADMIN_PASSWORD must be 14-128 characters and include upper/lowercase letters, a number, and a symbol");
+    throw new Error("BOOTSTRAP_ADMIN_PASSWORD must be 14-72 characters and include upper/lowercase letters, a number, and a symbol");
   }
 
   const pool = new Pool({
@@ -57,8 +57,8 @@ async function main(): Promise<void> {
           !/^[A-Z0-9][A-Z0-9_-]{1,49}$/.test(branchCode)) {
         throw new Error("Company and branch codes must be 2-50 uppercase letters, numbers, hyphens, or underscores");
       }
-      if (username.length < 3 || username.length > 100) {
-        throw new Error("BOOTSTRAP_ADMIN_USERNAME must be 3-100 characters");
+      if (!/^[A-Za-z0-9._-]{3,100}$/.test(username)) {
+        throw new Error("BOOTSTRAP_ADMIN_USERNAME must be 3-100 letters, numbers, dots, underscores, or hyphens");
       }
       if (companyNameAr.length > 255 || branchNameAr.length > 255) {
         throw new Error("Arabic company and branch names must not exceed 255 characters");
@@ -200,7 +200,7 @@ async function main(): Promise<void> {
       );
       await client.query(
         `INSERT INTO audit_logs (user_id, branch_id, table_name, record_id, action, new_values)
-         VALUES ($1, $2, 'users', $1, 'BOOTSTRAP_SUPER_ADMIN', jsonb_build_object('username', $3))`,
+         VALUES ($1, $2, 'users', $1, 'ADMIN_BOOTSTRAP', jsonb_build_object('username', $3))`,
         [userId, branchId, username],
       );
 
