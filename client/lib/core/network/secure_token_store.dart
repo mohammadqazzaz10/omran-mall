@@ -10,8 +10,21 @@ class SecureTokenStore {
   static const _refreshKey = 'omran.refresh_token';
   static const _mustChangeKey = 'omran.must_change_password';
 
-  Future<String?> readAccessToken() => _storage.read(key: _accessKey);
-  Future<String?> readRefreshToken() => _storage.read(key: _refreshKey);
+  Future<String?> readAccessToken() async {
+    try {
+      return await _storage.read(key: _accessKey);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> readRefreshToken() async {
+    try {
+      return await _storage.read(key: _refreshKey);
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> saveTokens({
     required String accessToken,
@@ -27,12 +40,20 @@ class SecureTokenStore {
   }
 
   Future<bool> readMustChangePassword() async {
-    return (await _storage.read(key: _mustChangeKey)) == 'true';
+    try {
+      return (await _storage.read(key: _mustChangeKey)) == 'true';
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> clear() async {
-    await _storage.delete(key: _accessKey);
-    await _storage.delete(key: _refreshKey);
-    await _storage.delete(key: _mustChangeKey);
+    try {
+      await _storage.delete(key: _accessKey);
+      await _storage.delete(key: _refreshKey);
+      await _storage.delete(key: _mustChangeKey);
+    } catch (_) {
+      // Platform storage may be unavailable in a browser privacy context or widget test.
+    }
   }
 }
