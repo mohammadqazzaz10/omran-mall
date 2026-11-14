@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'secure_token_store.dart';
 
@@ -9,7 +8,7 @@ class ApiClient {
     SecureTokenStore? tokenStore,
     String? baseUrl,
   })  : tokenStore = tokenStore ?? SecureTokenStore(),
-        baseUrl = baseUrl ?? _defaultBaseUrl() {
+        baseUrl = _withTrailingSlash(baseUrl ?? _defaultBaseUrl()) {
     dio = Dio(
       BaseOptions(
         baseUrl: this.baseUrl,
@@ -75,6 +74,9 @@ class ApiClient {
   late final Dio dio;
   Future<String?>? _refreshInFlight;
 
+  static String _withTrailingSlash(String value) =>
+      value.endsWith('/') ? value : value + '/';
+
   static String _defaultBaseUrl() {
     const configured = String.fromEnvironment('API_BASE_URL');
     if (configured.isNotEmpty) return configured;
@@ -108,7 +110,7 @@ class ApiClient {
         ),
       );
       final response = await refreshDio.post<Map<String, dynamic>>(
-        '/auth/refresh',
+        'auth/refresh',
         data: {'refreshToken': refreshToken},
       );
       final data = response.data ?? <String, dynamic>{};
