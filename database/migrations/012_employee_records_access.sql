@@ -42,7 +42,7 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM employee_contracts
     WHERE is_current = TRUE
-    GROUP BY employee_id, branch_id
+    GROUP BY employee_id
     HAVING COUNT(*) > 1
   ) THEN
     RAISE EXCEPTION 'Cannot enforce one current contract per employee and branch: duplicate current contracts exist';
@@ -50,5 +50,5 @@ BEGIN
 END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_employee_contracts_one_current
-  ON employee_contracts(employee_id, branch_id)
+  ON employee_contracts(employee_id)
   WHERE is_current = TRUE;
