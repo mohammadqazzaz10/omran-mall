@@ -27,7 +27,7 @@ if (!jwtSecret || jwtSecret.length < 32) {
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, { provide: APP_GUARD, useClass: AccessTokenGuard }],
+  providers: [\n    AuthService,\n    AccessTokenGuard,\n    { provide: APP_GUARD, useExisting: AccessTokenGuard },\n  ],
   exports: [AuthService, AccessTokenGuard, JwtModule],
 })
 export class AuthModule {}
