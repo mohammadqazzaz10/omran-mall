@@ -85,7 +85,9 @@ describe("AttendanceService", () => {
     },
   );
 
-  it("keeps overnight attendance on the assigned shift work date", async () => {
+  it(
+    "keeps overnight attendance on the assigned shift work date",
+    async () => {
     const employeeId = "66666666-6666-4666-8666-666666666666";
     const shiftId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
     const record = {
@@ -251,7 +253,9 @@ describe("AttendanceService", () => {
         check_in_lng: 35.91,
       });
       expect(db.transaction).toHaveBeenCalledTimes(1);
-      expect(client.query.mock.calls[2][0]).toContain("attendance_qr_challenges");
+      expect(client.query.mock.calls[2][0]).toContain(
+        "attendance_qr_challenges",
+      );
       expect(client.query.mock.calls[3][0]).toContain("attendance_qr_uses");
       expect(client.query.mock.calls[3][0]).toContain("branch_id");
       expect(client.query.mock.calls[3][1]).toEqual([
