@@ -1,5 +1,5 @@
 import {
-  IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, IsUUID,
+  IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, IsUUID, Matches,
   MaxLength, MinLength,
 } from "class-validator";
 
