@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Req } from "@nestjs/common";\nimport { Public } from "../../common/decorators/public.decorator";
+import { Body, Controller, Post, Get, Req } from "@nestjs/common";\nimport { Public } from "../../common/decorators/public.decorator";\nimport { SkipPermissionCheck } from "../../common/decorators/permission.decorator";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { AuthService } from "./auth.service";
@@ -25,14 +25,14 @@ export class AuthController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @Post("logout")
+  @SkipPermissionCheck()\n  @Post("logout")
   logout(@Req() request: AuthenticatedRequest) {
     return this.auth.logout(request.user.sessionId, request.user.id);
   }
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @Get("me")
+  @SkipPermissionCheck()\n  @Get("me")
   me(@Req() request: AuthenticatedRequest) {
     return this.auth.me(request.user.id, request.user.sessionId);
   }
