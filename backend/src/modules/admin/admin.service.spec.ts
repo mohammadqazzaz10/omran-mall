@@ -47,4 +47,60 @@ describe("AdminService privilege boundaries", () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(db.query).not.toHaveBeenCalled();
   });
+
+  it("restricts custom role management to a company Super Admin", async () => {
+    const db = {
+      query: jest.fn().mockResolvedValue({ rowCount: 0, rows: [] }),
+      transaction: jest.fn(),
+    };
+    const service = new AdminService(db as any);
+    await expect(
+      service.createRole(
+        { code: "CUSTOM_STOCK_VIEWER", nameAr: "مشاهد المخزون", permissionCodes: ["employees.view.branch"] },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects company-level and identity-management permissions in custom roles", async () => {
+    const client = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 1,
+        rows: [{ id: "permission-id", code: "users.manage.company", scope: "company" }],
+      }),
+    };
+    const db = {
+      query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [] }),
+      transaction: jest.fn((callback: (tx: any) => unknown) => callback(client)),
+    };
+    const service = new AdminService(db as any);
+    await expect(
+      service.createRole(
+        { code: "CUSTOM_USER_ADMIN", nameAr: "مدير حسابات", permissionCodes: ["users.manage.company"] },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("prevents editing built-in system roles even for a Super Admin", async () => {
+    const superAdmin = { ...actor, id: "99999999-9999-4999-8999-999999999999" };
+    const client = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 1,
+        rows: [{ id: "role-id", code: "SUPER_ADMIN", is_system_role: true }],
+      }),
+    };
+    const db = {
+      query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [] }),
+      transaction: jest.fn((callback: (tx: any) => unknown) => callback(client)),
+    };
+    const service = new AdminService(db as any);
+    await expect(
+      service.updateRole("role-id", { nameAr: "تعديل غير مسموح" }, superAdmin),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
 });
