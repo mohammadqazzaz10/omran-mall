@@ -552,5 +552,4 @@ export class AttendanceService {
       };
     });
   }
-
 }
