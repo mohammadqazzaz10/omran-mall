@@ -83,7 +83,9 @@ export class BreaksService {
     );
     const employee = result.rows[0];
     if (!employee) {
-      throw new ForbiddenException("لا يوجد ملف موظف مرتبط بحسابك في هذا الفرع");
+      throw new ForbiddenException(
+        "لا يوجد ملف موظف مرتبط بحسابك في هذا الفرع",
+      );
     }
     if (employee.status !== "active") {
       throw new ForbiddenException("حالة الموظف لا تسمح بطلب الاستراحة");
@@ -213,7 +215,11 @@ export class BreaksService {
     }
 
     for (const period of this.blackoutPeriods(type.blackout_periods)) {
-      if (!period || typeof period.start !== "string" || typeof period.end !== "string") {
+      if (
+        !period ||
+        typeof period.start !== "string" ||
+        typeof period.end !== "string"
+      ) {
         continue;
       }
       const start = this.minutes(period.start);
@@ -231,7 +237,9 @@ export class BreaksService {
       [employee.id, type.id, localDate],
     );
     if (Number(daily.rows[0]?.count ?? 0) >= type.daily_quota_times) {
-      throw new ConflictException("تم استنفاد عدد مرات هذا النوع من الاستراحة اليوم");
+      throw new ConflictException(
+        "تم استنفاد عدد مرات هذا النوع من الاستراحة اليوم",
+      );
     }
 
     if (type.cooldown_between_breaks_minutes > 0) {
@@ -249,7 +257,9 @@ export class BreaksService {
           [lastEnd, type.cooldown_between_breaks_minutes],
         );
         if (!cooldown.rows[0]?.allowed) {
-          throw new ConflictException("لم تنتهِ فترة الانتظار بين الاستراحات بعد");
+          throw new ConflictException(
+            "لم تنتهِ فترة الانتظار بين الاستراحات بعد",
+          );
         }
       }
     }
@@ -265,7 +275,9 @@ export class BreaksService {
       Number(concurrent.rows[0]?.count ?? 0) >=
       type.max_simultaneous_per_department
     ) {
-      throw new ConflictException("وصل القسم إلى الحد الأقصى للموظفين خارج العمل");
+      throw new ConflictException(
+        "وصل القسم إلى الحد الأقصى للموظفين خارج العمل",
+      );
     }
   }
 
@@ -329,7 +341,9 @@ export class BreaksService {
       throw new BadRequestException("يجب تحديد بداية ونهاية الوقت المسموح معاً");
     }
     if (dto.defaultDurationMinutes > dto.maxDurationMinutes) {
-      throw new BadRequestException("المدة الافتراضية لا يمكن أن تتجاوز الحد الأقصى");
+      throw new BadRequestException(
+        "المدة الافتراضية لا يمكن أن تتجاوز الحد الأقصى",
+      );
     }
 
     return this.db.transaction(async (client) => {
@@ -400,7 +414,10 @@ export class BreaksService {
     const values: unknown[] = [branchId, typeId];
     const assignments: string[] = [];
     for (const [key, column] of Object.entries(columns)) {
-      if (Object.prototype.hasOwnProperty.call(dto, key) && dto[key as keyof UpdateBreakTypeDto] !== undefined) {
+      if (
+        Object.prototype.hasOwnProperty.call(dto, key) &&
+        dto[key as keyof UpdateBreakTypeDto] !== undefined
+      ) {
         values.push(
           key === "blackoutPeriods"
             ? JSON.stringify(dto.blackoutPeriods ?? [])
@@ -428,20 +445,29 @@ export class BreaksService {
 
       const defaultDuration =
         dto.defaultDurationMinutes ?? current.default_duration_minutes;
-      const maxDuration = dto.maxDurationMinutes ?? current.max_duration_minutes;
+      const maxDuration =
+        dto.maxDurationMinutes ?? current.max_duration_minutes;
       if (defaultDuration < 1 || maxDuration < defaultDuration) {
         throw new BadRequestException("سياسة مدة الاستراحة غير صحيحة");
       }
-      const hasStart = Object.prototype.hasOwnProperty.call(dto, "allowedStartTime");
-      const hasEnd = Object.prototype.hasOwnProperty.call(dto, "allowedEndTime");
+      const hasStart = Object.prototype.hasOwnProperty.call(
+        dto,
+        "allowedStartTime",
+      );
+      const hasEnd = Object.prototype.hasOwnProperty.call(
+        dto,
+        "allowedEndTime",
+      );
       const startTime = hasStart
-        ? dto.allowedStartTime ?? null
+        ? (dto.allowedStartTime ?? null)
         : current.allowed_start_time;
       const endTime = hasEnd
-        ? dto.allowedEndTime ?? null
+        ? (dto.allowedEndTime ?? null)
         : current.allowed_end_time;
       if ((startTime === null) !== (endTime === null)) {
-        throw new BadRequestException("يجب تحديد بداية ونهاية الوقت المسموح معاً");
+        throw new BadRequestException(
+          "يجب تحديد بداية ونهاية الوقت المسموح معاً",
+        );
       }
 
       const result = await client.query(
@@ -451,7 +477,8 @@ export class BreaksService {
          RETURNING *`,
         values,
       );
-      if (!result.rowCount) throw new NotFoundException("نوع الاستراحة غير موجود");
+      if (!result.rowCount)
+        throw new NotFoundException("نوع الاستراحة غير موجود");
       await client.query(
         `INSERT INTO audit_logs
           (user_id, branch_id, table_name, record_id, action, new_values)
@@ -471,9 +498,12 @@ export class BreaksService {
       await this.assertBranch(client, branchId, user);
       const employee = await this.employeeForUser(client, branchId, user.id);
       const type = await this.breakType(client, branchId, dto.breakTypeId);
-      const duration = dto.requestedDurationMinutes ?? type.default_duration_minutes;
+      const duration =
+        dto.requestedDurationMinutes ?? type.default_duration_minutes;
       if (duration > type.max_duration_minutes) {
-        throw new BadRequestException("مدة الاستراحة تتجاوز الحد الأقصى المحدد");
+        throw new BadRequestException(
+          "مدة الاستراحة تتجاوز الحد الأقصى المحدد",
+        );
       }
 
       const pending = await client.query(
@@ -507,7 +537,13 @@ export class BreaksService {
       const request = requestResult.rows[0];
       const session = type.requires_approval
         ? null
-        : await this.createSession(client, request.id, employee, type, duration);
+        : await this.createSession(
+            client,
+            request.id,
+            employee,
+            type,
+            duration,
+          );
 
       await client.query(
         `INSERT INTO audit_logs
@@ -579,7 +615,12 @@ export class BreaksService {
       if (!employeeRow || employeeRow.status !== "active") {
         throw new ConflictException("لم يعد الموظف مؤهلاً لبدء الاستراحة");
       }
-      const type = await this.breakType(client, branchId, request.break_type_id, true);
+      const type = await this.breakType(
+        client,
+        branchId,
+        request.break_type_id,
+        true,
+      );
       await this.assertCanStart(
         client,
         employeeRow,
@@ -715,7 +756,7 @@ export class BreaksService {
       const scope = await this.accessScope(client, branchId, user);
       const [sessions, requests] = await Promise.all([
         client.query(
-        `SELECT s.id, s.employee_id, s.department_id, s.break_type_id,
+          `SELECT s.id, s.employee_id, s.department_id, s.break_type_id,
                 s.start_time, s.expected_end_time,
                 GREATEST(0, CEIL(EXTRACT(EPOCH FROM (s.expected_end_time - CURRENT_TIMESTAMP))))::int AS remaining_seconds,
                 e.employee_code, e.first_name_ar, e.second_name_ar, e.last_name_ar,
@@ -727,10 +768,10 @@ export class BreaksService {
          WHERE s.branch_id = $1 AND s.actual_end_time IS NULL
            AND ($2::boolean = TRUE OR s.department_id = ANY($3::uuid[]))
          ORDER BY s.expected_end_time ASC`,
-        [branchId, scope.branchWide, scope.departmentIds],
-      ),
-      client.query(
-        `SELECT r.id, r.employee_id, r.department_id, r.break_type_id,
+          [branchId, scope.branchWide, scope.departmentIds],
+        ),
+        client.query(
+          `SELECT r.id, r.employee_id, r.department_id, r.break_type_id,
                 r.requested_duration_minutes, r.created_at,
                 e.employee_code, e.first_name_ar, e.second_name_ar, e.last_name_ar,
                 t.name_ar AS break_type_name_ar, d.name_ar AS department_name_ar
@@ -741,8 +782,8 @@ export class BreaksService {
          WHERE r.branch_id = $1 AND r.status = 'pending'
            AND ($2::boolean = TRUE OR r.department_id = ANY($3::uuid[]))
          ORDER BY r.created_at ASC`,
-        [branchId, scope.branchWide, scope.departmentIds],
-      ),
+          [branchId, scope.branchWide, scope.departmentIds],
+        ),
       ]);
       return { activeSessions: sessions.rows, pendingRequests: requests.rows };
     });
