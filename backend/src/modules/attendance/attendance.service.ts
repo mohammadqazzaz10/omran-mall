@@ -545,7 +545,11 @@ export class AttendanceService {
         row,
         updated.rows[0],
       );
-      return { correctionId, status: "rejected", correction: updated.rows[0] };
+      return {
+        correctionId,
+        status: "rejected",
+        correction: updated.rows[0],
+      };
     });
   }
 
