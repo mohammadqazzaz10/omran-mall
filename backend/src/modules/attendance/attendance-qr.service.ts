@@ -22,6 +22,9 @@ export class AttendanceQrService {
 
   private signingKey(branchSalt: string): Buffer {
     const secret = process.env.ATTENDANCE_QR_SECRET;
+    if (!branchSalt) {
+      throw new ServiceUnavailableException("ملح توقيع QR غير مضبوط لهذا الفرع");
+    }
     if (!secret || Buffer.byteLength(secret, "utf8") < 32) {
       throw new ServiceUnavailableException(
         "خدمة QR غير مهيأة؛ يلزم ضبط ATTENDANCE_QR_SECRET بطول 32 بايت على الأقل",
@@ -229,6 +232,12 @@ export class AttendanceQrService {
       ) {
         throw new ForbiddenException("دقة الموقع غير كافية للتحقق من الحضور");
       }
+      const radius = fence.geofence_radius_meters ?? 150;
+      if (!Number.isInteger(radius) || radius < 25 || radius > 1000) {
+        throw new ServiceUnavailableException(
+          "نصف قطر النطاق الجغرافي للفرع خارج الحدود المسموحة",
+        );
+      }
       latitude = dto.latitude;
       longitude = dto.longitude;
       const distance = this.distanceMeters(
@@ -237,7 +246,7 @@ export class AttendanceQrService {
         latitude,
         longitude,
       );
-      if (distance > (fence.geofence_radius_meters ?? 150)) {
+      if (distance > radius) {
         throw new ForbiddenException("أنت خارج النطاق الجغرافي المسموح للفرع");
       }
     }
