@@ -46,10 +46,8 @@ class _AttendanceQrScannerScreenState
         return null;
       }
       return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 12),
-        ),
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 12),
       );
     } catch (_) {
       return null;
