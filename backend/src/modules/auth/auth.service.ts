@@ -286,7 +286,11 @@ export class AuthService {
     return result.rows;
   }
 
-  async revokeOwnedSession(userId: string, currentSessionId: string, targetSessionId: string) {
+  async revokeOwnedSession(
+    userId: string,
+    currentSessionId: string,
+    targetSessionId: string,
+  ) {
     if (targetSessionId === currentSessionId) {
       throw new ForbiddenException("استخدم تسجيل الخروج لإنهاء الجلسة الحالية");
     }
@@ -308,10 +312,22 @@ export class AuthService {
     return { success: true };
   }
 
-  async changePassword(userId: string, sessionId: string, currentPassword: string, newPassword: string) {
-    if (currentPassword === newPassword) throw new ForbiddenException("يجب اختيار كلمة مرور جديدة مختلفة");
-    if (Buffer.byteLength(newPassword, "utf8") > 72) throw new ForbiddenException("كلمة المرور الجديدة تتجاوز الحد الآمن المسموح به");
-    const found = await this.db.query<{ password_hash: string; must_change_password: boolean }>(
+  async changePassword(
+    userId: string,
+    sessionId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    if (currentPassword === newPassword)
+      throw new ForbiddenException("يجب اختيار كلمة مرور جديدة مختلفة");
+    if (Buffer.byteLength(newPassword, "utf8") > 72)
+      throw new ForbiddenException(
+        "كلمة المرور الجديدة تتجاوز الحد الآمن المسموح به",
+      );
+    const found = await this.db.query<{
+      password_hash: string;
+      must_change_password: boolean;
+    }>(
       "SELECT password_hash,must_change_password FROM users WHERE id=$1 AND is_active=TRUE AND deleted_at IS NULL",
       [userId],
     );

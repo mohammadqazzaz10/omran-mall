@@ -128,15 +128,18 @@ describe("AccessTokenGuard", () => {
   it("blocks temporary-password accounts from all routes except explicitly allowed routes", async () => {
     const jwt = { verifyAsync: jest.fn().mockResolvedValue(claims) } as any;
     const db = {
-      query: jest.fn()
+      query: jest
+        .fn()
         .mockResolvedValueOnce({
-          rows: [{
-            user_id: claims.sub,
-            company_id: claims.companyId,
-            username: "new-user",
-            primary_branch_id: "44444444-4444-4444-8444-444444444444",
-            must_change_password: true,
-          }],
+          rows: [
+            {
+              user_id: claims.sub,
+              company_id: claims.companyId,
+              username: "new-user",
+              primary_branch_id: "44444444-4444-4444-8444-444444444444",
+              must_change_password: true,
+            },
+          ],
         })
         .mockResolvedValueOnce({
           rows: [{ branch_id: "44444444-4444-4444-8444-444444444444" }],
@@ -147,8 +150,9 @@ describe("AccessTokenGuard", () => {
       headers: { authorization: "Bearer valid-token" },
     };
 
-    await expect(guard.canActivate(contextFor(request))).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(guard.canActivate(contextFor(request))).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
     expect(request.user).toBeUndefined();
   });
-
 });

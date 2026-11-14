@@ -1,4 +1,12 @@
-import { Body, Controller, Post, Get, Req, Param, ParseUUIDPipe } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Req,
+  Param,
+  ParseUUIDPipe,
+} from "@nestjs/common";
 import { Public } from "../../common/decorators/public.decorator";
 import { SkipPermissionCheck } from "../../common/decorators/permission.decorator";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
@@ -39,8 +47,16 @@ export class AuthController {
   @SkipPermissionCheck()
   @AllowPasswordChangeOnly()
   @Post("change-password")
-  changePassword(@Body() dto: ChangePasswordDto, @Req() request: AuthenticatedRequest) {
-    return this.auth.changePassword(request.user.id, request.user.sessionId, dto.currentPassword, dto.newPassword);
+  changePassword(
+    @Body() dto: ChangePasswordDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.auth.changePassword(
+      request.user.id,
+      request.user.sessionId,
+      dto.currentPassword,
+      dto.newPassword,
+    );
   }
 
   @ApiBearerAuth()
@@ -53,8 +69,15 @@ export class AuthController {
   @ApiBearerAuth()
   @SkipPermissionCheck()
   @Post("sessions/:sessionId/revoke")
-  revokeSession(@Param("sessionId", ParseUUIDPipe) id: string, @Req() request: AuthenticatedRequest) {
-    return this.auth.revokeOwnedSession(request.user.id, request.user.sessionId, id);
+  revokeSession(
+    @Param("sessionId", ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.auth.revokeOwnedSession(
+      request.user.id,
+      request.user.sessionId,
+      id,
+    );
   }
 
   @ApiBearerAuth()

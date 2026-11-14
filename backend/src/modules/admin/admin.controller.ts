@@ -1,13 +1,25 @@
 import {
-  Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req,
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { RequirePermission } from "../../common/decorators/permission.decorator";
 import { AuthenticatedUser } from "../auth/auth.types";
 import {
-  AssignUserRoleDto, CreateBranchDto, CreateUserDto, ListUsersQueryDto,
-  UpdateBranchDto, UpdateUserStatusDto,
+  AssignUserRoleDto,
+  CreateBranchDto,
+  CreateUserDto,
+  ListUsersQueryDto,
+  UpdateBranchDto,
+  UpdateUserStatusDto,
 } from "./admin.dto";
 import { AdminService } from "./admin.service";
 

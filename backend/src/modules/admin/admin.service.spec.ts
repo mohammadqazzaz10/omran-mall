@@ -13,29 +13,38 @@ describe("AdminService privilege boundaries", () => {
   };
 
   it("does not allow a non-super-admin to create elevated role accounts", async () => {
-    const db = { query: jest.fn().mockResolvedValue({ rowCount: 0, rows: [] }) };
+    const db = {
+      query: jest.fn().mockResolvedValue({ rowCount: 0, rows: [] }),
+    };
     const service = new AdminService(db as any);
-    await expect(service.createUser({
-      username: "branch.manager",
-      roleCode: "BRANCH_MANAGER",
-      branchIds: ["44444444-4444-4444-8444-444444444444"],
-    }, actor)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.createUser(
+        {
+          username: "branch.manager",
+          roleCode: "BRANCH_MANAGER",
+          branchIds: ["44444444-4444-4444-8444-444444444444"],
+        },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.query).toHaveBeenCalledTimes(1);
   });
 
   it("prevents an administrator from disabling their own account", async () => {
     const db = { query: jest.fn() };
     const service = new AdminService(db as any);
-    await expect(service.updateUserStatus(actor.id, false, actor))
-      .rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.updateUserStatus(actor.id, false, actor),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(db.query).not.toHaveBeenCalled();
   });
 
   it("does not allow an empty branch update", async () => {
     const db = { query: jest.fn() };
     const service = new AdminService(db as any);
-    await expect(service.updateBranch("55555555-5555-4555-8555-555555555555", {}, actor))
-      .rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.updateBranch("55555555-5555-4555-8555-555555555555", {}, actor),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(db.query).not.toHaveBeenCalled();
   });
 });

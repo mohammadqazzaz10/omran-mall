@@ -689,7 +689,8 @@ export class OrganizationService {
        LIMIT 1`,
       [user.id, user.companyId],
     );
-    if (!result.rows[0]) throw new NotFoundException("لا يوجد ملف وظيفي مرتبط بهذا الحساب");
+    if (!result.rows[0])
+      throw new NotFoundException("لا يوجد ملف وظيفي مرتبط بهذا الحساب");
     return result.rows[0];
   }
 
@@ -705,7 +706,8 @@ export class OrganizationService {
       [user.id],
     );
     const old = oldResult.rows[0];
-    if (!old) throw new NotFoundException("لا يوجد ملف وظيفي مرتبط بهذا الحساب");
+    if (!old)
+      throw new NotFoundException("لا يوجد ملف وظيفي مرتبط بهذا الحساب");
     return this.db.transaction(async (client) => {
       const updated = await client.query(
         `UPDATE employees SET
@@ -746,5 +748,4 @@ export class OrganizationService {
       return updated.rows[0];
     });
   }
-
 }

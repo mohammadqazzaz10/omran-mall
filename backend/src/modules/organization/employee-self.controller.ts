@@ -22,7 +22,10 @@ export class EmployeeSelfController {
 
   @Patch()
   @RequirePermission("employees.edit.own")
-  updateOwnProfile(@Body() dto: EmployeeSelfUpdateDto, @Req() req: AuthRequest) {
+  updateOwnProfile(
+    @Body() dto: EmployeeSelfUpdateDto,
+    @Req() req: AuthRequest,
+  ) {
     return this.organization.updateOwnEmployeeProfile(dto, req.user);
   }
 }

@@ -180,5 +180,4 @@ describe("PermissionGuard", () => {
       user.allowedBranchIds,
     ]);
   });
-
 });

@@ -1,5 +1,9 @@
 import {
-  IsOptional, IsString, Matches, MaxLength, MinLength,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
 } from "class-validator";
 
 export class LoginDto {

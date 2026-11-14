@@ -106,7 +106,15 @@ export class PermissionGuard implements CanActivate {
              ))
          )
        LIMIT 1`,
-      [user.id, user.companyId, branchId, permissionCode, hasBranchMembership, user.allowedBranchIds.length > 0, user.allowedBranchIds],
+      [
+        user.id,
+        user.companyId,
+        branchId,
+        permissionCode,
+        hasBranchMembership,
+        user.allowedBranchIds.length > 0,
+        user.allowedBranchIds,
+      ],
     );
 
     if (grant.rowCount !== 1) {

@@ -102,9 +102,14 @@ export class AccessTokenGuard implements CanActivate {
       }
     }
 
-    const passwordChangeAllowed = this.reflector.getAllAndOverride<boolean>(PASSWORD_CHANGE_ALLOWED_KEY, [context.getHandler(), context.getClass()]);
+    const passwordChangeAllowed = this.reflector.getAllAndOverride<boolean>(
+      PASSWORD_CHANGE_ALLOWED_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (active.must_change_password && !passwordChangeAllowed) {
-      throw new ForbiddenException("يجب تغيير كلمة المرور المؤقتة قبل استخدام النظام");
+      throw new ForbiddenException(
+        "يجب تغيير كلمة المرور المؤقتة قبل استخدام النظام",
+      );
     }
 
     const principal: AuthenticatedUser = {

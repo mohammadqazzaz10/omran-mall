@@ -1,6 +1,14 @@
 import {
-  IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, IsUUID, Matches,
-  MaxLength, MinLength,
+  IsArray,
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  MinLength,
 } from "class-validator";
 
 export class CreateBranchDto {
@@ -20,21 +28,45 @@ export class UpdateBranchDto {
   @IsOptional() @IsBoolean() isActive?: boolean;
 }
 export class CreateUserDto {
-  @IsString() @MinLength(3) @MaxLength(100) @Matches(/^[A-Za-z0-9._-]+$/) username!: string;
+  @IsString()
+  @MinLength(3)
+  @MaxLength(100)
+  @Matches(/^[A-Za-z0-9._-]+$/)
+  username!: string;
   @IsOptional() @IsEmail() @MaxLength(255) email?: string;
   @IsOptional() @IsString() @MinLength(7) @MaxLength(50) phone?: string;
   @IsOptional() @IsUUID() primaryBranchId?: string;
   @IsOptional() @IsArray() @IsUUID("4", { each: true }) branchIds?: string[];
-  @IsIn(["SUPER_ADMIN", "GENERAL_MANAGER", "BRANCH_MANAGER", "HR_MANAGER", "SUPERVISOR", "CASHIER", "EMPLOYEE"]) roleCode!: string;
+  @IsIn([
+    "SUPER_ADMIN",
+    "GENERAL_MANAGER",
+    "BRANCH_MANAGER",
+    "HR_MANAGER",
+    "SUPERVISOR",
+    "CASHIER",
+    "EMPLOYEE",
+  ])
+  roleCode!: string;
   @IsOptional() @IsUUID() departmentId?: string;
   @IsOptional() @IsUUID() employeeId?: string;
 }
 export class AssignUserRoleDto {
-  @IsIn(["SUPER_ADMIN", "GENERAL_MANAGER", "BRANCH_MANAGER", "HR_MANAGER", "SUPERVISOR", "CASHIER", "EMPLOYEE"]) roleCode!: string;
+  @IsIn([
+    "SUPER_ADMIN",
+    "GENERAL_MANAGER",
+    "BRANCH_MANAGER",
+    "HR_MANAGER",
+    "SUPERVISOR",
+    "CASHIER",
+    "EMPLOYEE",
+  ])
+  roleCode!: string;
   @IsOptional() @IsArray() @IsUUID("4", { each: true }) branchIds?: string[];
   @IsOptional() @IsUUID() departmentId?: string;
 }
-export class UpdateUserStatusDto { @IsBoolean() isActive!: boolean; }
+export class UpdateUserStatusDto {
+  @IsBoolean() isActive!: boolean;
+}
 export class ListUsersQueryDto {
   @IsOptional() @IsString() @MaxLength(120) search?: string;
   @IsOptional() @IsIn(["true", "false"]) active?: string;
