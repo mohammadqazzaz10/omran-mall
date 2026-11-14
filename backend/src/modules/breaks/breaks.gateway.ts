@@ -177,12 +177,12 @@ export class BreaksGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.userId = payload.sub;
       client.data.companyId = payload.companyId;
       client.data.branchIds = [...branchIds];
-      client.data.employeeIds = employeeIds;
+      client.data.employeeIds = employeeRooms;
       client.data.departmentIds = departmentIds;
       await client.join([
         ...[...branchIds].map((id) => `branch_${id}`),
         ...departmentIds.map((id) => `department_${id}`),
-        ...employeeIds.map((id) => `employee_${id}`),
+        ...employeeRooms.map((id) => `employee_${id}`),
       ]);
     } catch (error) {
       this.logger.error(
