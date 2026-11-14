@@ -47,8 +47,8 @@ export class BreaksMonitor implements OnModuleInit, OnModuleDestroy {
              AND s.expected_end_time <= CURRENT_TIMESTAMP
              AND s.overstay_alert_sent_at IS NULL
            ORDER BY s.expected_end_time ASC
-           FOR UPDATE SKIP LOCKED
            LIMIT 100
+           FOR UPDATE SKIP LOCKED
          )
          UPDATE break_sessions s
          SET overstay_alert_sent_at = CURRENT_TIMESTAMP,
