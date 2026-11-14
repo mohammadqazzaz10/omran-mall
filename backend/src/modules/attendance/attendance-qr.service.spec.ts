@@ -51,7 +51,7 @@ describe("AttendanceQrService", () => {
     expect(result.branchId).toBe(branchId);
     expect(result.token.split(".")).toHaveLength(2);
     expect(db.query.mock.calls[1][0]).toContain("attendance_qr_challenges");
-    expect(db.query.mock.calls[1][0]).not.toContain("INSERT INTO attendance_qr_challenges (branch_id, nonce");
+    expect(db.query.mock.calls[1][0]).toContain("nonce_hash");
     expect(db.query.mock.calls[1][1][1]).toMatch(/^[a-f0-9]{64}$/);
   });
 
@@ -78,6 +78,56 @@ describe("AttendanceQrService", () => {
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.query).not.toHaveBeenCalled();
+  });
+
+  it("requires a sufficiently accurate location when a branch geofence is configured", async () => {
+    const nonce = "b".repeat(64);
+    const payload = {
+      v: 1 as const,
+      b: branchId,
+      n: nonce,
+      e: Math.floor(Date.now() / 1000) + 45,
+    };
+    const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+    const key = require("crypto")
+      .createHmac("sha256", process.env.ATTENDANCE_QR_SECRET)
+      .update("branch-salt")
+      .digest();
+    const signature = require("crypto")
+      .createHmac("sha256", key)
+      .update(encoded)
+      .digest("base64url");
+    const db = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          rows: [{
+            id: branchId,
+            qr_secret_salt: "branch-salt",
+            latitude: "31.95",
+            longitude: "35.91",
+            geofence_radius_meters: 150,
+          }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          rows: [{ id: "66666666-6666-4666-8666-666666666666" }],
+          rowCount: 1,
+        }),
+      transaction: jest.fn(),
+    };
+    const attendance = { checkIn: jest.fn() };
+    const service = new AttendanceQrService(db as any, attendance as any);
+
+    await expect(
+      service.checkInWithQr(
+        branchId,
+        { qrToken: encoded + "." + signature },
+        user,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(attendance.checkIn).not.toHaveBeenCalled();
   });
 
   it("fails closed when QR signing secret is not configured", async () => {
