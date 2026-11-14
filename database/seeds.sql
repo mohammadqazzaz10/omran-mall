@@ -194,7 +194,11 @@ SELECT r.id, p.id
 FROM roles r
 JOIN permissions p ON p.code = 'attendance.qr.manage.branch'
 WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
-  AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER', 'BRANCH_MANAGER', 'HR_MANAGER')
+  AND r.code IN (
+    'SUPER_ADMIN', 'GENERAL_MANAGER', 'BRANCH_MANAGER',
+    'ASSISTANT_MANAGER', 'SUPERVISOR', 'HR_MANAGER',
+    'HR_OFFICER', 'PERSONNEL_OFFICER'
+  )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 7. Insert Default Standard Shifts for Retail Operation
