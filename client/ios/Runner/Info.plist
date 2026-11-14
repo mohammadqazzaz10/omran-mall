@@ -4,6 +4,10 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is required to scan the branch attendance QR code.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is checked during QR attendance when branch geofencing is enabled.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
