@@ -18,6 +18,7 @@ describe("OrganizationService branch integrity", () => {
     allowedBranchIds: ["00000000-0000-4000-8000-000000000003"],
     sessionId: "session",
     username: "admin",
+    mustChangePassword: false,
   };
 
   beforeEach(() => query.mockReset());
