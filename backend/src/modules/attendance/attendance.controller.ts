@@ -51,10 +51,11 @@ export class AttendanceController {
 
   @Post("check-in")
   @RequirePermission("attendance.check_in.own")
-  checkIn(
+  async checkIn(
     @Param("branchId", ParseUUIDPipe) branchId: string,
     @Req() req: AuthenticatedRequest,
   ) {
+    await this.attendanceQr.assertDirectCheckInAllowed(branchId, req.user);
     return this.attendance.checkIn(branchId, req.user);
   }
 
