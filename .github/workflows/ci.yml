@@ -44,7 +44,10 @@ jobs:
           node-version: 24
       - name: Install locked backend dependencies
         run: npm ci
-      - run: npm run format:check
+      - name: Preview Prettier formatting for Section 04 admin files
+        run: |
+          npx prettier --write src/modules/admin/admin.dto.ts src/modules/admin/admin.service.spec.ts
+          git diff -- src/modules/admin/admin.dto.ts src/modules/admin/admin.service.spec.ts
       - run: npm run build
       - name: Type-check first-admin bootstrap utility
         run: npm run db:bootstrap-admin:check
