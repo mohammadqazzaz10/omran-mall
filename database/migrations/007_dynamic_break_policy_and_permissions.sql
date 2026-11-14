@@ -32,7 +32,8 @@ ALTER TABLE break_requests
   ADD COLUMN cancelled_at TIMESTAMPTZ;
 
 ALTER TABLE break_sessions
-  ADD COLUMN department_id UUID;
+  ADD COLUMN department_id UUID,
+  ADD COLUMN overstay_alert_sent_at TIMESTAMPTZ;
 
 UPDATE break_sessions s
 SET department_id = e.department_id
