@@ -111,7 +111,11 @@ describe("EmployeeRecordsService", () => {
         rows: [{ id: "old-branch-document", branch_id: "old-branch" }],
       });
 
-    const result = await service.listDocuments(branchId, employeeId, user as any);
+    const result = await service.listDocuments(
+      branchId,
+      employeeId,
+      user as any,
+    );
 
     expect(result).toHaveLength(1);
     expect(query.mock.calls[1][0]).not.toContain("branch_id=$2");
