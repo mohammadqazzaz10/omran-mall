@@ -192,9 +192,9 @@ export class AttendanceService {
         }
         try {
           await client.query(
-            `INSERT INTO attendance_qr_uses (challenge_id, employee_id)
-             VALUES ($1, $2)`,
-            [challenge.rows[0].id, employee.id],
+            `INSERT INTO attendance_qr_uses (challenge_id, employee_id, branch_id)
+             VALUES ($1, $2, $3)`,
+            [challenge.rows[0].id, employee.id, branchId],
           );
         } catch (error) {
           if ((error as { code?: string })?.code === "23505") {
