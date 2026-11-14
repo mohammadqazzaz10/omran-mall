@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
 import 'attendance_repository.dart';
@@ -25,6 +26,20 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       if (branch != null && branch.isNotEmpty) return branch;
     }
     return null;
+  }
+
+  bool get _canManageQr {
+    final roles = (ref.read(authProvider).user?['roles'] as List? ?? const [])
+        .whereType<Map>()
+        .map((role) => role['code']?.toString() ?? '')
+        .toSet();
+    return roles.any((role) => {
+      'SUPER_ADMIN',
+      'GENERAL_MANAGER',
+      'HR_MANAGER',
+      'BRANCH_MANAGER',
+      'SUPERVISOR',
+    }.contains(role));
   }
 
   bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
@@ -168,6 +183,27 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 icon: const Icon(Icons.logout),
                                 label: Text(_t('تسجيل الانصراف', 'Check out')),
                               ),
+                              const SizedBox(height: 8),
+                              OutlinedButton.icon(
+                                onPressed: _busy
+                                    ? null
+                                    : () async {
+                                        final recorded = await context.push<bool>('/attendance/scan');
+                                        if (recorded == true) _reload();
+                                      },
+                                icon: const Icon(Icons.qr_code_scanner),
+                                label: Text(_t('مسح رمز QR للحضور', 'Scan attendance QR')),
+                              ),
+                              if (_canManageQr) ...[
+                                const SizedBox(height: 8),
+                                OutlinedButton.icon(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => context.push('/attendance/qr'),
+                                  icon: const Icon(Icons.qr_code_2),
+                                  label: Text(_t('عرض رمز QR للفرع', 'Display branch QR')),
+                                ),
+                              ],
                               if (_busy) const Padding(
                                 padding: EdgeInsets.only(top: 12),
                                 child: LinearProgressIndicator(),
