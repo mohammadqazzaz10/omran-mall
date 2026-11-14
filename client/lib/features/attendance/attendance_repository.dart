@@ -25,6 +25,22 @@ class AttendanceRepository {
         .toList(growable: false);
   }
 
+  Future<List<Map<String, dynamic>>> branchRecords(
+    String branchId,
+    String workDate,
+  ) async {
+    final response = await client.dio.get<dynamic>(
+      'branches/$branchId/attendance',
+      queryParameters: {'workDate': workDate},
+    );
+    final data = response.data;
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList(growable: false);
+  }
+
   Future<Map<String, dynamic>> createQrChallenge(String branchId) async {
     final response = await client.dio.post<dynamic>(
       'branches/$branchId/attendance/qr/challenges',
