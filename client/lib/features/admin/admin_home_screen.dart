@@ -408,6 +408,16 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.free_breakfast_outlined),
+                    title: Text(strings.breakManagementTitle),
+                    subtitle: Text(strings.pendingBreakRequestsTitle),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/breaks/manage'),
+                  ),
+                ),
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     Expanded(
