@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: quality-checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -44,29 +44,6 @@ jobs:
           node-version: 24
       - name: Install locked backend dependencies
         run: npm ci
-      - name: Temporary employee records Prettier formatting preview
-        run: |
-          git fetch origin "${{ github.event.pull_request.head.ref }}"
-          git checkout -B section-05-format FETCH_HEAD
-          npx prettier --write "src/modules/organization/employee-records.controller.ts" "src/modules/organization/employee-records.dto.ts" "src/modules/organization/employee-records.service.ts" "src/modules/organization/employee-records.service.spec.ts" "src/modules/admin/admin.service.ts" "src/modules/admin/admin.service.spec.ts"
-          git add src/modules/organization/employee-records.controller.ts src/modules/organization/employee-records.dto.ts src/modules/organization/employee-records.service.ts src/modules/organization/employee-records.service.spec.ts src/modules/admin/admin.service.ts src/modules/admin/admin.service.spec.ts
-          if ! git diff --cached --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "style(section-05): apply Prettier formatting"
-            git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
-          fi
-          mkdir -p /tmp/employee-records-formatted
-          cp src/modules/organization/employee-records.controller.ts /tmp/employee-records-formatted/
-          cp src/modules/organization/employee-records.dto.ts /tmp/employee-records-formatted/
-          cp src/modules/organization/employee-records.service.ts /tmp/employee-records-formatted/
-          tar -czf employee-records-formatted.tar.gz -C /tmp/employee-records-formatted .
-        working-directory: backend
-      - uses: actions/upload-artifact@v6
-        with:
-          name: employee-records-prettier-preview
-          path: backend/employee-records-formatted.tar.gz
-          if-no-files-found: error
       - run: npm run format:check
       - run: npm run build
       - name: Type-check first-admin bootstrap utility
