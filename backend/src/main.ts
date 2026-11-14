@@ -18,7 +18,11 @@ function validateProductionConfig(): void {
     );
   }
 
-  if ((process.env.JWT_SECRET || "").length < 32 || (process.env.JWT_SECRET || "").startsWith("REPLACE_")) {\n    throw new Error("Production JWT_SECRET must be a unique secret of at least 32 characters");\n  }\n\n  const databaseUrl = new URL(process.env.DATABASE_URL as string);
+  if ((process.env.JWT_SECRET || "").length < 32 || (process.env.JWT_SECRET || "").startsWith("REPLACE_")) {
+    throw new Error("Production JWT_SECRET must be a unique secret of at least 32 characters");
+  }
+
+  const databaseUrl = new URL(process.env.DATABASE_URL as string);
   if (!["postgres:", "postgresql:"].includes(databaseUrl.protocol)) {
     throw new Error("Production DATABASE_URL must use PostgreSQL");
   }
