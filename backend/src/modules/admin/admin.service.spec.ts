@@ -56,7 +56,11 @@ describe("AdminService privilege boundaries", () => {
     const service = new AdminService(db as any);
     await expect(
       service.createRole(
-        { code: "CUSTOM_STOCK_VIEWER", nameAr: "مشاهد المخزون", permissionCodes: ["employees.view.branch"] },
+        {
+          code: "CUSTOM_STOCK_VIEWER",
+          nameAr: "مشاهد المخزون",
+          permissionCodes: ["employees.view.branch"],
+        },
         actor,
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
@@ -67,17 +71,29 @@ describe("AdminService privilege boundaries", () => {
     const client = {
       query: jest.fn().mockResolvedValue({
         rowCount: 1,
-        rows: [{ id: "permission-id", code: "users.manage.company", scope: "company" }],
+        rows: [
+          {
+            id: "permission-id",
+            code: "users.manage.company",
+            scope: "company",
+          },
+        ],
       }),
     };
     const db = {
       query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [] }),
-      transaction: jest.fn((callback: (tx: any) => unknown) => callback(client)),
+      transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(client),
+      ),
     };
     const service = new AdminService(db as any);
     await expect(
       service.createRole(
-        { code: "CUSTOM_USER_ADMIN", nameAr: "مدير حسابات", permissionCodes: ["users.manage.company"] },
+        {
+          code: "CUSTOM_USER_ADMIN",
+          nameAr: "مدير حسابات",
+          permissionCodes: ["users.manage.company"],
+        },
         actor,
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
@@ -103,14 +119,21 @@ describe("AdminService privilege boundaries", () => {
     expect(client.query).toHaveBeenCalledTimes(1);
   });
 
-
   it("rejects custom roles that mix branch and department scopes", async () => {
     const client = {
       query: jest.fn().mockResolvedValue({
         rowCount: 2,
         rows: [
-          { id: "permission-1", code: "employees.view.branch", scope: "branch" },
-          { id: "permission-2", code: "employees.view.department", scope: "department" },
+          {
+            id: "permission-1",
+            code: "employees.view.branch",
+            scope: "branch",
+          },
+          {
+            id: "permission-2",
+            code: "employees.view.department",
+            scope: "department",
+          },
         ],
       }),
     };
@@ -124,12 +147,14 @@ describe("AdminService privilege boundaries", () => {
         {
           code: "CUSTOM_MIXED_SCOPE",
           nameAr: "دور بنطاق مختلط",
-          permissionCodes: ["employees.view.branch", "employees.view.department"],
+          permissionCodes: [
+            "employees.view.branch",
+            "employees.view.department",
+          ],
         },
         actor,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(client.query).toHaveBeenCalledTimes(1);
   });
-
 });
