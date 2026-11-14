@@ -559,6 +559,45 @@ export class BreaksService {
     return result;
   }
 
+  async myStatus(branchId: string, user: AuthenticatedUser) {
+    return this.db.transaction(async (client) => {
+      await this.assertBranch(client, branchId, user);
+      const employee = await this.employeeForUser(client, branchId, user.id);
+      const [session, requests] = await Promise.all([
+        client.query(
+          `SELECT s.id, s.employee_id, s.branch_id, s.department_id,
+                  s.break_type_id, s.start_time, s.expected_end_time,
+                  s.actual_end_time, s.duration_minutes, s.overstay_minutes,
+                  GREATEST(0, CEIL(EXTRACT(EPOCH FROM (s.expected_end_time - CURRENT_TIMESTAMP))))::int AS remaining_seconds,
+                  t.name_ar AS break_type_name_ar
+           FROM break_sessions s
+           JOIN break_types t ON t.id = s.break_type_id
+           WHERE s.employee_id = $1 AND s.branch_id = $2
+             AND s.actual_end_time IS NULL
+           ORDER BY s.start_time DESC
+           LIMIT 1`,
+          [employee.id, branchId],
+        ),
+        client.query(
+          `SELECT r.id, r.break_type_id, r.requested_duration_minutes,
+                  r.status, r.created_at, r.decided_at, r.rejection_reason,
+                  t.name_ar AS break_type_name_ar
+           FROM break_requests r
+           JOIN break_types t ON t.id = r.break_type_id
+           WHERE r.employee_id = $1 AND r.branch_id = $2
+           ORDER BY r.created_at DESC
+           LIMIT 20`,
+          [employee.id, branchId],
+        ),
+      ]);
+      return {
+        employeeId: employee.id,
+        activeSession: session.rows[0] ?? null,
+        requests: requests.rows,
+      };
+    });
+  }
+
   async listRequests(
     branchId: string,
     status: string | undefined,
