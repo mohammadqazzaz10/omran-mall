@@ -40,16 +40,64 @@ class AdminRepository {
     return Map<String, dynamic>.from(response.data as Map);
   }
 
-  Future<List<Map<String, dynamic>>> listEmployees(String branchId) async {
+  Future<List<Map<String, dynamic>>> listEmployees(
+    String branchId, {
+    bool activeOnly = true,
+  }) async {
     final response = await client.dio.get<dynamic>(
       'branches/' + branchId + '/employees',
-      queryParameters: {'page': 1, 'limit': 100, 'status': 'active'},
+      queryParameters: {
+        'page': 1,
+        'limit': 100,
+        if (activeOnly) 'status': 'active',
+      },
     );
     final data = response.data;
     if (data is! Map || data['items'] is! List) return const [];
     return (data['items'] as List)
         .map((item) => Map<String, dynamic>.from(item as Map))
         .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> listDepartments(String branchId) async {
+    final response = await client.dio.get<dynamic>(
+      'branches/' + branchId + '/departments',
+    );
+    final data = response.data;
+    if (data is! List) return const [];
+    return data.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> listPositions(String branchId) async {
+    final response = await client.dio.get<dynamic>(
+      'branches/' + branchId + '/positions',
+    );
+    final data = response.data;
+    if (data is! List) return const [];
+    return data.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
+  Future<Map<String, dynamic>> transferEmployee({
+    required String sourceBranchId,
+    required String employeeId,
+    required String targetBranchId,
+    required String targetDepartmentId,
+    required String targetPositionId,
+    required String reason,
+    String? targetDirectManagerId,
+  }) async {
+    final response = await client.dio.post<dynamic>(
+      'branches/' + sourceBranchId + '/employees/' + employeeId + '/transfer',
+      data: {
+        'targetBranchId': targetBranchId,
+        'targetDepartmentId': targetDepartmentId,
+        'targetPositionId': targetPositionId,
+        'reason': reason,
+        if (targetDirectManagerId != null)
+          'targetDirectManagerId': targetDirectManagerId,
+      },
+    );
+    return Map<String, dynamic>.from(response.data as Map);
   }
 
   Future<Map<String, dynamic>> listUsers({

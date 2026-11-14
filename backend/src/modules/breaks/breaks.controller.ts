@@ -8,10 +8,12 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { RequirePermission } from "../../common/decorators/permission.decorator";
+import { BranchIsolationGuard } from "../../common/guards/branch-isolation.guard";
 import { AuthenticatedUser } from "../auth/auth.types";
 import {
   CreateBreakTypeDto,
@@ -26,6 +28,7 @@ type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 
 @ApiTags("Breaks")
 @ApiBearerAuth()
+@UseGuards(BranchIsolationGuard)
 @Controller("branches/:branchId/breaks")
 export class BreaksController {
   constructor(private readonly breaks: BreaksService) {}

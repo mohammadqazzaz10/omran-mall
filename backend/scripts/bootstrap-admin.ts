@@ -95,9 +95,9 @@ async function main(): Promise<void> {
         [companyId],
       );
       const permissionCatalog = await client.query(
-        "SELECT code FROM permissions WHERE code IN ('employees.view.branch', 'branches.view.company', 'users.manage.company')",
+        "SELECT code FROM permissions WHERE code IN ('employees.view.branch', 'branches.view.company', 'users.manage.company', 'employees.transfer.company')",
       );
-      if (permissionCatalog.rowCount !== 3) {
+      if (permissionCatalog.rowCount !== 4) {
         throw new Error("Permission catalogue is incomplete. Apply the latest database migrations first.");
       }
 
@@ -124,7 +124,8 @@ async function main(): Promise<void> {
                'branches.manage.company',
                'users.view.company',
                'roles.view.company',
-               'users.assign_roles.company'
+               'users.assign_roles.company',
+               'employees.transfer.company'
              )
            )
          WHERE r.company_id = $1 AND r.code = 'GENERAL_MANAGER'
@@ -144,7 +145,7 @@ async function main(): Promise<void> {
         `INSERT INTO role_permissions (role_id, permission_id)
          SELECT r.id, p.id FROM roles r
          JOIN permissions p ON
-           (p.scope = 'company' AND (p.module = 'users' OR p.code = 'branches.view.company'))
+           (p.scope = 'company' AND (p.module = 'users' OR p.code IN ('branches.view.company', 'employees.transfer.company')))
            OR (p.scope = 'branch' AND p.module IN ('employees', 'departments', 'positions'))
          WHERE r.company_id = $1 AND r.code = 'HR_MANAGER'
          ON CONFLICT (role_id, permission_id) DO NOTHING`,

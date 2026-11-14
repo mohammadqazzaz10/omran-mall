@@ -8,16 +8,19 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { RequirePermission } from "../../common/decorators/permission.decorator";
+import { BranchIsolationGuard } from "../../common/guards/branch-isolation.guard";
 import { AuthenticatedUser } from "../auth/auth.types";
 import {
   DepartmentDto,
   DepartmentUpdateDto,
   EmployeeDto,
   EmployeeUpdateDto,
+  EmployeeTransferDto,
   PositionDto,
   PositionUpdateDto,
 } from "./organization.dto";
@@ -27,6 +30,7 @@ type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 
 @ApiTags("Organization & Employees")
 @ApiBearerAuth()
+@UseGuards(BranchIsolationGuard)
 @Controller("branches/:branchId")
 export class OrganizationController {
   constructor(private readonly organization: OrganizationService) {}
@@ -131,6 +135,17 @@ export class OrganizationController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.organization.updateEmployee(branchId, id, dto, req.user);
+  }
+
+  @Post("employees/:employeeId/transfer")
+  @RequirePermission("employees.transfer.company")
+  transferEmployee(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Param("employeeId", ParseUUIDPipe) id: string,
+    @Body() dto: EmployeeTransferDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.organization.transferEmployee(branchId, id, dto, req.user);
   }
 
   @Post("employees/:employeeId/archive")
