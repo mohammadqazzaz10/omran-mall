@@ -44,10 +44,7 @@ jobs:
           node-version: 24
       - name: Install locked backend dependencies
         run: npm ci
-      - name: Temporary Prettier formatting preview for Section 03
-        run: |
-          npx prettier --write "src/modules/organization/organization.service.ts" "src/modules/organization/organization.service.spec.ts"
-          git diff --unified=2 -- src/modules/organization/organization.service.ts src/modules/organization/organization.service.spec.ts
+      - run: npm run format:check
       - run: npm run build
       - name: Type-check first-admin bootstrap utility
         run: npm run db:bootstrap-admin:check
