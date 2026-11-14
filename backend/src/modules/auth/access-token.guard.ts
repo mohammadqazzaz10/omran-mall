@@ -1,12 +1,14 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Reflector } from "@nestjs/core";
 import { IS_PUBLIC_KEY } from "../../common/decorators/public.decorator";
+import { PASSWORD_CHANGE_ALLOWED_KEY } from "../../common/decorators/password-change.decorator";
 import { DatabaseService } from "../../database/database.service";
 import { AccessTokenPayload, AuthenticatedUser } from "./auth.types";
 
@@ -47,8 +49,9 @@ export class AccessTokenGuard implements CanActivate {
       company_id: string;
       username: string;
       primary_branch_id: string | null;
+      must_change_password: boolean;
     }>(
-      `SELECT s.user_id, u.company_id, u.username, u.primary_branch_id
+      `SELECT s.user_id, u.company_id, u.username, u.primary_branch_id, u.must_change_password
        FROM auth_sessions s
        JOIN users u ON u.id = s.user_id
        WHERE s.id = $1
@@ -99,10 +102,16 @@ export class AccessTokenGuard implements CanActivate {
       }
     }
 
+    const passwordChangeAllowed = this.reflector.getAllAndOverride<boolean>(PASSWORD_CHANGE_ALLOWED_KEY, [context.getHandler(), context.getClass()]);
+    if (active.must_change_password && !passwordChangeAllowed) {
+      throw new ForbiddenException("يجب تغيير كلمة المرور المؤقتة قبل استخدام النظام");
+    }
+
     const principal: AuthenticatedUser = {
       id: active.user_id,
       companyId: active.company_id,
       username: active.username,
+      mustChangePassword: active.must_change_password,
       primaryBranchId: active.primary_branch_id,
       allowedBranchIds,
       sessionId: payload.sid,
