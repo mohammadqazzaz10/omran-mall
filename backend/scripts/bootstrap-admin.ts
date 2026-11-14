@@ -95,9 +95,9 @@ async function main(): Promise<void> {
         [companyId],
       );
       const permissionCatalog = await client.query(
-        "SELECT code FROM permissions WHERE code IN ('employees.view.branch', 'branches.view.company', 'users.manage.company', 'employees.transfer.company', 'users.assign_roles.company')",
+        "SELECT code FROM permissions WHERE code IN ('employees.view.branch', 'branches.view.company', 'users.manage.company', 'employees.transfer.company', 'users.assign_roles.company', 'employee_profiles.view.branch', 'employee_profiles.manage.branch', 'employee_documents.view.branch', 'employee_documents.manage.branch', 'employee_contracts.view.branch', 'employee_contracts.manage.branch', 'employee_history.view.branch')",
       );
-      if (permissionCatalog.rowCount !== 5) {
+      if (permissionCatalog.rowCount !== 12) {
         throw new Error("Permission catalogue is incomplete. Apply the latest database migrations first.");
       }
 
@@ -146,7 +146,15 @@ async function main(): Promise<void> {
          SELECT r.id, p.id FROM roles r
          JOIN permissions p ON
            (p.scope = 'company' AND (p.module = 'users' OR p.code IN ('branches.view.company', 'employees.transfer.company')))
-           OR (p.scope = 'branch' AND p.module IN ('employees', 'departments', 'positions'))
+           OR (p.scope = 'branch' AND p.module IN (
+             'employees',
+             'departments',
+             'positions',
+             'employee_profiles',
+             'employee_documents',
+             'employee_contracts',
+             'employee_history'
+           ))
          WHERE r.company_id = $1 AND r.code = 'HR_MANAGER'
          ON CONFLICT (role_id, permission_id) DO NOTHING`,
         [companyId],
