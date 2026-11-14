@@ -23,6 +23,7 @@ async function main(): Promise<void> {
   if (
     password.length < 14 ||
     password.length > 72 ||
+    Buffer.byteLength(password, "utf8") > 72 ||
     !/[a-z]/.test(password) ||
     !/[A-Z]/.test(password) ||
     !/[0-9]/.test(password) ||
