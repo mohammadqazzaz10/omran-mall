@@ -11,12 +11,31 @@ describe("AccessTokenGuard", () => {
   const contextFor = (request: Record<string, any>) =>
     ({
       switchToHttp: () => ({ getRequest: () => request }),
+      getHandler: () => ({}),
+      getClass: () => ({}),
     }) as any;
+
+  const reflector = {
+    getAllAndOverride: jest.fn().mockReturnValue(false),
+  };
+
+  beforeEach(() => reflector.getAllAndOverride.mockReturnValue(false));
+
+  it("allows explicitly public routes without a bearer token", async () => {
+    const jwt = { verifyAsync: jest.fn() } as any;
+    const db = { query: jest.fn() } as any;
+    reflector.getAllAndOverride.mockReturnValue(true);
+    const guard = new AccessTokenGuard(jwt, db, reflector as any);
+
+    await expect(guard.canActivate(contextFor({ headers: {} }))).resolves.toBe(true);
+    expect(jwt.verifyAsync).not.toHaveBeenCalled();
+    expect(db.query).not.toHaveBeenCalled();
+  });
 
   it("rejects requests without a bearer token", async () => {
     const jwt = { verifyAsync: jest.fn() } as any;
     const db = { query: jest.fn() } as any;
-    const guard = new AccessTokenGuard(jwt, db);
+    const guard = new AccessTokenGuard(jwt, db, reflector as any);
 
     await expect(
       guard.canActivate(contextFor({ headers: {} })),
@@ -27,7 +46,7 @@ describe("AccessTokenGuard", () => {
   it("rejects a revoked or missing session", async () => {
     const jwt = { verifyAsync: jest.fn().mockResolvedValue(claims) } as any;
     const db = { query: jest.fn().mockResolvedValue({ rows: [] }) } as any;
-    const guard = new AccessTokenGuard(jwt, db);
+    const guard = new AccessTokenGuard(jwt, db, reflector as any);
 
     await expect(
       guard.canActivate(
@@ -55,7 +74,7 @@ describe("AccessTokenGuard", () => {
           rows: [{ branch_id: "44444444-4444-4444-8444-444444444444" }],
         }),
     } as any;
-    const guard = new AccessTokenGuard(jwt, db);
+    const guard = new AccessTokenGuard(jwt, db, reflector as any);
     const request: Record<string, any> = {
       headers: { authorization: "Bearer valid-token" },
     };
