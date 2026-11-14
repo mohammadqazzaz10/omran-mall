@@ -67,7 +67,7 @@ jobs:
         run: |
           npm audit --json > npm-audit.json || true
           node -e 'const a=require("./npm-audit.json"); const v=a.metadata?.vulnerabilities; if (!v) { console.error("npm audit did not return a valid vulnerability report", a.error ?? ""); process.exit(2); } console.log("All-dependency vulnerability summary:", JSON.stringify(v)); for (const [name, item] of Object.entries(a.vulnerabilities ?? {})) console.log(`${name}: ${item.severity}; direct=${item.isDirect}; fixAvailable=${JSON.stringify(item.fixAvailable)}`); if ((v.high ?? 0) > 0 || (v.critical ?? 0) > 0) process.exit(1);'
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always() && hashFiles('backend/npm-audit.json') != ''
         with:
           name: backend-security-audit
@@ -77,7 +77,7 @@ jobs:
         run: |
           npm audit --omit=dev --json > npm-audit-production.json || true
           node -e 'const a=require("./npm-audit-production.json"); const v=a.metadata?.vulnerabilities; if (!v) { console.error("Production npm audit did not return a valid report", a.error ?? ""); process.exit(2); } console.log("Production dependency vulnerability summary:", JSON.stringify(v)); if ((v.high ?? 0) > 0 || (v.critical ?? 0) > 0) process.exit(1);'
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always() && hashFiles('backend/npm-audit-production.json') != ''
         with:
           name: backend-production-security-audit
@@ -116,7 +116,7 @@ jobs:
         working-directory: client
       - name: Archive generated Flutter platform files with permissions
         run: tar -czf flutter-generated-foundation.tar.gz -C client android ios web .metadata .gitignore pubspec.lock
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: flutter-generated-foundation
           path: flutter-generated-foundation.tar.gz
@@ -143,7 +143,7 @@ jobs:
         working-directory: client
       - run: flutter build web --release
         working-directory: client
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: flutter-web-release
           path: client/build/web/
@@ -171,7 +171,7 @@ jobs:
       - name: Build Android Debug APK with verbose Gradle diagnostics
         run: flutter build apk --debug --verbose
         working-directory: client
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: android-debug-apk
           path: client/build/app/outputs/flutter-apk/app-debug.apk
