@@ -48,6 +48,8 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       _roleCodes.contains('SUPER_ADMIN') ||
       _roleCodes.contains('GENERAL_MANAGER');
 
+  bool get _canManageRoles => _roleCodes.contains('SUPER_ADMIN');
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +63,9 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
     final roles = _canViewRoles
         ? await repository.listRoles()
         : <Map<String, dynamic>>[];
+    final permissions = _canManageRoles
+        ? await repository.listPermissions()
+        : <Map<String, dynamic>>[];
     return _AdminData(
       branches: branches,
       users: (users['items'] as List? ?? const [])
@@ -69,6 +74,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
           .toList(),
       totalUsers: (users['total'] as num?)?.toInt() ?? 0,
       roles: roles,
+      permissions: permissions,
     );
   }
 
@@ -742,6 +748,435 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       );
     } finally {
       reason.dispose();
+    }
+  }
+
+
+  Future<void> _manageRole(
+    List<Map<String, dynamic>> permissions, {
+    Map<String, dynamic>? role,
+  }) async {
+    final arabic = isArabic(context);
+    final code = TextEditingController(text: role?['code']?.toString() ?? 'CUSTOM_');
+    final nameAr = TextEditingController(text: role?['name_ar']?.toString() ?? '');
+    final nameEn = TextEditingController(text: role?['name_en']?.toString() ?? '');
+    final description = TextEditingController(text: role?['description']?.toString() ?? '');
+    final formKey = GlobalKey<FormState>();
+    final allowedPermissions = permissions.where((permission) {
+      final scope = permission['scope']?.toString();
+      final module = permission['module']?.toString();
+      return ['branch', 'department', 'own'].contains(scope) &&
+          !['companies', 'users', 'roles', 'sessions'].contains(module);
+    }).toList();
+    final selected = <String>{
+      ...((role?['permission_codes'] as List?) ?? const [])
+          .map((value) => value.toString()),
+    };
+    try {
+      final saved = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text(
+              role == null
+                  ? (arabic ? 'إنشاء دور مخصص' : 'Create custom role')
+                  : (arabic ? 'تعديل الدور المخصص' : 'Edit custom role'),
+            ),
+            content: SizedBox(
+              width: 560,
+              child: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (role == null)
+                        TextFormField(
+                          controller: code,
+                          decoration: InputDecoration(
+                            labelText: arabic ? 'رمز الدور' : 'Role code',
+                            helperText: 'CUSTOM_...',
+                          ),
+                          validator: (value) {
+                            final text = value?.trim() ?? '';
+                            return RegExp(r'^CUSTOM_[A-Z0-9_]{1,43}
+    final strings = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(strings.adminDashboardTitle),
+        actions: [
+          IconButton(
+            tooltip: strings.sessionsTitle,
+            onPressed: () => context.push('/sessions'),
+            icon: const Icon(Icons.devices_outlined),
+          ),
+          IconButton(
+            tooltip: strings.logoutButton,
+            onPressed: () => ref.read(authProvider.notifier).logout(),
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
+      body: FutureBuilder<_AdminData>(
+        future: _data,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: OutlinedButton(
+                onPressed: _reload,
+                child: Text(strings.retryButton),
+              ),
+            );
+          }
+          final data = snapshot.data!;
+          return RefreshIndicator(
+            onRefresh: () async => _reload(),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _SummaryCard(
+                      title: strings.branchesTitle,
+                      value: data.branches.length.toString(),
+                      icon: Icons.storefront_outlined,
+                    ),
+                    _SummaryCard(
+                      title: strings.usersTitle,
+                      value: data.totalUsers.toString(),
+                      icon: Icons.people_outline,
+                    ),
+                    if (_canViewRoles)
+                      _SummaryCard(
+                        title: strings.rolesTitle,
+                        value: data.roles.length.toString(),
+                        icon: Icons.admin_panel_settings_outlined,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                if (_canTransferEmployees)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.swap_horiz),
+                      title: Text(
+                        isArabic(context)
+                            ? 'نقل موظف بين الفروع'
+                            : 'Transfer employee between branches',
+                      ),
+                      subtitle: Text(
+                        isArabic(context)
+                            ? 'مع حفظ السجل الوظيفي وإعادة ضبط صلاحيات الفرع'
+                            : 'Preserve employment history and reset branch-scoped access',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _transferEmployee(data.branches),
+                    ),
+                  ),
+                if (_canManageBreaks)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.free_breakfast_outlined),
+                      title: Text(strings.breakManagementTitle),
+                      subtitle: Text(strings.pendingBreakRequestsTitle),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/breaks/manage'),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        strings.branchesTitle,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    if (_canManageBranches)
+                      IconButton.filledTonal(
+                        tooltip: strings.createBranchButton,
+                        onPressed: _createBranch,
+                        icon: const Icon(Icons.add),
+                      ),
+                  ],
+                ),
+                ...data.branches.map(
+                  (branch) => Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.store_outlined),
+                      title: Text(
+                        branch['name_ar']?.toString() ??
+                            branch['code'].toString(),
+                      ),
+                      subtitle: Text(branch['code'].toString()),
+                      trailing: Icon(
+                        branch['is_active'] == true
+                            ? Icons.check_circle_outline
+                            : Icons.pause_circle_outline,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        strings.usersTitle,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    if (_canManageUsers)
+                      IconButton.filledTonal(
+                        tooltip: strings.createUserButton,
+                        onPressed: () => _createEmployeeAccount(data.branches),
+                        icon: const Icon(Icons.person_add_alt_1),
+                      ),
+                  ],
+                ),
+                ...data.users.map(
+                  (user) {
+                    final roles = (user['roles'] as List? ?? const [])
+                        .whereType<Map>()
+                        .map((role) => role['code'].toString())
+                        .toSet()
+                        .join(', ');
+                    return Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.person_outline),
+                        title: Text(user['username'].toString()),
+                        subtitle: Text(roles.isEmpty ? '—' : roles),
+                        trailing: Icon(
+                          user['is_active'] == true
+                              ? Icons.check_circle_outline
+                              : Icons.block_outlined,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                if (_canViewRoles) ...[
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          strings.rolesTitle,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                      if (_canManageRoles)
+                        IconButton(
+                          tooltip: isArabic(context) ? 'إنشاء دور مخصص' : 'Create custom role',
+                          onPressed: () => _manageRole(data.permissions),
+                          icon: const Icon(Icons.add_circle_outline),
+                        ),
+                    ],
+                  ),
+                  ...data.roles.map(
+                    (role) => Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.security_outlined),
+                        title: Text(role['name_ar']?.toString() ??
+                            role['code'].toString()),
+                        subtitle: Text(role['code'].toString()),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(role['permissions_count'].toString()),
+                            if (_canManageRoles && role['is_system_role'] != true)
+                              IconButton(
+                                tooltip: isArabic(context) ? 'تعديل الدور' : 'Edit role',
+                                onPressed: () => _manageRole(data.permissions, role: role),
+                                icon: const Icon(Icons.edit_outlined),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+bool isArabic(BuildContext context) =>
+    Localizations.localeOf(context).languageCode == 'ar';
+
+class _AdminData {
+  const _AdminData({
+    required this.branches,
+    required this.users,
+    required this.totalUsers,
+    required this.roles,
+    required this.permissions,
+  });
+
+  final List<Map<String, dynamic>> branches;
+  final List<Map<String, dynamic>> users;
+  final int totalUsers;
+  final List<Map<String, dynamic>> roles;
+  final List<Map<String, dynamic>> permissions;
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+  });
+
+  final String title;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 160,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon),
+              const SizedBox(height: 10),
+              Text(value, style: Theme.of(context).textTheme.headlineSmall),
+              Text(title),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+).hasMatch(text)
+                                ? null
+                                : (arabic
+                                    ? 'استخدم رمزاً يبدأ بـ CUSTOM_ وأحرفاً إنجليزية كبيرة'
+                                    : 'Use CUSTOM_ followed by uppercase letters, numbers or underscores');
+                          },
+                        ),
+                      TextFormField(
+                        controller: nameAr,
+                        decoration: InputDecoration(
+                          labelText: arabic ? 'اسم الدور بالعربية' : 'Arabic role name',
+                        ),
+                        validator: (value) => value == null || value.trim().length < 2
+                            ? (arabic ? 'أدخل اسم الدور' : 'Enter a role name')
+                            : null,
+                      ),
+                      TextFormField(
+                        controller: nameEn,
+                        decoration: InputDecoration(
+                          labelText: arabic ? 'اسم الدور بالإنجليزية' : 'English role name',
+                        ),
+                      ),
+                      TextFormField(
+                        controller: description,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          labelText: arabic ? 'الوصف' : 'Description',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          arabic ? 'الصلاحيات المسموح بها' : 'Allowed permissions',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (allowedPermissions.isEmpty)
+                        Text(arabic ? 'لا توجد صلاحيات متاحة' : 'No permissions available')
+                      else
+                        ...allowedPermissions.map((permission) {
+                          final permissionCode = permission['code'].toString();
+                          return CheckboxListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            value: selected.contains(permissionCode),
+                            title: Text(permissionCode),
+                            subtitle: Text(
+                              '${permission['description_ar'] ?? ''} · ${permission['scope']}',
+                            ),
+                            onChanged: (checked) {
+                              setDialogState(() {
+                                if (checked == true) {
+                                  selected.add(permissionCode);
+                                } else {
+                                  selected.remove(permissionCode);
+                                }
+                              });
+                            },
+                          );
+                        }),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(AppLocalizations.of(context).cancelButton),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate() &&
+                      (role != null || selected.isNotEmpty)) {
+                    Navigator.pop(dialogContext, true);
+                  }
+                },
+                child: Text(arabic ? 'حفظ' : 'Save'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (saved != true) return;
+      final repository = ref.read(adminRepositoryProvider);
+      if (role == null) {
+        await repository.createRole(
+          code: code.text.trim(),
+          nameAr: nameAr.text.trim(),
+          nameEn: nameEn.text.trim(),
+          description: description.text.trim(),
+          permissionCodes: selected.toList(),
+        );
+      } else {
+        await repository.updateRole(
+          role['id'].toString(),
+          nameAr: nameAr.text.trim(),
+          nameEn: nameEn.text.trim(),
+          description: description.text.trim(),
+          permissionCodes: selected.toList(),
+        );
+      }
+      if (mounted) _reload();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
+    } finally {
+      code.dispose();
+      nameAr.dispose();
+      nameEn.dispose();
+      description.dispose();
     }
   }
 
