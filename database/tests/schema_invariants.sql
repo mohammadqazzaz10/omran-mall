@@ -9,6 +9,10 @@ DECLARE
     v_role_id UUID;
     v_other_company_id UUID;
     v_other_branch_id UUID;
+    v_same_company_other_branch UUID;
+    v_other_department_id UUID;
+    v_other_position_id UUID;
+    v_other_employee_id UUID;
 BEGIN
 
     -- The migration must create a usable least-privilege permission catalogue.
@@ -94,6 +98,86 @@ BEGIN
         RAISE EXCEPTION 'Employee codes are not sequential: %, %',
             v_employee_code_1, v_employee_code_2;
     END IF;
+
+    -- Composite foreign keys must reject cross-branch and cross-department references.
+    INSERT INTO branches (company_id, code, name_ar)
+    VALUES ('a0000000-0000-0000-0000-000000000001', 'CI-SECOND-BRANCH', 'فرع ثانٍ للاختبار')
+    RETURNING id INTO v_same_company_other_branch;
+
+    INSERT INTO departments (branch_id, code, name_ar)
+    VALUES (v_same_company_other_branch, 'CI-SECOND-DEPT', 'قسم الفرع الثاني')
+    RETURNING id INTO v_other_department_id;
+
+    INSERT INTO positions (department_id, code, title_ar)
+    VALUES (v_other_department_id, 'CI-SECOND-POS', 'مسمى الفرع الثاني')
+    RETURNING id INTO v_other_position_id;
+
+    INSERT INTO employees (
+        branch_id, department_id, position_id,
+        first_name_ar, second_name_ar, last_name_ar, mobile_phone, hire_date
+    ) VALUES (
+        v_same_company_other_branch, v_other_department_id, v_other_position_id,
+        'موظف', 'فرع', 'ثانٍ', '0000000002', CURRENT_DATE
+    )
+    RETURNING id INTO v_other_employee_id;
+
+    BEGIN
+        INSERT INTO employees (
+            branch_id, department_id, position_id,
+            first_name_ar, second_name_ar, last_name_ar, mobile_phone, hire_date
+        ) VALUES (
+            'b0000000-0000-0000-0000-000000000001', v_other_department_id, v_other_position_id,
+            'تجاوز', 'نطاق', 'الفرع', '0000000003', CURRENT_DATE
+        );
+        RAISE EXCEPTION 'Employee with another branch department was accepted';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    BEGIN
+        INSERT INTO employees (
+            branch_id, department_id, position_id,
+            first_name_ar, second_name_ar, last_name_ar, mobile_phone, hire_date
+        ) VALUES (
+            'b0000000-0000-0000-0000-000000000001',
+            'c0000000-0000-0000-0000-000000000001', v_other_position_id,
+            'تجاوز', 'نطاق', 'المسمى', '0000000004', CURRENT_DATE
+        );
+        RAISE EXCEPTION 'Employee with a position from another department was accepted';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    BEGIN
+        INSERT INTO employees (
+            branch_id, department_id, position_id, direct_manager_id,
+            first_name_ar, second_name_ar, last_name_ar, mobile_phone, hire_date
+        ) VALUES (
+            v_same_company_other_branch, v_other_department_id, v_other_position_id,
+            (SELECT id FROM employees WHERE employee_code = v_employee_code_1),
+            'تجاوز', 'مدير', 'فرع', '0000000005', CURRENT_DATE
+        );
+        RAISE EXCEPTION 'Cross-branch direct manager was accepted';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    BEGIN
+        INSERT INTO departments (branch_id, parent_id, code, name_ar)
+        VALUES (
+            v_same_company_other_branch,
+            'c0000000-0000-0000-0000-000000000001',
+            'CI-CROSS-PARENT',
+            'قسم بأب من فرع آخر'
+        );
+        RAISE EXCEPTION 'Cross-branch department parent was accepted';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
+
+    BEGIN
+        UPDATE departments
+        SET manager_employee_id = v_other_employee_id
+        WHERE id = 'c0000000-0000-0000-0000-000000000001';
+        RAISE EXCEPTION 'Cross-branch department manager was accepted';
+    EXCEPTION WHEN foreign_key_violation THEN NULL;
+    END;
 
     INSERT INTO users (company_id, username, password_hash)
     VALUES (
