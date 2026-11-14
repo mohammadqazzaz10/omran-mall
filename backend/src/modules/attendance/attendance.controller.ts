@@ -16,6 +16,7 @@ import { BranchIsolationGuard } from "../../common/guards/branch-isolation.guard
 import { AuthenticatedUser } from "../auth/auth.types";
 import {
   AttendanceCorrectionDto,
+  AttendanceCorrectionRejectionDto,
   AttendanceQrCheckInDto,
 } from "./attendance.dto";
 import { AttendanceQrService } from "./attendance-qr.service";
@@ -99,6 +100,22 @@ export class AttendanceController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.attendance.branchRecords(branchId, workDate, req.user);
+  }
+
+  @Post("corrections/:correctionId/reject")
+  @RequirePermission("attendance.approve.branch")
+  rejectCorrection(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Param("correctionId", ParseUUIDPipe) correctionId: string,
+    @Body() dto: AttendanceCorrectionRejectionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.attendance.rejectCorrection(
+      branchId,
+      correctionId,
+      dto.reviewNotes,
+      req.user,
+    );
   }
 
   @Post("corrections/:correctionId/approve")
