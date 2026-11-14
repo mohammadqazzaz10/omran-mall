@@ -20,7 +20,7 @@ class EmployeeRepository {
     Map<String, dynamic> changes,
   ) async {
     final response = await client.dio.patch<dynamic>(
-      '/me/employee',
+      'me/employee',
       data: changes,
     );
     return Map<String, dynamic>.from(response.data as Map);
