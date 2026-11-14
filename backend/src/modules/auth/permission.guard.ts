@@ -75,10 +75,10 @@ export class PermissionGuard implements CanActivate {
            (ur.branch_id IS NULL AND ur.department_id IS NULL AND p.scope = 'company')
            OR
            (ur.branch_id = $3 AND ur.department_id IS NULL
-             AND p.scope IN ('branch', 'department', 'own'))
+             AND p.scope = 'branch')
            OR
            (ur.branch_id = $3 AND ur.department_id IS NOT NULL
-             AND p.scope IN ('department', 'own')
+             AND p.scope = 'department'
              AND EXISTS (
                SELECT 1 FROM employees e
                WHERE e.user_id = ur.user_id
