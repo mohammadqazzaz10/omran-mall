@@ -102,4 +102,39 @@ describe("BreaksService", () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(client.query).toHaveBeenCalledTimes(2);
   });
+  it("filters supervisor request lists to their assigned departments", async () => {
+    const departmentId = "77777777-7777-4777-8777-777777777777";
+    const client = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [{ department_id: departmentId }] })
+        .mockResolvedValueOnce({ rows: [] }),
+    };
+    const { service } = serviceWithClient(client);
+
+    await expect(service.listRequests(branchId, "pending", user)).resolves.toEqual([]);
+
+    const listQuery = client.query.mock.calls[2];
+    expect(listQuery[0]).toContain(
+      "($3::boolean = TRUE OR r.department_id = ANY($4::uuid[]))",
+    );
+    expect(listQuery[1]).toEqual([branchId, "pending", false, [departmentId]]);
+  });
+
+  it("allows branch-wide managers to view all branch requests", async () => {
+    const client = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [{ department_id: null }] })
+        .mockResolvedValueOnce({ rows: [] }),
+    };
+    const { service } = serviceWithClient(client);
+
+    await service.listRequests(branchId, undefined, user);
+
+    expect(client.query.mock.calls[2][1]).toEqual([branchId, null, true, []]);
+  });
+
 });
