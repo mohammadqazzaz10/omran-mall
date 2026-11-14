@@ -44,65 +44,67 @@ describe("AttendanceService", () => {
   it(
     "uses PostgreSQL server time and the employee's own branch record",
     async () => {
-    const employeeId = "66666666-6666-4666-8666-666666666666";
-    const record = {
-      id: "77777777-7777-4777-8777-777777777777",
-      employee_id: employeeId,
-      branch_id: branchId,
-      work_date: "2026-11-14",
-      check_in_time: "2026-11-14T08:00:00.000Z",
-      check_out_time: null,
-      status: "present",
-    };
-    const client = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-        .mockResolvedValueOnce({
-          rows: [{ id: employeeId, status: "active" }],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({
-          rows: [{ work_date: "2026-11-14", local_time: "08:00" }],
-        })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
-    };
-    const { service } = serviceWithClient(client);
+      const employeeId = "66666666-6666-4666-8666-666666666666";
+      const record = {
+        id: "77777777-7777-4777-8777-777777777777",
+        employee_id: employeeId,
+        branch_id: branchId,
+        work_date: "2026-11-14",
+        check_in_time: "2026-11-14T08:00:00.000Z",
+        check_out_time: null,
+        status: "present",
+      };
+      const client = {
+        query: jest
+          .fn()
+          .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+          .mockResolvedValueOnce({
+            rows: [{ id: employeeId, status: "active" }],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({
+            rows: [{ work_date: "2026-11-14", local_time: "08:00" }],
+          })
+          .mockResolvedValueOnce({ rows: [] })
+          .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+      };
+      const { service } = serviceWithClient(client);
 
-    await expect(service.checkIn(branchId, user)).resolves.toEqual(record);
-    const insert = client.query.mock.calls[4];
-    expect(insert[0]).toContain("CURRENT_TIMESTAMP");
-    expect(insert[1]).toEqual([
-      employeeId,
-      branchId,
-      null,
-      "2026-11-14",
-      0,
-      "present",
-    ]);
-  });
+      await expect(service.checkIn(branchId, user)).resolves.toEqual(record);
+      const insert = client.query.mock.calls[4];
+      expect(insert[0]).toContain("CURRENT_TIMESTAMP");
+      expect(insert[1]).toEqual([
+        employeeId,
+        branchId,
+        null,
+        "2026-11-14",
+        0,
+        "present",
+      ]);
+    },
+  );;
 
   it(
     "does not expose another employee's records through self-service",
     async () => {
-    const client = {
-      query: jest
-        .fn()
+      const client = {
+        query: jest
+          .fn()
+          .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 0 }),
+      };
+      const { service, db } = serviceWithClient(client);
+      db.query
         .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }),
-    };
-    const { service, db } = serviceWithClient(client);
-    db.query
-      .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
-    await expect(service.myRecords(branchId, user)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
-    expect(db.query).toHaveBeenCalledTimes(2);
-  });
+      await expect(service.myRecords(branchId, user)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(db.query).toHaveBeenCalledTimes(2);
+    },
+  );;
 
   it("rejects malformed report dates before querying attendance", async () => {
     const db = { query: jest.fn() };
@@ -140,148 +142,151 @@ describe("AttendanceService", () => {
   it(
     "consumes QR and writes attendance plus audit through one transaction",
     async () => {
-    const employeeId = "66666666-6666-4666-8666-666666666666";
-    const record = {
-      id: "77777777-7777-4777-8777-777777777777",
-      employee_id: employeeId,
-      branch_id: branchId,
-      work_date: "2026-11-14",
-      check_in_time: "2026-11-14T08:00:00.000Z",
-      check_out_time: null,
-      status: "present",
-    };
-    const client = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-        .mockResolvedValueOnce({
-          rows: [{ id: employeeId, status: "active" }],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({
-          rows: [{ id: "88888888-8888-4888-8888-888888888888" }],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
-        .mockResolvedValueOnce({
-          rows: [{ work_date: "2026-11-14", local_time: "08:00" }],
-        })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
-    };
-    const { service, db } = serviceWithClient(client);
+      const employeeId = "66666666-6666-4666-8666-666666666666";
+      const record = {
+        id: "77777777-7777-4777-8777-777777777777",
+        employee_id: employeeId,
+        branch_id: branchId,
+        work_date: "2026-11-14",
+        check_in_time: "2026-11-14T08:00:00.000Z",
+        check_out_time: null,
+        status: "present",
+      };
+      const client = {
+        query: jest
+          .fn()
+          .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+          .mockResolvedValueOnce({
+            rows: [{ id: employeeId, status: "active" }],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({
+            rows: [{ id: "88888888-8888-4888-8888-888888888888" }],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+          .mockResolvedValueOnce({
+            rows: [{ work_date: "2026-11-14", local_time: "08:00" }],
+          })
+          .mockResolvedValueOnce({ rows: [] })
+          .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+      };
+      const { service, db } = serviceWithClient(client);
 
-    const result = await service.checkInWithQr(
-      branchId,
-      user,
-      "a".repeat(64),
-      31.95,
-      35.91,
-    );
+      const result = await service.checkInWithQr(
+        branchId,
+        user,
+        "a".repeat(64),
+        31.95,
+        35.91,
+      );
 
-    expect(result).toMatchObject({
-      id: record.id,
-      check_in_method: "qr_code",
-      check_in_lat: 31.95,
-      check_in_lng: 35.91,
-    });
-    expect(db.transaction).toHaveBeenCalledTimes(1);
-    expect(client.query.mock.calls[2][0]).toContain("attendance_qr_challenges");
-    expect(client.query.mock.calls[3][0]).toContain("attendance_qr_uses");
-    expect(client.query.mock.calls[3][0]).toContain("branch_id");
-    expect(client.query.mock.calls[3][1]).toEqual([
-      "88888888-8888-4888-8888-888888888888",
-      employeeId,
-      branchId,
-    ]);
-    expect(client.query.mock.calls[6][0]).toContain("'qr_code'");
-    expect(client.query.mock.calls[7][0]).toContain("audit_logs");
-  });
+      expect(result).toMatchObject({
+        id: record.id,
+        check_in_method: "qr_code",
+        check_in_lat: 31.95,
+        check_in_lng: 35.91,
+      });
+      expect(db.transaction).toHaveBeenCalledTimes(1);
+      expect(client.query.mock.calls[2][0]).toContain("attendance_qr_challenges");
+      expect(client.query.mock.calls[3][0]).toContain("attendance_qr_uses");
+      expect(client.query.mock.calls[3][0]).toContain("branch_id");
+      expect(client.query.mock.calls[3][1]).toEqual([
+        "88888888-8888-4888-8888-888888888888",
+        employeeId,
+        branchId,
+      ]);
+      expect(client.query.mock.calls[6][0]).toContain("'qr_code'");
+      expect(client.query.mock.calls[7][0]).toContain("audit_logs");
+    },
+  );;
 
   it(
     "does not write audit or commit a partial QR attendance when record insertion fails",
     async () => {
-    const employeeId = "66666666-6666-4666-8666-666666666666";
-    const failure = new Error("attendance insert failed");
-    const client = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-        .mockResolvedValueOnce({
-          rows: [{ id: employeeId, status: "active" }],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({
-          rows: [{ id: "88888888-8888-4888-8888-888888888888" }],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
-        .mockResolvedValueOnce({
-          rows: [{ work_date: "2026-11-14", local_time: "08:00" }],
-        })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockRejectedValueOnce(failure),
-    };
-    const { service, db } = serviceWithClient(client);
+      const employeeId = "66666666-6666-4666-8666-666666666666";
+      const failure = new Error("attendance insert failed");
+      const client = {
+        query: jest
+          .fn()
+          .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+          .mockResolvedValueOnce({
+            rows: [{ id: employeeId, status: "active" }],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({
+            rows: [{ id: "88888888-8888-4888-8888-888888888888" }],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+          .mockResolvedValueOnce({
+            rows: [{ work_date: "2026-11-14", local_time: "08:00" }],
+          })
+          .mockResolvedValueOnce({ rows: [] })
+          .mockRejectedValueOnce(failure),
+      };
+      const { service, db } = serviceWithClient(client);
 
-    await expect(
-      service.checkInWithQr(branchId, user, "b".repeat(64), null, null),
-    ).rejects.toBe(failure);
-    expect(db.transaction).toHaveBeenCalledTimes(1);
-    expect(client.query).toHaveBeenCalledTimes(7);
-    expect(
-      client.query.mock.calls.some((call: any[]) =>
-        String(call[0]).includes("audit_logs"),
-      ),
-    ).toBe(false);
-  });
+      await expect(
+        service.checkInWithQr(branchId, user, "b".repeat(64), null, null),
+      ).rejects.toBe(failure);
+      expect(db.transaction).toHaveBeenCalledTimes(1);
+      expect(client.query).toHaveBeenCalledTimes(7);
+      expect(
+        client.query.mock.calls.some((call: any[]) =>
+          String(call[0]).includes("audit_logs"),
+        ),
+      ).toBe(false);
+    },
+  );;
 
   it(
     "rejects a pending correction with reviewer notes and an audit record",
     async () => {
-    const correctionId = "99999999-9999-4999-8999-999999999999";
-    const correction = {
-      id: correctionId,
-      attendance_record_id: "77777777-7777-4777-8777-777777777777",
-      branch_id: branchId,
-      status: "pending",
-      reason: "Forgot to check out",
-    };
-    const rejected = {
-      ...correction,
-      status: "rejected",
-      review_notes: "Insufficient evidence",
-    };
-    const client = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [correction], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [rejected], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
-    };
-    const { service, db } = serviceWithClient(client);
+      const correctionId = "99999999-9999-4999-8999-999999999999";
+      const correction = {
+        id: correctionId,
+        attendance_record_id: "77777777-7777-4777-8777-777777777777",
+        branch_id: branchId,
+        status: "pending",
+        reason: "Forgot to check out",
+      };
+      const rejected = {
+        ...correction,
+        status: "rejected",
+        review_notes: "Insufficient evidence",
+      };
+      const client = {
+        query: jest
+          .fn()
+          .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [correction], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [rejected], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+      };
+      const { service, db } = serviceWithClient(client);
 
-    await expect(
-      service.rejectCorrection(
-        branchId,
+      await expect(
+        service.rejectCorrection(
+          branchId,
+          correctionId,
+          "  Insufficient evidence  ",
+          user,
+        ),
+      ).resolves.toMatchObject({ correctionId, status: "rejected" });
+
+      expect(db.transaction).toHaveBeenCalledTimes(1);
+      expect(client.query.mock.calls[2][0]).toContain("status = 'rejected'");
+      expect(client.query.mock.calls[2][1]).toEqual([
         correctionId,
-        "  Insufficient evidence  ",
-        user,
-      ),
-    ).resolves.toMatchObject({ correctionId, status: "rejected" });
-
-    expect(db.transaction).toHaveBeenCalledTimes(1);
-    expect(client.query.mock.calls[2][0]).toContain("status = 'rejected'");
-    expect(client.query.mock.calls[2][1]).toEqual([
-      correctionId,
-      "Insufficient evidence",
-      user.id,
-      branchId,
-    ]);
-    expect(client.query.mock.calls[3][0]).toContain("audit_logs");
-  });
+        "Insufficient evidence",
+        user.id,
+        branchId,
+      ]);
+      expect(client.query.mock.calls[3][0]).toContain("audit_logs");
+    },
+  );;
   it(
     "subtracts recorded break minutes when an attendance correction recalculates work time",
     async () => {
