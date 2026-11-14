@@ -18,7 +18,11 @@ export class DepartmentDto {
   @IsString() @MinLength(1) @MaxLength(50) code!: string;
   @IsOptional() @IsUUID() parentId?: string | null;
   @IsOptional() @IsUUID() managerEmployeeId?: string | null;
-  @IsOptional() @IsInt() @Min(0) @Max(100) maxSimultaneousBreakPercentage?: number;
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  maxSimultaneousBreakPercentage?: number;
 }
 
 export class PositionDto {
@@ -27,8 +31,14 @@ export class PositionDto {
   @IsString() @MinLength(2) @MaxLength(255) titleAr!: string;
   @IsOptional() @IsString() @MaxLength(255) titleEn?: string;
   @IsOptional() @IsString() @MaxLength(50) jobLevel?: string;
-  @IsOptional() @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) basicSalaryMin?: number;
-  @IsOptional() @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) basicSalaryMax?: number;
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 3 })
+  @Min(0)
+  basicSalaryMin?: number;
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 3 })
+  @Min(0)
+  basicSalaryMax?: number;
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
 }
 
@@ -89,7 +99,11 @@ export class DepartmentUpdateDto {
   @IsOptional() @IsString() @MinLength(1) @MaxLength(50) code?: string;
   @IsOptional() @IsUUID() parentId?: string | null;
   @IsOptional() @IsUUID() managerEmployeeId?: string | null;
-  @IsOptional() @IsInt() @Min(0) @Max(100) maxSimultaneousBreakPercentage?: number;
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  maxSimultaneousBreakPercentage?: number;
 }
 
 export class PositionUpdateDto {
@@ -98,7 +112,9 @@ export class PositionUpdateDto {
   @IsOptional() @IsString() @MinLength(2) @MaxLength(255) titleAr?: string;
   @IsOptional() @IsString() @MaxLength(255) titleEn?: string | null;
   @IsOptional() @IsString() @MaxLength(50) jobLevel?: string | null;
-  @IsOptional() @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) basicSalaryMin?: number | null;
-  @IsOptional() @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) basicSalaryMax?: number | null;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) basicSalaryMin?:
+    number | null;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) basicSalaryMax?:
+    number | null;
   @IsOptional() @IsString() @MaxLength(5000) description?: string | null;
 }

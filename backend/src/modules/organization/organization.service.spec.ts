@@ -24,7 +24,10 @@ describe("OrganizationService branch integrity", () => {
 
   it("rejects a department from another branch before inserting an employee", async () => {
     query
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: user.primaryBranchId }] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: user.primaryBranchId }],
+      })
       .mockResolvedValueOnce({ rowCount: 0, rows: [] });
 
     await expect(
@@ -44,12 +47,19 @@ describe("OrganizationService branch integrity", () => {
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(query).toHaveBeenCalledTimes(2);
-    expect(query.mock.calls.some((call) => String(call[0]).includes("INSERT INTO employees"))).toBe(false);
+    expect(
+      query.mock.calls.some((call) =>
+        String(call[0]).includes("INSERT INTO employees"),
+      ),
+    ).toBe(false);
   });
 
   it("rejects a position that does not belong to the selected department", async () => {
     query
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: user.primaryBranchId }] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: user.primaryBranchId }],
+      })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "department" }] })
       .mockResolvedValueOnce({ rowCount: 0, rows: [] });
 
@@ -70,6 +80,10 @@ describe("OrganizationService branch integrity", () => {
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(query).toHaveBeenCalledTimes(3);
-    expect(query.mock.calls.some((call) => String(call[0]).includes("INSERT INTO employees"))).toBe(false);
+    expect(
+      query.mock.calls.some((call) =>
+        String(call[0]).includes("INSERT INTO employees"),
+      ),
+    ).toBe(false);
   });
 });
