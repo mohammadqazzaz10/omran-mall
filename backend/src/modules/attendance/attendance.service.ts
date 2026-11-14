@@ -100,8 +100,7 @@ export class AttendanceService {
           `SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date::text AS work_date,
                   TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman', 'HH24:MI') AS local_time`,
         );
-        const { work_date: workDate, local_time: localTime } =
-          clock.rows[0];
+        const { work_date: workDate, local_time: localTime } = clock.rows[0];
         const assignment = await client.query<{
           shift_id: string | null;
           start_time: string | null;
@@ -232,11 +231,7 @@ export class AttendanceService {
     limit = 30,
   ) {
     const safeLimit = Math.min(Math.max(limit, 1), 100);
-    await this.assertBranch(
-      this.db as unknown as PoolClient,
-      branchId,
-      user,
-    );
+    await this.assertBranch(this.db as unknown as PoolClient, branchId, user);
     const employee = await this.db.query<EmployeeRow>(
       `SELECT id, status FROM employees
        WHERE user_id = $1 AND branch_id = $2 AND deleted_at IS NULL`,
@@ -268,11 +263,7 @@ export class AttendanceService {
         "صيغة التاريخ يجب أن تكون YYYY-MM-DD",
       );
     }
-    await this.assertBranch(
-      this.db as unknown as PoolClient,
-      branchId,
-      user,
-    );
+    await this.assertBranch(this.db as unknown as PoolClient, branchId, user);
     const result = await this.db.query(
       `SELECT ar.*, e.employee_code, e.first_name_ar, e.second_name_ar, e.last_name_ar,
               d.name_ar AS department_name_ar, p.title_ar AS position_title_ar
