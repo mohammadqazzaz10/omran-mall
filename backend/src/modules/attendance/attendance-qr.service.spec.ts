@@ -26,7 +26,9 @@ describe("AttendanceQrService", () => {
     delete process.env.ATTENDANCE_QR_SECRET;
   });
 
-  it("issues a signed 45-second QR token and stores only the nonce digest", async () => {
+  it(
+    "issues a signed 45-second QR token and stores only the nonce digest",
+    async () => {
     const db = {
       query: jest
         .fn()
@@ -54,7 +56,8 @@ describe("AttendanceQrService", () => {
     expect(db.query.mock.calls[1][0]).toContain("attendance_qr_challenges");
     expect(db.query.mock.calls[1][0]).toContain("nonce_hash");
     expect(db.query.mock.calls[1][1][1]).toMatch(/^[a-f0-9]{64}$/);
-  });
+    },
+  );
 
   it("rejects QR tokens issued for another branch", async () => {
     const db = { query: jest.fn(), transaction: jest.fn() };
@@ -81,7 +84,9 @@ describe("AttendanceQrService", () => {
     expect(db.query).not.toHaveBeenCalled();
   });
 
-  it("requires accurate location when branch geofence is configured", async () => {
+  it(
+    "requires accurate location when branch geofence is configured",
+    async () => {
     const nonce = "b".repeat(64);
     const payload = {
       v: 1 as const,
@@ -129,7 +134,8 @@ describe("AttendanceQrService", () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.transaction).not.toHaveBeenCalled();
     expect(attendance.checkIn).not.toHaveBeenCalled();
-  });
+    },
+  );
 
   it("fails closed without a QR signing secret", async () => {
     delete process.env.ATTENDANCE_QR_SECRET;
