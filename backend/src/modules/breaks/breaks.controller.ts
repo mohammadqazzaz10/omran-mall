@@ -70,6 +70,15 @@ export class BreaksController {
     return this.breaks.requestBreak(branchId, dto, req.user);
   }
 
+  @Get("me")
+  @RequirePermission("breaks.types.view.branch")
+  myStatus(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.breaks.myStatus(branchId, req.user);
+  }
+
   @Get("requests")
   @RequirePermission("breaks.view.branch")
   listRequests(
