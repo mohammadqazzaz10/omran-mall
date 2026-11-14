@@ -56,7 +56,7 @@ describe("AccessTokenGuard", () => {
         }),
     } as any;
     const guard = new AccessTokenGuard(jwt, db);
-    const request = {
+    const request: Record<string, any> = {
       headers: { authorization: "Bearer valid-token" },
     };
 
