@@ -11,6 +11,7 @@ import '../../features/auth/session_management_screen.dart';
 import '../../features/employee/employee_home_screen.dart';
 import '../../features/breaks/breaks_home_screen.dart';
 import '../../features/breaks/breaks_management_screen.dart';
+import '../../features/attendance/attendance_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -92,6 +93,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/change-password',
         builder: (context, state) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: '/attendance',
+        builder: (context, state) => const AttendanceScreen(),
       ),
       GoRoute(
         path: '/breaks',
