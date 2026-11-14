@@ -27,6 +27,7 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 
 | Method | Path | Permission | Purpose |
 |---|---|---|---|
+| GET | `/qr/geofence` | `attendance.check_in.own` | Check whether location is required before requesting GPS permission |
 | POST | `/qr/challenges` | `attendance.qr.manage.branch` | Issue a 45-second QR token for branch display |
 | POST | `/check-in/qr` | `attendance.check_in.own` | QR check-in with location when geofence is enabled |
 | POST | `/check-in` | `attendance.check_in.own` | App check-in only when geofence is not enabled |
@@ -44,7 +45,7 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - Actual production secret provisioning on Render is intentionally deferred to the final deployment stage.
 
 ## Current limitations — Section 06 is not complete
-- Flutter supervisor UI now displays a server-issued QR and rotates it every 45 seconds; employee UI scans the QR and sends location when available. Android/iOS camera and location permission declarations were added. CI and real-device acceptance are still pending.
+- Flutter supervisor UI now displays a server-issued QR and rotates it every 45 seconds; employee UI scans the QR and queries geofence status first; it requests location permission only when the branch requires it. Android/iOS camera and location permission declarations were added. CI and real-device acceptance are still pending.
 - Offline attendance is not supported. Client timestamps must not be accepted; queued operations must remain unconfirmed until server verification, and that workflow is not implemented.
 - GPS can be spoofed on some devices. Accuracy and distance checks alone do not prove device integrity; device attestation or another control must be evaluated before production use.
 - Correction rejection with optional reviewer notes and audit history is implemented; employee notifications and full handling of night shifts, holidays, lateness and early departure remain missing. A Flutter branch dashboard now polls attendance records every 30 seconds; this is periodic refresh, not a WebSocket live stream.
