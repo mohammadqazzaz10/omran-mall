@@ -1,4 +1,6 @@
-import { BranchIsolationGuard } from "../../common/guards/branch-isolation.guard";
+import {
+  BranchIsolationGuard,
+} from "../../common/guards/branch-isolation.guard";
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { BreaksController } from "./breaks.controller";
@@ -9,7 +11,12 @@ import { BreaksService } from "./breaks.service";
 @Module({
   imports: [AuthModule],
   controllers: [BreaksController],
-  providers: [BreaksService, BreaksGateway, BreaksMonitor, BranchIsolationGuard],
+  providers: [
+    BreaksService,
+    BreaksGateway,
+    BreaksMonitor,
+    BranchIsolationGuard,
+  ],
   exports: [BreaksService, BreaksGateway],
 })
 export class BreaksModule {}
