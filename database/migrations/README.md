@@ -9,3 +9,7 @@
 
 ## 009_employee_branch_transfers.sql
 Adds the company-scoped `employees.transfer.company` permission and grants it to SUPER_ADMIN, GENERAL_MANAGER, and HR_MANAGER. Branch managers do not receive cross-branch transfer authority by default.
+
+
+## 010_hr_branch_directory_read_permission.sql
+Grants HR_MANAGER read-only access to the company branch directory so the transfer workflow can choose source and destination branches. It does not grant branch management permissions.
