@@ -292,5 +292,4 @@ BEGIN
     ) THEN
       RAISE EXCEPTION 'EMPLOYEE is missing self-service employee profile permission';
     END IF;
-END;
-$;
+END;$$;
