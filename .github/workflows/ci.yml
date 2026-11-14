@@ -41,16 +41,32 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
       - name: Resolve backend dependencies
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-          npm audit fix || true
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit fix --package-lock-only --ignore-scripts || true
+          npm ci
+      - name: Apply official NestJS 12 migration
+        run: |
+          npx nest upgrade --no-observe --skip-install
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit fix --package-lock-only --ignore-scripts || true
           npm ci
       - uses: actions/upload-artifact@v6
         with:
           name: backend-lockfile
           path: backend/package-lock.json
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: backend-migration-config
+          path: |
+            backend/package.json
+            backend/tsconfig.json
+            backend/tsconfig.build.json
+            backend/nest-cli.json
+            backend/jest.config.js
           if-no-files-found: error
       - run: npm run format
       - run: npm run build
@@ -198,6 +214,10 @@ jobs:
           path: backend-lock
       - uses: actions/download-artifact@v8
         with:
+          name: backend-migration-config
+          path: backend-config
+      - uses: actions/download-artifact@v8
+        with:
           name: backend-formatted-source
           path: backend-generated
       - uses: actions/download-artifact@v8
@@ -215,8 +235,13 @@ jobs:
           fi
           tar --no-same-owner --no-same-permissions -xzf client-generated/flutter-generated-foundation.tar.gz -C client
           cp backend-lock/package-lock.json backend/package-lock.json
+          cp backend-config/package.json backend/package.json
+          cp backend-config/tsconfig.json backend/tsconfig.json
+          cp backend-config/tsconfig.build.json backend/tsconfig.build.json
+          cp backend-config/nest-cli.json backend/nest-cli.json
+          cp backend-config/jest.config.js backend/jest.config.js
           cp -a backend-generated/. backend/src/
-          git add backend/src client/android client/ios client/web client/.metadata client/.gitignore client/pubspec.lock backend/package-lock.json
+          git add backend/src client/android client/ios client/web client/.metadata client/.gitignore client/pubspec.lock backend/package-lock.json backend/package.json backend/tsconfig.json backend/tsconfig.build.json backend/nest-cli.json backend/jest.config.js
           git add -f client/android/gradlew client/android/gradlew.bat client/android/gradle/wrapper/gradle-wrapper.jar
           if git diff --cached --quiet; then
             echo "No generated files changed."
