@@ -119,7 +119,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.access_time),
-                    title: Text(strings.attendanceTitle),
+                    title: Text(Localizations.localeOf(context).languageCode == 'ar' ? 'الحضور والانصراف' : 'Attendance'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/attendance'),
                   ),
