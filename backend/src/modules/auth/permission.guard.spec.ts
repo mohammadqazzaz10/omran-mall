@@ -207,4 +207,74 @@ describe("PermissionGuard", () => {
     expect(request.branchId).toBe(inactiveBranchId);
     expect(db.query).toHaveBeenCalledTimes(2);
   });
+  it("allows company-wide branch grants only within the user's company", async () => {
+    const companyUser = {
+      ...user,
+      primaryBranchId: null,
+      allowedBranchIds: [],
+    };
+    const branchId = "55555555-5555-4555-8555-555555555555";
+    const db = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rowCount: 1 })
+        .mockResolvedValueOnce({ rowCount: 1 }),
+    } as any;
+    const reflector = makeReflector({
+      "omran:requiredPermission": "breaks.view.branch",
+    });
+    const guard = new PermissionGuard(db, reflector as any);
+    const request: Record<string, any> = {
+      user: companyUser,
+      params: { branchId },
+      headers: {},
+    };
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(request.branchId).toBe(branchId);
+    expect(db.query.mock.calls[1][0]).toContain(
+      "scoped_branch.company_id = $2",
+    );
+    expect(db.query.mock.calls[1][1]).toEqual([
+      companyUser.id,
+      companyUser.companyId,
+      branchId,
+      "breaks.view.branch",
+      false,
+      false,
+      [],
+    ]);
+  });
+
+  it("limits department-assigned supervisors to department-scoped break permissions", async () => {
+    const db = { query: jest.fn().mockResolvedValue({ rowCount: 1 }) } as any;
+    const reflector = makeReflector({
+      "omran:requiredPermission": "breaks.view.branch",
+    });
+    const guard = new PermissionGuard(db, reflector as any);
+    const departmentUser = {
+      ...user,
+      departmentId: "77777777-7777-4777-8777-777777777777",
+    };
+
+    await expect(
+      guard.canActivate(
+        contextFor({
+          user: departmentUser,
+          params: { branchId: user.primaryBranchId },
+          headers: {},
+        }),
+      ),
+    ).resolves.toBe(true);
+    expect(db.query.mock.calls[0][0]).toContain("p.module = 'breaks'");
+    expect(db.query.mock.calls[0][1]).toEqual([
+      user.id,
+      user.companyId,
+      user.primaryBranchId,
+      "breaks.view.branch",
+      true,
+      true,
+      user.allowedBranchIds,
+    ]);
+  });
 });

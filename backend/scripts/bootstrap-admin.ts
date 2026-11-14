@@ -168,6 +168,37 @@ async function main(): Promise<void> {
         [companyId],
       );
 
+      // Grant the break feature permissions after creating the company role
+      // catalogue; migrations run before a new company and its roles exist.
+      await client.query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT r.id, p.id
+         FROM roles r
+         JOIN permissions p ON
+           (r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER', 'BRANCH_MANAGER')
+             AND p.code IN (
+               'breaks.view.branch',
+               'breaks.types.view.branch',
+               'breaks.manage.branch',
+               'breaks.approve.branch'
+             ))
+           OR
+           (r.code = 'SUPERVISOR' AND p.code IN (
+             'breaks.view.branch',
+             'breaks.types.view.branch',
+             'breaks.approve.branch'
+           ))
+           OR
+           (r.code IN ('EMPLOYEE', 'CASHIER') AND p.code IN (
+             'breaks.types.view.branch',
+             'breaks.request.own',
+             'breaks.end.own'
+           ))
+         WHERE r.company_id = $1
+         ON CONFLICT (role_id, permission_id) DO NOTHING`,
+        [companyId],
+      );
+
       await client.query(
         `INSERT INTO branches (id, company_id, code, name_ar, name_en, is_active)
          VALUES ($1, $2, $3, $4, $5, TRUE)

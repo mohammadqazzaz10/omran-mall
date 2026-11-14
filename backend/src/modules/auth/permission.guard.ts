@@ -87,7 +87,23 @@ export class PermissionGuard implements CanActivate {
        WHERE ur.user_id = $1
          AND p.code = $4
          AND (
-           (ur.branch_id IS NULL AND ur.department_id IS NULL AND p.scope = 'company')
+           (
+             ur.branch_id IS NULL
+             AND ur.department_id IS NULL
+             AND (
+               p.scope = 'company'
+               OR (
+                 p.scope = 'branch'
+                 AND $3::uuid IS NOT NULL
+                 AND EXISTS (
+                   SELECT 1 FROM branches scoped_branch
+                   WHERE scoped_branch.id = $3
+                     AND scoped_branch.company_id = $2
+                     AND scoped_branch.deleted_at IS NULL
+                 )
+               )
+             )
+           )
            OR
            ($5::boolean = TRUE AND ur.branch_id = $3
              AND ur.department_id IS NULL AND p.scope = 'branch')
@@ -96,7 +112,8 @@ export class PermissionGuard implements CanActivate {
              AND ur.department_id IS NULL AND p.scope = 'own')
            OR
            ($5::boolean = TRUE AND ur.branch_id = $3
-             AND ur.department_id IS NOT NULL AND p.scope = 'department'
+             AND ur.department_id IS NOT NULL
+             AND (p.scope = 'department' OR (p.scope = 'branch' AND p.module = 'breaks'))
              AND EXISTS (
                SELECT 1 FROM employees e
                WHERE e.user_id = ur.user_id
