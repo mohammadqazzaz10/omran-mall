@@ -5,7 +5,6 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { AuthService } from "./auth.service";
 import { LoginDto, RefreshDto } from "./auth.dto";
-import { AccessTokenGuard } from "./access-token.guard";
 import { AuthenticatedUser } from "./auth.types";
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
@@ -28,7 +27,6 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(AccessTokenGuard)
   @SkipPermissionCheck()
   @Post("logout")
   logout(@Req() request: AuthenticatedRequest) {
