@@ -404,6 +404,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       targetDepartments = initial[1];
       targetPositions = initial[2];
       targetEmployees = initial[3];
+      if (!mounted) return;
       employeeId = sourceEmployees.isEmpty
           ? null
           : sourceEmployees.first['id'].toString();
@@ -725,16 +726,15 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
         targetDirectManagerId: targetDirectManagerId,
         reason: reason.text.trim(),
       );
+      if (!mounted) return;
       _reload();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               isArabic(context) ? 'تم تنفيذ نقل الموظف بنجاح' : 'Employee transfer completed.',
             ),
           ),
         );
-      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
