@@ -35,7 +35,7 @@ export class DatabaseService implements OnModuleDestroy {
 
   query<T extends QueryResultRow = any>(
     text: string,
-    values: unknown[] = [],
+    values: any[] = [],
   ): Promise<QueryResult<T>> {
     return this.getPool().query<T>(text, values);
   }
