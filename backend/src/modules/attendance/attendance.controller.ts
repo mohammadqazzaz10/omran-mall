@@ -10,9 +10,7 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
-import {
-  RequirePermission,
-} from "../../common/decorators/permission.decorator";
+import { RequirePermission } from "../../common/decorators/permission.decorator";
 import { AuthenticatedUser } from "../auth/auth.types";
 import { AttendanceCorrectionDto } from "./attendance.dto";
 import { AttendanceService } from "./attendance.service";
