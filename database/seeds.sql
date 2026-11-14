@@ -86,6 +86,62 @@ INSERT INTO roles (
 ('f0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000001', 'EMPLOYEE', 'موظف تشغيلي', 'Employee', NULL, TRUE)
 ON CONFLICT (company_id, code) DO NOTHING;
 
+-- Development seed role grants mirror migration 003. No user accounts are
+-- created here, and no real credentials or employee records are included.
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.scope IN ('company', 'branch')
+WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+  AND r.code = 'SUPER_ADMIN'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON
+  p.scope = 'branch'
+  OR (
+    p.scope = 'company'
+    AND p.code IN (
+      'companies.view.company',
+      'branches.view.company',
+      'branches.manage.company',
+      'users.view.company',
+      'roles.view.company'
+    )
+  )
+WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+  AND r.code = 'GENERAL_MANAGER'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.scope = 'branch'
+WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+  AND r.code = 'BRANCH_MANAGER'
+  AND p.module IN ('departments', 'positions', 'employees')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON
+  (p.scope = 'company' AND p.module = 'users')
+  OR (p.scope = 'branch' AND p.module IN ('employees', 'departments', 'positions'))
+WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+  AND r.code = 'HR_MANAGER'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.scope = 'department' AND p.module = 'employees'
+WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+  AND r.code = 'SUPERVISOR'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
 -- 7. Insert Default Standard Shifts for Retail Operation
 INSERT INTO shifts (
     id, branch_id, code, name_ar, name_en, start_time, end_time, grace_period_late_minutes, grace_period_early_leave_minutes, color_hex
