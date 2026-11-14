@@ -16,9 +16,11 @@ import { AuthenticatedUser } from "../auth/auth.types";
 import {
   AssignUserRoleDto,
   CreateBranchDto,
+  CreateRoleDto,
   CreateUserDto,
   ListUsersQueryDto,
   UpdateBranchDto,
+  UpdateRoleDto,
   UpdateUserStatusDto,
 } from "./admin.dto";
 import { AdminService } from "./admin.service";
@@ -57,6 +59,22 @@ export class AdminController {
   @RequirePermission("roles.view.company")
   roles(@Req() req: AuthRequest) {
     return this.admin.listRoles(req.user);
+  }
+
+  @Post("roles")
+  @RequirePermission("roles.manage.company")
+  createRole(@Body() dto: CreateRoleDto, @Req() req: AuthRequest) {
+    return this.admin.createRole(dto, req.user);
+  }
+
+  @Patch("roles/:roleId")
+  @RequirePermission("roles.manage.company")
+  updateRole(
+    @Param("roleId", ParseUUIDPipe) id: string,
+    @Body() dto: UpdateRoleDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.admin.updateRole(id, dto, req.user);
   }
 
   @Get("permissions")

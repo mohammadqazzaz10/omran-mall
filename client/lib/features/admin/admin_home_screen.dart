@@ -48,6 +48,8 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       _roleCodes.contains('SUPER_ADMIN') ||
       _roleCodes.contains('GENERAL_MANAGER');
 
+  bool get _canManageRoles => _roleCodes.contains('SUPER_ADMIN');
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +63,9 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
     final roles = _canViewRoles
         ? await repository.listRoles()
         : <Map<String, dynamic>>[];
+    final permissions = _canManageRoles
+        ? await repository.listPermissions()
+        : <Map<String, dynamic>>[];
     return _AdminData(
       branches: branches,
       users: (users['items'] as List? ?? const [])
@@ -69,6 +74,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
           .toList(),
       totalUsers: (users['total'] as num?)?.toInt() ?? 0,
       roles: roles,
+      permissions: permissions,
     );
   }
 
@@ -745,6 +751,174 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
     }
   }
 
+
+  Future<void> _manageRole(
+    List<Map<String, dynamic>> permissions, {
+    Map<String, dynamic>? role,
+  }) async {
+    final arabic = isArabic(context);
+    final code = TextEditingController(text: role?['code']?.toString() ?? 'CUSTOM_');
+    final nameAr = TextEditingController(text: role?['name_ar']?.toString() ?? '');
+    final nameEn = TextEditingController(text: role?['name_en']?.toString() ?? '');
+    final description = TextEditingController(text: role?['description']?.toString() ?? '');
+    final formKey = GlobalKey<FormState>();
+    final allowedPermissions = permissions.where((permission) {
+      final scope = permission['scope']?.toString();
+      final module = permission['module']?.toString();
+      return ['branch', 'department', 'own'].contains(scope) &&
+          !['companies', 'users', 'roles', 'sessions'].contains(module);
+    }).toList();
+    final selected = <String>{
+      ...((role?['permission_codes'] as List?) ?? const [])
+          .map((value) => value.toString()),
+    };
+    try {
+      final saved = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text(
+              role == null
+                  ? (arabic ? 'إنشاء دور مخصص' : 'Create custom role')
+                  : (arabic ? 'تعديل الدور المخصص' : 'Edit custom role'),
+            ),
+            content: SizedBox(
+              width: 560,
+              child: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (role == null)
+                        TextFormField(
+                          controller: code,
+                          decoration: InputDecoration(
+                            labelText: arabic ? 'رمز الدور' : 'Role code',
+                            helperText: 'CUSTOM_...',
+                          ),
+                          validator: (value) {
+                            final text = value?.trim() ?? '';
+                            return RegExp(r'^CUSTOM_[A-Z0-9_]{1,43}$').hasMatch(text)
+                                ? null
+                                : (arabic
+                                    ? 'استخدم رمزاً يبدأ بـ CUSTOM_ وأحرفاً إنجليزية كبيرة'
+                                    : 'Use CUSTOM_ followed by uppercase letters, numbers or underscores');
+                          },
+                        ),
+                      TextFormField(
+                        controller: nameAr,
+                        decoration: InputDecoration(
+                          labelText: arabic ? 'اسم الدور بالعربية' : 'Arabic role name',
+                        ),
+                        validator: (value) => value == null || value.trim().length < 2
+                            ? (arabic ? 'أدخل اسم الدور' : 'Enter a role name')
+                            : null,
+                      ),
+                      TextFormField(
+                        controller: nameEn,
+                        decoration: InputDecoration(
+                          labelText: arabic ? 'اسم الدور بالإنجليزية' : 'English role name',
+                        ),
+                      ),
+                      TextFormField(
+                        controller: description,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          labelText: arabic ? 'الوصف' : 'Description',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          arabic ? 'الصلاحيات المسموح بها' : 'Allowed permissions',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (allowedPermissions.isEmpty)
+                        Text(arabic ? 'لا توجد صلاحيات متاحة' : 'No permissions available')
+                      else
+                        ...allowedPermissions.map((permission) {
+                          final permissionCode = permission['code'].toString();
+                          return CheckboxListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            value: selected.contains(permissionCode),
+                            title: Text(permissionCode),
+                            subtitle: Text(
+                              '${permission['description_ar'] ?? ''} · ${permission['scope']}',
+                            ),
+                            onChanged: (checked) {
+                              setDialogState(() {
+                                if (checked == true) {
+                                  selected.add(permissionCode);
+                                } else {
+                                  selected.remove(permissionCode);
+                                }
+                              });
+                            },
+                          );
+                        }),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(AppLocalizations.of(context).cancelButton),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate() &&
+                      (role != null || selected.isNotEmpty)) {
+                    Navigator.pop(dialogContext, true);
+                  }
+                },
+                child: Text(arabic ? 'حفظ' : 'Save'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (saved != true) return;
+      final repository = ref.read(adminRepositoryProvider);
+      if (role == null) {
+        await repository.createRole(
+          code: code.text.trim(),
+          nameAr: nameAr.text.trim(),
+          nameEn: nameEn.text.trim(),
+          description: description.text.trim(),
+          permissionCodes: selected.toList(),
+        );
+      } else {
+        await repository.updateRole(
+          role['id'].toString(),
+          nameAr: nameAr.text.trim(),
+          nameEn: nameEn.text.trim(),
+          description: description.text.trim(),
+          permissionCodes: selected.toList(),
+        );
+      }
+      if (mounted) _reload();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
+    } finally {
+      code.dispose();
+      nameAr.dispose();
+      nameEn.dispose();
+      description.dispose();
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
@@ -909,9 +1083,21 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                 ),
                 if (_canViewRoles) ...[
                   const SizedBox(height: 20),
-                  Text(
-                    strings.rolesTitle,
-                    style: Theme.of(context).textTheme.titleLarge,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          strings.rolesTitle,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                      if (_canManageRoles)
+                        IconButton(
+                          tooltip: isArabic(context) ? 'إنشاء دور مخصص' : 'Create custom role',
+                          onPressed: () => _manageRole(data.permissions),
+                          icon: const Icon(Icons.add_circle_outline),
+                        ),
+                    ],
                   ),
                   ...data.roles.map(
                     (role) => Card(
@@ -920,8 +1106,17 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                         title: Text(role['name_ar']?.toString() ??
                             role['code'].toString()),
                         subtitle: Text(role['code'].toString()),
-                        trailing: Text(
-                          role['permissions_count'].toString(),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(role['permissions_count'].toString()),
+                            if (_canManageRoles && role['is_system_role'] != true)
+                              IconButton(
+                                tooltip: isArabic(context) ? 'تعديل الدور' : 'Edit role',
+                                onPressed: () => _manageRole(data.permissions, role: role),
+                                icon: const Icon(Icons.edit_outlined),
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -945,12 +1140,14 @@ class _AdminData {
     required this.users,
     required this.totalUsers,
     required this.roles,
+    required this.permissions,
   });
 
   final List<Map<String, dynamic>> branches;
   final List<Map<String, dynamic>> users;
   final int totalUsers;
   final List<Map<String, dynamic>> roles;
+  final List<Map<String, dynamic>> permissions;
 }
 
 class _SummaryCard extends StatelessWidget {
