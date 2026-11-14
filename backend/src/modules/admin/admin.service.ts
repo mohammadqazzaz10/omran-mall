@@ -157,7 +157,9 @@ export class AdminService {
 
   private async assertRoleAdministrator(actor: AuthenticatedUser) {
     if (!(await this.isSuperAdmin(actor))) {
-      throw new ForbiddenException("إدارة الأدوار المخصصة متاحة لمدير النظام الأعلى فقط");
+      throw new ForbiddenException(
+        "إدارة الأدوار المخصصة متاحة لمدير النظام الأعلى فقط",
+      );
     }
   }
 
@@ -174,17 +176,28 @@ export class AdminService {
     if (result.rows.length !== uniqueCodes.length) {
       throw new BadRequestException("تتضمن القائمة صلاحية غير موجودة");
     }
-    const scopes = new Set(result.rows.map((permission: any) => permission.scope));
+    const scopes = new Set(
+      result.rows.map((permission: any) => permission.scope),
+    );
     if (scopes.size > 1) {
-      throw new BadRequestException("يجب أن تكون صلاحيات الدور المخصص ضمن نطاق واحد متجانس");
+      throw new BadRequestException(
+        "يجب أن تكون صلاحيات الدور المخصص ضمن نطاق واحد متجانس",
+      );
     }
-    const blocked = result.rows.filter((permission: any) =>
-      !["branch", "department", "own"].includes(permission.scope) ||
-      ["companies", "users", "roles", "sessions"].includes(permission.code.split(".")[0]) ||
-      ["branches.manage.company", "employees.transfer.company"].includes(permission.code),
+    const blocked = result.rows.filter(
+      (permission: any) =>
+        !["branch", "department", "own"].includes(permission.scope) ||
+        ["companies", "users", "roles", "sessions"].includes(
+          permission.code.split(".")[0],
+        ) ||
+        ["branches.manage.company", "employees.transfer.company"].includes(
+          permission.code,
+        ),
     );
     if (blocked.length) {
-      throw new ForbiddenException("لا يمكن إسناد صلاحيات إدارية على مستوى الشركة أو إدارة الهوية إلى دور مخصص");
+      throw new ForbiddenException(
+        "لا يمكن إسناد صلاحيات إدارية على مستوى الشركة أو إدارة الهوية إلى دور مخصص",
+      );
     }
     return result.rows;
   }
@@ -194,10 +207,19 @@ export class AdminService {
     const code = dto.code.trim().toUpperCase();
     try {
       return await this.db.transaction(async (client) => {
-        const permissions = await this.validateCustomRolePermissions(client, dto.permissionCodes);
+        const permissions = await this.validateCustomRolePermissions(
+          client,
+          dto.permissionCodes,
+        );
         const inserted = await client.query(
           "INSERT INTO roles(company_id,code,name_ar,name_en,description,is_system_role) VALUES($1,$2,$3,$4,$5,FALSE) RETURNING id,code,name_ar,name_en,description,is_system_role,is_active",
-          [actor.companyId, code, dto.nameAr.trim(), dto.nameEn?.trim() || null, dto.description?.trim() || null],
+          [
+            actor.companyId,
+            code,
+            dto.nameAr.trim(),
+            dto.nameEn?.trim() || null,
+            dto.description?.trim() || null,
+          ],
         );
         const role = inserted.rows[0];
         for (const permission of permissions) {
@@ -208,17 +230,32 @@ export class AdminService {
         }
         await client.query(
           "INSERT INTO audit_logs(user_id,table_name,record_id,action,new_values) VALUES($1,'roles',$2,'INSERT',$3::jsonb)",
-          [actor.id, role.id, JSON.stringify({ code, permissionCodes: permissions.map((item: any) => item.code) })],
+          [
+            actor.id,
+            role.id,
+            JSON.stringify({
+              code,
+              permissionCodes: permissions.map((item: any) => item.code),
+            }),
+          ],
         );
-        return { ...role, permission_codes: permissions.map((item: any) => item.code) };
+        return {
+          ...role,
+          permission_codes: permissions.map((item: any) => item.code),
+        };
       });
     } catch (error: any) {
-      if (error?.code === "23505") throw new ConflictException("رمز الدور مستخدم مسبقاً في الشركة");
+      if (error?.code === "23505")
+        throw new ConflictException("رمز الدور مستخدم مسبقاً في الشركة");
       throw error;
     }
   }
 
-  async updateRole(roleId: string, dto: UpdateRoleDto, actor: AuthenticatedUser) {
+  async updateRole(
+    roleId: string,
+    dto: UpdateRoleDto,
+    actor: AuthenticatedUser,
+  ) {
     await this.assertRoleAdministrator(actor);
     if (Object.keys(dto).length === 0) {
       throw new BadRequestException("لم يتم إرسال أي تعديل");
@@ -229,13 +266,21 @@ export class AdminService {
         [roleId, actor.companyId],
       );
       if (!current.rows[0]) throw new NotFoundException("الدور غير موجود");
-      if (current.rows[0].is_system_role || !String(current.rows[0].code).startsWith("CUSTOM_")) {
+      if (
+        current.rows[0].is_system_role ||
+        !String(current.rows[0].code).startsWith("CUSTOM_")
+      ) {
         throw new ForbiddenException("لا يمكن تعديل الأدوار الأساسية المحمية");
       }
       let permissions: any[] | undefined;
       if (dto.permissionCodes !== undefined) {
-        permissions = await this.validateCustomRolePermissions(client, dto.permissionCodes);
-        await client.query("DELETE FROM role_permissions WHERE role_id=$1", [roleId]);
+        permissions = await this.validateCustomRolePermissions(
+          client,
+          dto.permissionCodes,
+        );
+        await client.query("DELETE FROM role_permissions WHERE role_id=$1", [
+          roleId,
+        ]);
         for (const permission of permissions) {
           await client.query(
             "INSERT INTO role_permissions(role_id,permission_id) VALUES($1,$2)",
@@ -245,13 +290,34 @@ export class AdminService {
       }
       const updated = await client.query(
         "UPDATE roles SET name_ar=COALESCE($3,name_ar),name_en=CASE WHEN $4 THEN $5 ELSE name_en END,description=CASE WHEN $6 THEN $7 ELSE description END,updated_at=NOW() WHERE id=$1 AND company_id=$2 RETURNING id,code,name_ar,name_en,description,is_system_role,is_active",
-        [roleId, actor.companyId, dto.nameAr?.trim() ?? null, dto.nameEn !== undefined, dto.nameEn?.trim() ?? null, dto.description !== undefined, dto.description?.trim() ?? null],
+        [
+          roleId,
+          actor.companyId,
+          dto.nameAr?.trim() ?? null,
+          dto.nameEn !== undefined,
+          dto.nameEn?.trim() ?? null,
+          dto.description !== undefined,
+          dto.description?.trim() ?? null,
+        ],
       );
       await client.query(
         "INSERT INTO audit_logs(user_id,table_name,record_id,action,old_values,new_values) VALUES($1,'roles',$2,'UPDATE',$3::jsonb,$4::jsonb)",
-        [actor.id, roleId, JSON.stringify(current.rows[0]), JSON.stringify({ ...updated.rows[0], permissionCodes: permissions?.map((item) => item.code) })],
+        [
+          actor.id,
+          roleId,
+          JSON.stringify(current.rows[0]),
+          JSON.stringify({
+            ...updated.rows[0],
+            permissionCodes: permissions?.map((item) => item.code),
+          }),
+        ],
       );
-      return { ...updated.rows[0], ...(permissions ? { permission_codes: permissions.map((item) => item.code) } : {}) };
+      return {
+        ...updated.rows[0],
+        ...(permissions
+          ? { permission_codes: permissions.map((item) => item.code) }
+          : {}),
+      };
     });
   }
 
@@ -458,7 +524,9 @@ export class AdminService {
           "SELECT p.scope FROM role_permissions rp JOIN permissions p ON p.id=rp.permission_id WHERE rp.role_id=$1",
           [role.rows[0].id],
         );
-        customRoleRequiresDepartment = customPermissions.rows.some((item: any) => item.scope === "department");
+        customRoleRequiresDepartment = customPermissions.rows.some(
+          (item: any) => item.scope === "department",
+        );
         if (customRoleRequiresDepartment && !dto.departmentId) {
           throw new BadRequestException("هذا الدور يتطلب تحديد القسم");
         }
