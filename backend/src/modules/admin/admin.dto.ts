@@ -54,16 +54,28 @@ export class CreateUserDto {
   @IsOptional() @IsUUID() employeeId?: string;
 }
 export class CreateRoleDto {
-  @IsString() @Matches(/^CUSTOM_[A-Z0-9_]{1,43}$/) @MaxLength(50)
+  @IsString()
+  @Matches(/^CUSTOM_[A-Z0-9_]{1,43}$/)
+  @MaxLength(50)
   code!: string;
-  @IsString() @MinLength(2) @MaxLength(100)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
   nameAr!: string;
-  @IsOptional() @IsString() @MaxLength(100)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
   nameEn?: string;
-  @IsOptional() @IsString() @MaxLength(500)
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   description?: string;
-  @IsArray() @ArrayNotEmpty() @ArrayUnique() @ArrayMaxSize(100)
-  @IsString({ each: true }) @MaxLength(100, { each: true })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayUnique()
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  @MaxLength(100, { each: true })
   permissionCodes!: string[];
 }
 
@@ -74,14 +86,20 @@ export class UpdateRoleDto {
   nameEn?: string | null;
   @IsOptional() @IsString() @MaxLength(500)
   description?: string | null;
-  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(100)
-  @IsString({ each: true }) @MaxLength(100, { each: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  @MaxLength(100, { each: true })
   permissionCodes?: string[];
 }
 
 export class AssignUserRoleDto {
   @IsString()
-  @Matches(/^(SUPER_ADMIN|GENERAL_MANAGER|BRANCH_MANAGER|HR_MANAGER|SUPERVISOR|CASHIER|EMPLOYEE|CUSTOM_[A-Z0-9_]{1,43})$/)
+  @Matches(
+    /^(SUPER_ADMIN|GENERAL_MANAGER|BRANCH_MANAGER|HR_MANAGER|SUPERVISOR|CASHIER|EMPLOYEE|CUSTOM_[A-Z0-9_]{1,43})$/,
+  )
   @MaxLength(50)
   roleCode!: string;
   @IsOptional() @IsArray() @IsUUID("4", { each: true }) branchIds?: string[];
