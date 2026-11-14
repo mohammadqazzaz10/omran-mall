@@ -336,6 +336,8 @@ gantt
 - [Section 01 — Vision and Principles (English)](docs/SECTION_01_VISION_AND_PRINCIPLES_EN.md)
 - [القسم 02 — البنية التقنية والهندسية (عربي)](docs/SECTION_02_TECHNICAL_ARCHITECTURE_AR.md)
 - [Section 02 — Technical Architecture (English)](docs/SECTION_02_TECHNICAL_ARCHITECTURE_EN.md)
+- [القسم 03 — الشركة والفروع والهيكل التنظيمي (عربي)](docs/SECTION_03_COMPANY_BRANCHES_AR.md)
+- [Section 03 — Company, Branches, and Organization (English)](docs/SECTION_03_COMPANY_BRANCHES_EN.md)
 
 - **[Master Requirements & Technical Specification — Arabic](docs/MASTER_REQUIREMENTS_AR.md)** — النسخة العربية الأصلية والمرجع الأساسي.
 - **[Master Requirements & Technical Specification — English](docs/MASTER_REQUIREMENTS_EN.md)** — complete English companion translation.
