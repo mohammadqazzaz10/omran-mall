@@ -19,10 +19,9 @@ CREATE TABLE user_branch_memberships (
     FOREIGN KEY (user_id, company_id) REFERENCES users(id, company_id) ON DELETE CASCADE,
   CONSTRAINT fk_membership_branch_company
     FOREIGN KEY (branch_id, company_id) REFERENCES branches(id, company_id) ON DELETE CASCADE,
-  CONSTRAINT uq_user_branch_membership UNIQUE (user_id, branch_id)
 );
 
-CREATE INDEX idx_user_branch_memberships_active
+CREATE UNIQUE INDEX uq_user_branch_memberships_active
   ON user_branch_memberships(user_id, branch_id)
   WHERE revoked_at IS NULL;
 
@@ -40,6 +39,7 @@ INSERT INTO user_branch_memberships (user_id, branch_id, company_id)
 SELECT DISTINCT u.id, ur.branch_id, u.company_id
 FROM user_roles ur
 JOIN users u ON u.id = ur.user_id
+JOIN roles r ON r.id = ur.role_id AND r.company_id = u.company_id
 JOIN branches b ON b.id = ur.branch_id AND b.company_id = u.company_id
 WHERE ur.branch_id IS NOT NULL
 ON CONFLICT (user_id, branch_id) DO NOTHING;
