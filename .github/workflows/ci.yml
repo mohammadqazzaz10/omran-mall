@@ -44,6 +44,20 @@ jobs:
           node-version: 24
       - name: Install locked backend dependencies
         run: npm ci
+      - name: Temporary employee records Prettier formatting preview
+        run: |
+          npx prettier --write "src/modules/organization/employee-records.controller.ts" "src/modules/organization/employee-records.dto.ts" "src/modules/organization/employee-records.service.ts"
+          mkdir -p /tmp/employee-records-formatted
+          cp src/modules/organization/employee-records.controller.ts /tmp/employee-records-formatted/
+          cp src/modules/organization/employee-records.dto.ts /tmp/employee-records-formatted/
+          cp src/modules/organization/employee-records.service.ts /tmp/employee-records-formatted/
+          tar -czf employee-records-formatted.tar.gz -C /tmp/employee-records-formatted .
+        working-directory: backend
+      - uses: actions/upload-artifact@v6
+        with:
+          name: employee-records-prettier-preview
+          path: backend/employee-records-formatted.tar.gz
+          if-no-files-found: error
       - run: npm run format:check
       - run: npm run build
       - name: Type-check first-admin bootstrap utility
