@@ -82,5 +82,12 @@
   "maxConcurrentLabel": "Maximum employees out per department",
   "requiresApprovalLabel": "Requires supervisor approval",
   "saveBreakTypeButton": "Save break type",
-  "breakTypeSavedMessage": "Break settings saved"
+  "breakTypeSavedMessage": "Break settings saved",
+  "breakManagementTitle": "Break management",
+  "noPendingBreakRequests": "There are no pending break requests",
+  "noEmployeesOnBreak": "No employees are currently on break",
+  "deductFromWorkHoursLabel": "Deduct break from working hours",
+  "allowEarlyReturnLabel": "Allow early return",
+  "isActiveLabel": "Break type is active",
+  "editButton": "Edit"
 }
