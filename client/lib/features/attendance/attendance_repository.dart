@@ -41,6 +41,12 @@ class AttendanceRepository {
         .toList(growable: false);
   }
 
+  Future<Map<String, dynamic>> geofenceStatus(String branchId) async {
+    final response = await client.dio.get<dynamic>(
+      'branches/$branchId/attendance/qr/geofence',
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
   Future<Map<String, dynamic>> createQrChallenge(String branchId) async {
     final response = await client.dio.post<dynamic>(
       'branches/$branchId/attendance/qr/challenges',
