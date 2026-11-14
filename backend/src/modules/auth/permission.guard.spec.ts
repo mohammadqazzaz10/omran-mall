@@ -232,7 +232,9 @@ describe("PermissionGuard", () => {
 
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
     expect(request.branchId).toBe(branchId);
-    expect(db.query.mock.calls[1][0]).toContain("scoped_branch.company_id = $2");
+    expect(db.query.mock.calls[1][0]).toContain(
+      "scoped_branch.company_id = $2",
+    );
     expect(db.query.mock.calls[1][1]).toEqual([
       companyUser.id,
       companyUser.companyId,
@@ -275,5 +277,4 @@ describe("PermissionGuard", () => {
       user.allowedBranchIds,
     ]);
   });
-
 });
