@@ -123,7 +123,25 @@ export class AttendanceService {
       const updated = await client.query<AttendanceRow>(
         `UPDATE attendance_records
          SET check_out_time = CURRENT_TIMESTAMP,
-             total_work_minutes = GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - check_in_time)) / 60)::int),
+             total_break_minutes = COALESCE((
+               SELECT SUM(GREATEST(0, FLOOR(EXTRACT(EPOCH FROM
+                 (COALESCE(bs.actual_end_time, CURRENT_TIMESTAMP) - bs.start_time)) / 60)::int))
+               FROM break_sessions bs
+               WHERE bs.employee_id = $3 AND bs.branch_id = $2
+                 AND bs.start_time >= attendance_records.check_in_time
+                 AND bs.start_time <= CURRENT_TIMESTAMP
+             ), 0),
+             total_work_minutes = GREATEST(0,
+               FLOOR(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - check_in_time)) / 60)::int
+               - COALESCE((
+                 SELECT SUM(GREATEST(0, FLOOR(EXTRACT(EPOCH FROM
+                   (COALESCE(bs.actual_end_time, CURRENT_TIMESTAMP) - bs.start_time)) / 60)::int))
+                 FROM break_sessions bs
+                 WHERE bs.employee_id = $3 AND bs.branch_id = $2
+                   AND bs.start_time >= attendance_records.check_in_time
+                   AND bs.start_time <= CURRENT_TIMESTAMP
+               ), 0)
+             ),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1 AND branch_id = $2 AND employee_id = $3 AND check_out_time IS NULL
          RETURNING id, employee_id, branch_id, work_date::text, check_in_time, check_out_time, status`,
