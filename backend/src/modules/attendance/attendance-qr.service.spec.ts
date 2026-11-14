@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   ServiceUnavailableException,
 } from "@nestjs/common";
+import { createHmac } from "crypto";
 import { AttendanceQrService } from "./attendance-qr.service";
 
 describe("AttendanceQrService", () => {
@@ -25,7 +26,7 @@ describe("AttendanceQrService", () => {
     delete process.env.ATTENDANCE_QR_SECRET;
   });
 
-  it("issues a signed short-lived QR token and persists only its nonce digest", async () => {
+  it("issues a signed 45-second QR token and stores only the nonce digest", async () => {
     const db = {
       query: jest
         .fn()
@@ -55,7 +56,7 @@ describe("AttendanceQrService", () => {
     expect(db.query.mock.calls[1][1][1]).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it("rejects a QR token issued for a different branch before any database lookup", async () => {
+  it("rejects QR tokens issued for another branch", async () => {
     const db = { query: jest.fn(), transaction: jest.fn() };
     const service = new AttendanceQrService(
       db as any,
@@ -80,7 +81,7 @@ describe("AttendanceQrService", () => {
     expect(db.query).not.toHaveBeenCalled();
   });
 
-  it("requires a sufficiently accurate location when a branch geofence is configured", async () => {
+  it("requires accurate location when branch geofence is configured", async () => {
     const nonce = "b".repeat(64);
     const payload = {
       v: 1 as const,
@@ -89,25 +90,25 @@ describe("AttendanceQrService", () => {
       e: Math.floor(Date.now() / 1000) + 45,
     };
     const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
-    const key = require("crypto")
-      .createHmac("sha256", process.env.ATTENDANCE_QR_SECRET)
+    const key = createHmac("sha256", process.env.ATTENDANCE_QR_SECRET!)
       .update("branch-salt")
       .digest();
-    const signature = require("crypto")
-      .createHmac("sha256", key)
+    const signature = createHmac("sha256", key)
       .update(encoded)
       .digest("base64url");
     const db = {
       query: jest
         .fn()
         .mockResolvedValueOnce({
-          rows: [{
-            id: branchId,
-            qr_secret_salt: "branch-salt",
-            latitude: "31.95",
-            longitude: "35.91",
-            geofence_radius_meters: 150,
-          }],
+          rows: [
+            {
+              id: branchId,
+              qr_secret_salt: "branch-salt",
+              latitude: "31.95",
+              longitude: "35.91",
+              geofence_radius_meters: 150,
+            },
+          ],
           rowCount: 1,
         })
         .mockResolvedValueOnce({
@@ -130,7 +131,7 @@ describe("AttendanceQrService", () => {
     expect(attendance.checkIn).not.toHaveBeenCalled();
   });
 
-  it("fails closed when QR signing secret is not configured", async () => {
+  it("fails closed without a QR signing secret", async () => {
     delete process.env.ATTENDANCE_QR_SECRET;
     const db = {
       query: jest.fn().mockResolvedValueOnce({
@@ -143,8 +144,8 @@ describe("AttendanceQrService", () => {
       { checkIn: jest.fn() } as any,
     );
 
-    await expect(service.createChallenge(branchId, user)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
+    await expect(
+      service.createChallenge(branchId, user),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });
