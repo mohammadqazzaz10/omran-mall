@@ -6,11 +6,17 @@ import { AccessTokenGuard } from "./access-token.guard";
 import { PermissionGuard } from "./permission.guard";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
+import { durationToSeconds } from "./auth.config";
 
 const jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret || jwtSecret.length < 32) {
-  throw new Error("JWT_SECRET must be configured with at least 32 characters");
+if (!jwtSecret || jwtSecret.length < 32 || jwtSecret.startsWith("REPLACE_")) {
+  throw new Error("JWT_SECRET must be a unique secret of at least 32 characters");
 }
+const accessTokenTtlSeconds = durationToSeconds(
+  process.env.JWT_EXPIRATION,
+  900,
+  60 * 60,
+);
 
 @Module({
   imports: [
@@ -18,7 +24,7 @@ if (!jwtSecret || jwtSecret.length < 32) {
     JwtModule.register({
       secret: jwtSecret,
       signOptions: {
-        expiresIn: 900,
+        expiresIn: accessTokenTtlSeconds,
         issuer: "omran-mall-api",
         audience: "omran-mall-client",
       },
