@@ -168,7 +168,10 @@ export class AuthService {
     if (separator < 1) {
       throw new UnauthorizedException("جلسة الدخول غير صالحة");
     }
-    const sessionId = refreshToken.slice(0, separator);\n    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) {\n      throw new UnauthorizedException("جلسة الدخول غير صالحة");\n    }
+    const sessionId = refreshToken.slice(0, separator);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) {
+      throw new UnauthorizedException("جلسة الدخول غير صالحة");
+    }
     const oldSecret = refreshToken.slice(separator + 1);
     const nextSecret = randomBytes(48).toString("base64url");
 
