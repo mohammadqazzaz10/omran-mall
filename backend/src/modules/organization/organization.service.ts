@@ -589,6 +589,9 @@ export class OrganizationService {
   ) {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, sourceBranchId, user);
+      if (!dto.reason || dto.reason.trim().length < 10) {
+        throw new BadRequestException("سبب النقل يجب ألا يقل عن 10 أحرف فعلية");
+      }
       if (dto.targetBranchId === sourceBranchId) {
         throw new BadRequestException("الفرع المستهدف هو الفرع الحالي للموظف");
       }
@@ -715,6 +718,9 @@ export class OrganizationService {
           sourceBranchId,
         ],
       );
+      if (updated.rowCount !== 1) {
+        throw new ConflictException("تغير ملف الموظف أثناء تنفيذ النقل؛ أعد المحاولة");
+      }
       const newSnapshot = {
         branchId: updated.rows[0].branch_id,
         departmentId: updated.rows[0].department_id,
