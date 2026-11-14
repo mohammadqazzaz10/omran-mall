@@ -13,6 +13,7 @@ Record attendance using trusted server time, support branch QR verification and 
 
 ## Implemented in this increment
 1. **Rotating signed QR:** The backend issues a branch-bound HMAC-SHA256 token with a 45-second lifetime. Signing uses a dedicated `ATTENDANCE_QR_SECRET` environment variable combined with the branch salt stored in PostgreSQL.
+2. **Atomic consistency:** QR consumption, attendance insertion, location persistence, and audit logging run in one PostgreSQL transaction; any failure rolls back the complete operation.
 2. **No plaintext token storage:** Only a SHA-256 digest of the nonce is stored.
 3. **Replay protection:** A unique database key records each employee's use of a given QR challenge.
 4. **Branch binding:** Tokens from another branch, expired tokens, and invalid signatures are rejected.
