@@ -108,7 +108,8 @@ JOIN permissions p ON
       'branches.view.company',
       'branches.manage.company',
       'users.view.company',
-      'roles.view.company'
+      'roles.view.company',
+      'users.assign_roles.company'
     )
   )
 WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
@@ -140,6 +141,15 @@ FROM roles r
 JOIN permissions p ON p.scope = 'department' AND p.module = 'employees'
 WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
   AND r.code = 'SUPERVISOR'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Employee and cashier permissions are limited to owner-bound self-service APIs.
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.code IN ('employees.view.own', 'employees.edit.own')
+WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+  AND r.code IN ('CASHIER', 'EMPLOYEE')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 7. Insert Default Standard Shifts for Retail Operation

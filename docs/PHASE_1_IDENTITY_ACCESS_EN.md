@@ -68,3 +68,31 @@ A new work branch, `phase-1/organization-employee-apis`, adds protected branch-s
 The branch also adds migration 004 with composite PostgreSQL constraints that enforce same-branch department, position, and manager references. Service validation rejects invalid references and circular department/manager hierarchies. Initial unit tests cover cross-branch reference rejection.
 
 This work is not merged until the exact branch head passes CI. Branch/user/role/session administration, database row-level isolation, authenticated WebSocket authorization, Flutter API workflows, and all operational modules remain outstanding. Render integration remains deferred to the final release stage.
+
+
+## Administration, Account Lifecycle, and Self-Service Update — 2026-11-14
+
+### Implemented on `phase-1/admin-user-session-management`
+- Protected company-scoped branch listing, creation, update, activation, and deactivation. Company identity is derived from the authenticated principal, never from a client-supplied company ID.
+- Newly created or reactivated branches materialize memberships and branch grants only for the explicitly approved company-wide administrator roles.
+- Paginated and searchable user listing with active-state filtering and scoped role summaries.
+- User provisioning with a random temporary password returned only in the creation response and stored only as a bcrypt hash.
+- Optional linking to an existing employee record, guarded by company/branch ownership and the one-user-per-employee constraint.
+- Role assignment rules: elevated administrative roles require a company-level SUPER_ADMIN actor; non-super-admin operators cannot provision elevated roles.
+- Account deactivation revokes active sessions. Self-deactivation and disabling the last active SUPER_ADMIN are rejected; HR/general management cannot disable a SUPER_ADMIN account.
+- Temporary-password accounts are blocked from all protected routes until password rotation, except the password-change and logout routes.
+- Strong password change verifies the current password, enforces bcrypt's 72-byte input ceiling, and revokes other active sessions.
+- Self-service session listing and revocation, with protection against revoking the current session through the device-management route.
+- Restricted employee self-profile reads/updates are bound to the authenticated `user_id`; employees cannot edit employment, payroll, role, or branch scope fields.
+- Own-scope permission grants for EMPLOYEE/CASHIER roles are paired with service-level record ownership checks.
+
+### Remaining gates
+- This is still an open pull request until CI passes on the final head SHA and the diff is reviewed and merged.
+- Role/membership removal, account recovery, verified email/phone workflows, MFA, and robust login rate limiting remain open.
+- PostgreSQL RLS and transaction-scoped branch isolation are not implemented; the HTTP permission guard alone is not database isolation.
+- Full PostgreSQL integration coverage is still required for provisioning, employee linking, password rotation, and session lifecycle.
+- Flutter login, forced-password-change, administration, and employee self-service screens are not yet connected to these APIs.
+- Daily operations, real push delivery, reporting, HR/finance modules, and the remaining master requirements are still open.
+- Render integration and production deployment remain deferred until the final acceptance and security gates pass.
+
+**Status:** implementation and CI validation in progress; not production-ready.

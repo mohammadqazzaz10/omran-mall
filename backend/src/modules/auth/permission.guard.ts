@@ -92,6 +92,9 @@ export class PermissionGuard implements CanActivate {
            ($5::boolean = TRUE AND ur.branch_id = $3
              AND ur.department_id IS NULL AND p.scope = 'branch')
            OR
+           ($6::boolean = TRUE AND ur.branch_id = ANY($7::uuid[])
+             AND ur.department_id IS NULL AND p.scope = 'own')
+           OR
            ($5::boolean = TRUE AND ur.branch_id = $3
              AND ur.department_id IS NOT NULL AND p.scope = 'department'
              AND EXISTS (
@@ -103,7 +106,15 @@ export class PermissionGuard implements CanActivate {
              ))
          )
        LIMIT 1`,
-      [user.id, user.companyId, branchId, permissionCode, hasBranchMembership],
+      [
+        user.id,
+        user.companyId,
+        branchId,
+        permissionCode,
+        hasBranchMembership,
+        user.allowedBranchIds.length > 0,
+        user.allowedBranchIds,
+      ],
     );
 
     if (grant.rowCount !== 1) {

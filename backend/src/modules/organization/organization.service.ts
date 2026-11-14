@@ -671,4 +671,81 @@ export class OrganizationService {
       throw new BadRequestException("لا يمكن إتمام العملية لوجود سجلات مرتبطة");
     throw error;
   }
+
+  async getOwnEmployeeProfile(user: AuthenticatedUser) {
+    const result = await this.db.query(
+      `SELECT e.id, e.employee_code, e.first_name_ar, e.second_name_ar,
+              e.third_name_ar, e.last_name_ar, e.full_name_en, e.personal_email,
+              e.mobile_phone, e.emergency_contact_name, e.emergency_contact_phone,
+              e.emergency_contact_relation, e.hire_date, e.status,
+              b.id AS branch_id, b.name_ar AS branch_name_ar,
+              d.id AS department_id, d.name_ar AS department_name_ar,
+              p.id AS position_id, p.title_ar AS position_title_ar
+       FROM employees e
+       JOIN branches b ON b.id=e.branch_id AND b.company_id=$2
+       JOIN departments d ON d.id=e.department_id AND d.branch_id=e.branch_id
+       JOIN positions p ON p.id=e.position_id AND p.department_id=d.id
+       WHERE e.user_id=$1 AND e.deleted_at IS NULL
+       LIMIT 1`,
+      [user.id, user.companyId],
+    );
+    if (!result.rows[0])
+      throw new NotFoundException("لا يوجد ملف وظيفي مرتبط بهذا الحساب");
+    return result.rows[0];
+  }
+
+  async updateOwnEmployeeProfile(
+    dto: import("./employee-self.dto").EmployeeSelfUpdateDto,
+    user: AuthenticatedUser,
+  ) {
+    if (Object.keys(dto).length === 0) {
+      throw new BadRequestException("لم يتم إرسال أي تغييرات");
+    }
+    const oldResult = await this.db.query(
+      "SELECT id, branch_id, mobile_phone, personal_email, emergency_contact_name, emergency_contact_phone, emergency_contact_relation FROM employees WHERE user_id=$1 AND deleted_at IS NULL",
+      [user.id],
+    );
+    const old = oldResult.rows[0];
+    if (!old)
+      throw new NotFoundException("لا يوجد ملف وظيفي مرتبط بهذا الحساب");
+    return this.db.transaction(async (client) => {
+      const updated = await client.query(
+        `UPDATE employees SET
+           mobile_phone=COALESCE($2,mobile_phone),
+           personal_email=CASE WHEN $3 THEN $4 ELSE personal_email END,
+           emergency_contact_name=CASE WHEN $5 THEN $6 ELSE emergency_contact_name END,
+           emergency_contact_phone=CASE WHEN $7 THEN $8 ELSE emergency_contact_phone END,
+           emergency_contact_relation=CASE WHEN $9 THEN $10 ELSE emergency_contact_relation END,
+           updated_at=CURRENT_TIMESTAMP
+         WHERE id=$1 AND user_id=$11 AND deleted_at IS NULL
+         RETURNING id, employee_code, mobile_phone, personal_email,
+                   emergency_contact_name, emergency_contact_phone,
+                   emergency_contact_relation, updated_at`,
+        [
+          old.id,
+          dto.mobilePhone ?? null,
+          dto.personalEmail !== undefined,
+          dto.personalEmail ?? null,
+          dto.emergencyContactName !== undefined,
+          dto.emergencyContactName ?? null,
+          dto.emergencyContactPhone !== undefined,
+          dto.emergencyContactPhone ?? null,
+          dto.emergencyContactRelation !== undefined,
+          dto.emergencyContactRelation ?? null,
+          user.id,
+        ],
+      );
+      await this.audit(
+        client,
+        user,
+        old.branch_id,
+        "employees",
+        old.id,
+        "UPDATE",
+        old,
+        updated.rows[0],
+      );
+      return updated.rows[0];
+    });
+  }
 }

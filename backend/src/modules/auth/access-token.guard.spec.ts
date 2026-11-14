@@ -1,4 +1,4 @@
-import { UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { AccessTokenGuard } from "./access-token.guard";
 
 describe("AccessTokenGuard", () => {
@@ -69,6 +69,7 @@ describe("AccessTokenGuard", () => {
               company_id: claims.companyId,
               username: "company-admin",
               primary_branch_id: null,
+              must_change_password: false,
             },
           ],
         })
@@ -102,6 +103,7 @@ describe("AccessTokenGuard", () => {
               company_id: claims.companyId,
               username: "employee",
               primary_branch_id: "44444444-4444-4444-8444-444444444444",
+              must_change_password: false,
             },
           ],
         })
@@ -122,5 +124,35 @@ describe("AccessTokenGuard", () => {
       allowedBranchIds: ["44444444-4444-4444-8444-444444444444"],
     });
     expect(db.query).toHaveBeenCalledTimes(2);
+  });
+  it("blocks temporary-password accounts from all routes except explicitly allowed routes", async () => {
+    const jwt = { verifyAsync: jest.fn().mockResolvedValue(claims) } as any;
+    const db = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              user_id: claims.sub,
+              company_id: claims.companyId,
+              username: "new-user",
+              primary_branch_id: "44444444-4444-4444-8444-444444444444",
+              must_change_password: true,
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          rows: [{ branch_id: "44444444-4444-4444-8444-444444444444" }],
+        }),
+    } as any;
+    const guard = new AccessTokenGuard(jwt, db, reflector as any);
+    const request: Record<string, any> = {
+      headers: { authorization: "Bearer valid-token" },
+    };
+
+    await expect(guard.canActivate(contextFor(request))).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(request.user).toBeUndefined();
   });
 });

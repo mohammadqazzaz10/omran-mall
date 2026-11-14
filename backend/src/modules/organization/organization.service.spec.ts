@@ -18,6 +18,7 @@ describe("OrganizationService branch integrity", () => {
     allowedBranchIds: ["00000000-0000-4000-8000-000000000003"],
     sessionId: "session",
     username: "admin",
+    mustChangePassword: false,
   };
 
   beforeEach(() => query.mockReset());
@@ -85,5 +86,14 @@ describe("OrganizationService branch integrity", () => {
         String(call[0]).includes("INSERT INTO employees"),
       ),
     ).toBe(false);
+  });
+  it("loads only the employee record linked to the authenticated user", async () => {
+    query.mockResolvedValueOnce({
+      rows: [{ id: "employee-1", employee_code: "OM-1001" }],
+    });
+    const result = await service.getOwnEmployeeProfile(user as any);
+    expect(result.employee_code).toBe("OM-1001");
+    expect(query.mock.calls[0][0]).toContain("e.user_id=$1");
+    expect(query.mock.calls[0][1]).toEqual([user.id, user.companyId]);
   });
 });

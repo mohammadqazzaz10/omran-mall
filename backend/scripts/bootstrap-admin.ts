@@ -123,7 +123,8 @@ async function main(): Promise<void> {
                'branches.view.company',
                'branches.manage.company',
                'users.view.company',
-               'roles.view.company'
+               'roles.view.company',
+               'users.assign_roles.company'
              )
            )
          WHERE r.company_id = $1 AND r.code = 'GENERAL_MANAGER'
@@ -159,6 +160,15 @@ async function main(): Promise<void> {
       );
 
       await client.query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT r.id, p.id FROM roles r
+         JOIN permissions p ON p.code IN ('employees.view.own', 'employees.edit.own')
+         WHERE r.company_id = $1 AND r.code IN ('CASHIER', 'EMPLOYEE')
+         ON CONFLICT (role_id, permission_id) DO NOTHING`,
+        [companyId],
+      );
+
+      await client.query(
         `INSERT INTO branches (id, company_id, code, name_ar, name_en, is_active)
          VALUES ($1, $2, $3, $4, $5, TRUE)
          ON CONFLICT (company_id, code) DO NOTHING`,
@@ -188,8 +198,8 @@ async function main(): Promise<void> {
       const passwordHash = await hash(password, 12);
       const userId = randomUUID();
       await client.query(
-        `INSERT INTO users (id, company_id, primary_branch_id, username, email, password_hash)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+        `INSERT INTO users (id, company_id, primary_branch_id, username, email, password_hash, must_change_password)
+         VALUES ($1, $2, $3, $4, $5, $6, TRUE)`,
         [userId, companyId, branchId, username, email, passwordHash],
       );
 

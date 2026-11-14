@@ -83,6 +83,8 @@ describe("PermissionGuard", () => {
       null,
       "company.settings.manage",
       false,
+      false,
+      [],
     ]);
   });
 
@@ -117,6 +119,8 @@ describe("PermissionGuard", () => {
       branchId,
       "attendance.view.company",
       false,
+      false,
+      [],
     ]);
   });
 
@@ -153,6 +157,27 @@ describe("PermissionGuard", () => {
       user.primaryBranchId,
       "attendance.view.branch",
       true,
+      true,
+      user.allowedBranchIds,
+    ]);
+  });
+  it("allows own-scope grants only through one of the authenticated user's memberships", async () => {
+    const db = { query: jest.fn().mockResolvedValue({ rowCount: 1 }) } as any;
+    const reflector = makeReflector({
+      "omran:requiredPermission": "employees.view.own",
+    });
+    const guard = new PermissionGuard(db, reflector as any);
+    const request: Record<string, any> = { user, headers: {} };
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(db.query.mock.calls[0][1]).toEqual([
+      user.id,
+      user.companyId,
+      user.primaryBranchId,
+      "employees.view.own",
+      true,
+      true,
+      user.allowedBranchIds,
     ]);
   });
 });
