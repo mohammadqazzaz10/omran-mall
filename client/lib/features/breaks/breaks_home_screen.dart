@@ -423,7 +423,7 @@ class _BreakCountdownState extends State<_BreakCountdown> {
     final end = DateTime.tryParse(widget.expectedEnd ?? '')?.toLocal();
     final remaining =
         end == null ? 0 : end.difference(DateTime.now()).inSeconds;
-    if (mounted) setState(() => _remainingSeconds = remaining.clamp(0, 86400));
+    if (mounted) setState(() => _remainingSeconds = remaining.clamp(0, 86400).toInt());
   }
 
   @override
