@@ -14,7 +14,10 @@ import type { Request } from "express";
 import { RequirePermission } from "../../common/decorators/permission.decorator";
 import { BranchIsolationGuard } from "../../common/guards/branch-isolation.guard";
 import { AuthenticatedUser } from "../auth/auth.types";
-import { AttendanceCorrectionDto, AttendanceQrCheckInDto } from "./attendance.dto";
+import {
+  AttendanceCorrectionDto,
+  AttendanceQrCheckInDto,
+} from "./attendance.dto";
 import { AttendanceQrService } from "./attendance-qr.service";
 import { AttendanceService } from "./attendance.service";
 
