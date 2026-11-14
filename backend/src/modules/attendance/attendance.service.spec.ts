@@ -21,8 +21,8 @@ describe("AttendanceService", () => {
 
   const serviceWithClient = (client: any) => {
     const db = {
-      transaction: jest.fn(
-        async (work: (client: any) => Promise<any>) => work(client),
+      transaction: jest.fn(async (work: (client: any) => Promise<any>) =>
+        work(client),
       ),
       query: jest.fn(),
     };

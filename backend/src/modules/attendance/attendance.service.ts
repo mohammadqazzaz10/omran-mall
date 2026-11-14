@@ -181,9 +181,7 @@ export class AttendanceService {
       );
       const record = current.rows[0];
       if (!record) {
-        throw new ConflictException(
-          "لا يوجد سجل حضور مفتوح لتسجيل الانصراف",
-        );
+        throw new ConflictException("لا يوجد سجل حضور مفتوح لتسجيل الانصراف");
       }
       const updated = await client.query<AttendanceRow>(
         `UPDATE attendance_records
@@ -225,11 +223,7 @@ export class AttendanceService {
     });
   }
 
-  async myRecords(
-    branchId: string,
-    user: AuthenticatedUser,
-    limit = 30,
-  ) {
+  async myRecords(branchId: string, user: AuthenticatedUser, limit = 30) {
     const safeLimit = Math.min(Math.max(limit, 1), 100);
     await this.assertBranch(this.db as unknown as PoolClient, branchId, user);
     const employee = await this.db.query<EmployeeRow>(
@@ -259,9 +253,7 @@ export class AttendanceService {
     user: AuthenticatedUser,
   ) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(workDate)) {
-      throw new BadRequestException(
-        "صيغة التاريخ يجب أن تكون YYYY-MM-DD",
-      );
+      throw new BadRequestException("صيغة التاريخ يجب أن تكون YYYY-MM-DD");
     }
     await this.assertBranch(this.db as unknown as PoolClient, branchId, user);
     const result = await this.db.query(
@@ -334,9 +326,7 @@ export class AttendanceService {
       );
       const row = correction.rows[0];
       if (!row) {
-        throw new NotFoundException(
-          "طلب التصحيح غير موجود أو تمت معالجته",
-        );
+        throw new NotFoundException("طلب التصحيح غير موجود أو تمت معالجته");
       }
       const record = await client.query<AttendanceRow>(
         `SELECT id, employee_id, branch_id, work_date::text, check_in_time, check_out_time, status
