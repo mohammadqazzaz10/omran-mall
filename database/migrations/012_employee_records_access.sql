@@ -36,3 +36,19 @@ CREATE INDEX IF NOT EXISTS idx_employee_contracts_branch_employee_current
 
 CREATE INDEX IF NOT EXISTS idx_employee_history_employee_effective
   ON employee_history(employee_id, effective_date DESC, created_at DESC);
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM employee_contracts
+    WHERE is_current = TRUE
+    GROUP BY employee_id, branch_id
+    HAVING COUNT(*) > 1
+  ) THEN
+    RAISE EXCEPTION 'Cannot enforce one current contract per employee and branch: duplicate current contracts exist';
+  END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_employee_contracts_one_current
+  ON employee_contracts(employee_id, branch_id)
+  WHERE is_current = TRUE;
