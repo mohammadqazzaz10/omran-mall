@@ -112,7 +112,8 @@ export class PermissionGuard implements CanActivate {
              AND ur.department_id IS NULL AND p.scope = 'own')
            OR
            ($5::boolean = TRUE AND ur.branch_id = $3
-             AND ur.department_id IS NOT NULL AND p.scope = 'department'
+             AND ur.department_id IS NOT NULL
+             AND (p.scope = 'department' OR (p.scope = 'branch' AND p.module = 'breaks'))
              AND EXISTS (
                SELECT 1 FROM employees e
                WHERE e.user_id = ur.user_id
