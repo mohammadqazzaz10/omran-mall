@@ -27,6 +27,7 @@ dependencies:
   # Location & Geofencing
   geolocator: ^11.0.0
   mobile_scanner: ^7.5.0
+  qr_flutter: ^4.1.0
   
   # UI & Design
   google_fonts: ^6.2.1
