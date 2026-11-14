@@ -82,3 +82,23 @@ export class EmployeeUpdateDto {
   @IsOptional() @IsDateString() contractEndDate?: string;
   @IsOptional() @IsIn(["active", "on_leave", "suspended", "transferred"]) status?: string;
 }
+
+export class DepartmentUpdateDto {
+  @IsOptional() @IsString() @MinLength(2) @MaxLength(255) nameAr?: string;
+  @IsOptional() @IsString() @MaxLength(255) nameEn?: string | null;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(50) code?: string;
+  @IsOptional() @IsUUID() parentId?: string | null;
+  @IsOptional() @IsUUID() managerEmployeeId?: string | null;
+  @IsOptional() @IsInt() @Min(0) @Max(100) maxSimultaneousBreakPercentage?: number;
+}
+
+export class PositionUpdateDto {
+  @IsOptional() @IsUUID() departmentId?: string;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(50) code?: string;
+  @IsOptional() @IsString() @MinLength(2) @MaxLength(255) titleAr?: string;
+  @IsOptional() @IsString() @MaxLength(255) titleEn?: string | null;
+  @IsOptional() @IsString() @MaxLength(50) jobLevel?: string | null;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) basicSalaryMin?: number | null;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) basicSalaryMax?: number | null;
+  @IsOptional() @IsString() @MaxLength(5000) description?: string | null;
+}
