@@ -131,7 +131,12 @@ describe("AttendanceService", () => {
     const assignmentQuery = client.query.mock.calls[3];
     expect(assignmentQuery[0]).toContain("s.is_night_shift = TRUE");
     expect(assignmentQuery[0]).toContain("INTERVAL '1 day'");
-    expect(assignmentQuery[1]).toEqual([employeeId, branchId, "2026-11-15", "02:00"]);
+    expect(assignmentQuery[1]).toEqual([
+      employeeId,
+      branchId,
+      "2026-11-15",
+      "02:00",
+    ]);
     expect(client.query.mock.calls[4][1]).toEqual([
       employeeId,
       branchId,
