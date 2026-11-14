@@ -71,9 +71,7 @@ export class PermissionGuard implements CanActivate {
         [branchId, user.companyId],
       );
       if (branch.rowCount !== 1) {
-        throw new ForbiddenException(
-          "الفرع غير موجود ضمن الشركة أو غير فعال",
-        );
+        throw new ForbiddenException("الفرع غير موجود ضمن الشركة أو غير فعال");
       }
     }
 
@@ -105,13 +103,7 @@ export class PermissionGuard implements CanActivate {
              ))
          )
        LIMIT 1`,
-      [
-        user.id,
-        user.companyId,
-        branchId,
-        permissionCode,
-        hasBranchMembership,
-      ],
+      [user.id, user.companyId, branchId, permissionCode, hasBranchMembership],
     );
 
     if (grant.rowCount !== 1) {
