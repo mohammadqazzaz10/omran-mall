@@ -45,7 +45,7 @@ BEGIN
     GROUP BY employee_id
     HAVING COUNT(*) > 1
   ) THEN
-    RAISE EXCEPTION 'Cannot enforce one current contract per employee and branch: duplicate current contracts exist';
+    RAISE EXCEPTION 'Cannot enforce one current contract per employee: duplicate current contracts exist';
   END IF;
 END $$;
 
