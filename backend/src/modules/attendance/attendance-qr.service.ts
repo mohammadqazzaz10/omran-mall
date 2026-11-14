@@ -146,6 +146,8 @@ export class AttendanceQrService {
     }
 
     if (
+      !payload ||
+      typeof payload !== "object" ||
       payload.v !== 1 ||
       payload.b !== branchId ||
       typeof payload.n !== "string" ||
