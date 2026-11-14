@@ -503,4 +503,50 @@ export class AttendanceService {
       };
     });
   }
+
+  async rejectCorrection(
+    branchId: string,
+    correctionId: string,
+    reviewNotes: string | undefined,
+    user: AuthenticatedUser,
+  ) {
+    return this.db.transaction(async (client) => {
+      await this.assertBranch(client, branchId, user);
+      const correction = await client.query(
+        `SELECT * FROM attendance_corrections
+         WHERE id = $1 AND branch_id = $2 AND status = 'pending'
+         FOR UPDATE`,
+        [correctionId, branchId],
+      );
+      const row = correction.rows[0];
+      if (!row) {
+        throw new NotFoundException("طلب التصحيح غير موجود أو تمت معالجته");
+      }
+      const updated = await client.query(
+        `UPDATE attendance_corrections
+         SET status = 'rejected',
+             review_notes = $2,
+             reviewed_by_user_id = $3,
+             reviewed_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND branch_id = $4 AND status = 'pending'
+         RETURNING *`,
+        [correctionId, reviewNotes?.trim() || null, user.id, branchId],
+      );
+      if (!updated.rowCount) {
+        throw new ConflictException("تمت معالجة طلب التصحيح من مستخدم آخر");
+      }
+      await this.audit(
+        client,
+        user,
+        branchId,
+        row.attendance_record_id,
+        "UPDATE",
+        row,
+        updated.rows[0],
+      );
+      return { correctionId, status: "rejected", correction: updated.rows[0] };
+    });
+  }
+
 }
