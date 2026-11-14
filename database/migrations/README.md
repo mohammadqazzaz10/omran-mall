@@ -13,3 +13,7 @@ Adds the company-scoped `employees.transfer.company` permission and grants it to
 
 ## 010_hr_branch_directory_read_permission.sql
 Grants HR_MANAGER read-only access to the company branch directory so the transfer workflow can choose source and destination branches. It does not grant branch management permissions.
+
+
+## 011_role_management_and_assignment_permission.sql
+Adds the missing company-scoped `users.assign_roles.company` permission and grants it to the built-in General Manager and HR Manager roles for existing companies. SUPER_ADMIN receives it through the existing company-permission grant.
