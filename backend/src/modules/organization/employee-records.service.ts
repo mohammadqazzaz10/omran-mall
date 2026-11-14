@@ -391,9 +391,9 @@ export class EmployeeRecordsService {
       await this.assertEmployee(client, branchId, employeeId, user);
       const current = await client.query(
         `SELECT id FROM employee_contracts
-         WHERE employee_id=$1 AND branch_id=$2 AND is_current=TRUE
+         WHERE employee_id=$1 AND is_current=TRUE
          FOR UPDATE`,
-        [employeeId, branchId],
+        [employeeId],
       );
       if (current.rowCount) {
         throw new ConflictException(
