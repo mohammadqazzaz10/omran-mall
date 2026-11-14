@@ -43,6 +43,17 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       _roleCodes.contains('GENERAL_MANAGER') ||
       _roleCodes.contains('HR_MANAGER');
 
+  bool get _canManageAttendance => _roleCodes.any((role) => {
+        'SUPER_ADMIN',
+        'GENERAL_MANAGER',
+        'HR_MANAGER',
+        'HR_OFFICER',
+        'PERSONNEL_OFFICER',
+        'BRANCH_MANAGER',
+        'ASSISTANT_MANAGER',
+        'SUPERVISOR',
+      }.contains(role));
+
   bool get _canManageBreaks =>
       _roleCodes.contains('SUPER_ADMIN') ||
       _roleCodes.contains('GENERAL_MANAGER');
@@ -984,6 +995,22 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
+                if (_canManageAttendance)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.access_time),
+                      title: Text(
+                        isArabic(context) ? 'الحضور والانصراف' : 'Attendance',
+                      ),
+                      subtitle: Text(
+                        isArabic(context)
+                            ? 'تسجيل الحضور ورمز QR ولوحة متابعة الفروع'
+                            : 'Attendance check-in, QR display, and branch dashboard',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/attendance'),
+                    ),
+                  ),
                 if (_canTransferEmployees)
                   Card(
                     child: ListTile(
