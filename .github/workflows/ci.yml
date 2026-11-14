@@ -44,12 +44,6 @@ jobs:
           node-version: 24
       - name: Install locked backend dependencies
         run: npm ci
-      - run: npm run format
-      - uses: actions/upload-artifact@v6
-        with:
-          name: backend-prettier-source
-          path: backend/src/
-          if-no-files-found: error
       - run: npm run format:check
       - run: npm run build
       - name: Apply checksum migrations and verify guarded development seeds

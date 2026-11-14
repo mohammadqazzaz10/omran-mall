@@ -37,7 +37,7 @@ export class PermissionGuard implements CanActivate {
       targets,
     );
     if (!permissionCode) {
-      throw new ForbiddenException("المسار غير مربوط بصلاحية معتمدة");
+      throw new ForbiddenException("المسار غير مربوا بصلاحية معتمدة");
     }
 
     const request = context.switchToHttp().getRequest();
@@ -71,25 +71,21 @@ export class PermissionGuard implements CanActivate {
         [branchId, user.companyId],
       );
       if (branch.rowCount !== 1) {
-        throw new ForbiddenException(
-          "الفرع غير موجود ضمن الشركة أو غير فعال",
-        );
+        throw new ForbiddenException("الفرع غير موجود ضمن الشركة أو غير فعال");
       }
     }
 
     const grant = await this.db.query(
       `SELECT 1
        FROM user_roles ur
-       JOIN roles r
-         ON r.id = ur.role_id
-        AND r.company_id = $2
-        AND r.is_active = TRUE
+       JOIN roles r ON r.id = ur.role_id
+         AND r.company_id = $2 AND r.is_active = TRUE
        JOIN role_permissions rp ON rp.role_id = r.id
-       JOIN permissions p ON p.id = rp.permission_id
+       JOIN permissions p ON t.id = rp.permission_id
        WHERE ur.user_id = $1
          AND p.code = $4
          AND (
-           (ur.branch_id IS NULL AND ur.department_id IS NULL AND p.scope = 'company')
+            (ur.branch_id IS NULL AND ur.department_id IS NULL AND p.scope = 'company')
            OR
            ($5::boolean = TRUE AND ur.branch_id = $3
              AND ur.department_id IS NULL AND p.scope = 'branch')
@@ -105,13 +101,7 @@ export class PermissionGuard implements CanActivate {
              ))
          )
        LIMIT 1`,
-      [
-        user.id,
-        user.companyId,
-        branchId,
-        permissionCode,
-        hasBranchMembership,
-      ],
+      [user.id, user.companyId, branchId, permissionCode, hasBranchMembership],
     );
 
     if (grant.rowCount !== 1) {

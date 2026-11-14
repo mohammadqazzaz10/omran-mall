@@ -32,7 +32,9 @@ describe("PermissionGuard", () => {
   });
 
   it("rejects a requested branch outside current memberships", async () => {
-    const db = { query: jest.fn() } as any;
+    const db = {
+      query: jest.fn().mockResolvedValue({ rowCount: 0 }),
+    } as any;
     const reflector = makeReflector({
       "omran:requiredPermission": "attendance.view.branch",
     });
