@@ -1,0 +1,30 @@
+name: temporary-break-format
+on:
+  push:
+    branches:
+      - phase-2/break-engine
+permissions:
+  contents: read
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Format new break and permission files
+        run: npx prettier --write src/modules/auth/permission.guard.spec.ts src/modules/breaks/breaks.gateway.ts src/modules/breaks/breaks.service.spec.ts src/modules/breaks/breaks.service.ts
+      - name: Emit formatted files for reviewed commit
+        shell: bash
+        run: |
+          for file in src/modules/auth/permission.guard.spec.ts src/modules/breaks/breaks.gateway.ts src/modules/breaks/breaks.service.spec.ts src/modules/breaks/breaks.service.ts; do
+            echo "FILE_BEGIN:$file"
+            base64 -w0 "$file"
+            echo
+            echo "FILE_END:$file"
+          done
