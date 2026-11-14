@@ -22,9 +22,7 @@ const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000")
   },
   namespace: "/breaks",
 })
-export class BreaksGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class BreaksGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
@@ -60,7 +58,9 @@ export class BreaksGateway
     try {
       payload = await this.jwt.verifyAsync<AccessTokenPayload>(token);
     } catch {
-      this.logger.warn(`Rejected breaks socket with invalid token: ${client.id}`);
+      this.logger.warn(
+        `Rejected breaks socket with invalid token: ${client.id}`,
+      );
       this.reject(client);
       return;
     }
@@ -165,7 +165,11 @@ export class BreaksGateway
       );
       const employeeIds = employees.rows.map((row) => row.id);
 
-      if (branchIds.size === 0 && departmentIds.length === 0 && employeeIds.length === 0) {
+      if (
+        branchIds.size === 0 &&
+        departmentIds.length === 0 &&
+        employeeIds.length === 0
+      ) {
         this.reject(client);
         return;
       }
@@ -193,7 +197,11 @@ export class BreaksGateway
     this.logger.log(`Breaks socket disconnected: ${client.id}`);
   }
 
-  private roomFor(data: unknown, field: "employee_id" | "department_id", prefix: string): string | null {
+  private roomFor(
+    data: unknown,
+    field: "employee_id" | "department_id",
+    prefix: string,
+  ): string | null {
     if (!data || typeof data !== "object" || !(field in data)) return null;
     const value = (data as Record<string, unknown>)[field];
     return typeof value === "string" ? `${prefix}_${value}` : null;
@@ -207,9 +215,15 @@ export class BreaksGateway
     };
     this.server?.to(`branch_${branchId}`).emit("break_started", payload);
     const employeeRoom = this.roomFor(sessionData, "employee_id", "employee");
-    const departmentRoom = this.roomFor(sessionData, "department_id", "department");
-    if (employeeRoom) this.server?.to(employeeRoom).emit("break_started", payload);
-    if (departmentRoom) this.server?.to(departmentRoom).emit("break_started", payload);
+    const departmentRoom = this.roomFor(
+      sessionData,
+      "department_id",
+      "department",
+    );
+    if (employeeRoom)
+      this.server?.to(employeeRoom).emit("break_started", payload);
+    if (departmentRoom)
+      this.server?.to(departmentRoom).emit("break_started", payload);
   }
 
   broadcastBreakAlert(branchId: string, alertData: unknown): void {
@@ -227,9 +241,15 @@ export class BreaksGateway
     };
     this.server?.to(`branch_${branchId}`).emit("break_alert", payload);
     const employeeRoom = this.roomFor(alertData, "employee_id", "employee");
-    const departmentRoom = this.roomFor(alertData, "department_id", "department");
-    if (employeeRoom) this.server?.to(employeeRoom).emit("break_alert", payload);
-    if (departmentRoom) this.server?.to(departmentRoom).emit("break_alert", payload);
+    const departmentRoom = this.roomFor(
+      alertData,
+      "department_id",
+      "department",
+    );
+    if (employeeRoom)
+      this.server?.to(employeeRoom).emit("break_alert", payload);
+    if (departmentRoom)
+      this.server?.to(departmentRoom).emit("break_alert", payload);
   }
 
   broadcastBreakEnded(branchId: string, sessionData: unknown): void {
@@ -240,8 +260,14 @@ export class BreaksGateway
     };
     this.server?.to(`branch_${branchId}`).emit("break_ended", payload);
     const employeeRoom = this.roomFor(sessionData, "employee_id", "employee");
-    const departmentRoom = this.roomFor(sessionData, "department_id", "department");
-    if (employeeRoom) this.server?.to(employeeRoom).emit("break_ended", payload);
-    if (departmentRoom) this.server?.to(departmentRoom).emit("break_ended", payload);
+    const departmentRoom = this.roomFor(
+      sessionData,
+      "department_id",
+      "department",
+    );
+    if (employeeRoom)
+      this.server?.to(employeeRoom).emit("break_ended", payload);
+    if (departmentRoom)
+      this.server?.to(departmentRoom).emit("break_ended", payload);
   }
 }
