@@ -67,6 +67,58 @@ async function main(): Promise<void> {
       const companyId = company.rows[0].id;
 
       await client.query(
+        `INSERT INTO roles (company_id, code, name_ar, name_en, description, is_system_role)
+         VALUES
+           ($1, 'SUPER_ADMIN', 'مدير النظام الأعلى', 'Super Administrator', 'صلاحيات إدارة النظام والشركة والفروع', TRUE),
+           ($1, 'GENERAL_MANAGER', 'المدير العام', 'General Manager', 'إدارة ومتابعة الشركة والفروع', TRUE),
+           ($1, 'BRANCH_MANAGER', 'مدير فرع', 'Branch Manager', 'إدارة العمليات ضمن الفرع المحدد', TRUE),
+           ($1, 'HR_MANAGER', 'مسؤول الموارد البشرية', 'HR Manager', 'إدارة شؤون الموظفين ضمن النطاق الممنوح', TRUE),
+           ($1, 'SUPERVISOR', 'مشرف قسم', 'Department Supervisor', 'إدارة العمل ضمن القسم المحدد', TRUE),
+           ($1, 'CASHIER', 'أمين صندوق', 'Cashier', 'صلاحيات أمين الصندوق', TRUE),
+           ($1, 'EMPLOYEE', 'موظف', 'Employee', 'صلاحيات الموظف الذاتية', TRUE)
+         ON CONFLICT (company_id, code) DO NOTHING`,
+        [companyId],
+      );
+      await client.query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT r.id, p.id
+         FROM roles r
+         JOIN permissions p ON
+           (p.scope = 'company' AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER'))
+           OR (p.scope = 'branch' AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER'))
+         WHERE r.company_id = $1
+         ON CONFLICT (role_id, permission_id) DO NOTHING`,
+        [companyId],
+      );
+      await client.query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT r.id, p.id FROM roles r
+         JOIN permissions p ON p.scope = 'branch'
+         WHERE r.company_id = $1 AND r.code = 'BRANCH_MANAGER'
+           AND p.module IN ('departments', 'positions', 'employees')
+         ON CONFLICT (role_id, permission_id) DO NOTHING`,
+        [companyId],
+      );
+      await client.query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT r.id, p.id FROM roles r
+         JOIN permissions p ON
+           (p.scope = 'company' AND p.module = 'users')
+           OR (p.scope = 'branch' AND p.module IN ('employees', 'departments', 'positions'))
+         WHERE r.company_id = $1 AND r.code = 'HR_MANAGER'
+         ON CONFLICT (role_id, permission_id) DO NOTHING`,
+        [companyId],
+      );
+      await client.query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT r.id, p.id FROM roles r
+         JOIN permissions p ON p.scope = 'department' AND p.module = 'employees'
+         WHERE r.company_id = $1 AND r.code = 'SUPERVISOR'
+         ON CONFLICT (role_id, permission_id) DO NOTHING`,
+        [companyId],
+      );
+
+      await client.query(
         `INSERT INTO branches (id, company_id, code, name_ar, name_en, is_active)
          VALUES ($1, $2, $3, $4, $5, TRUE)
          ON CONFLICT (company_id, code) DO NOTHING`,
