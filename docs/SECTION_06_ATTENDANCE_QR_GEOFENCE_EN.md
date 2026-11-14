@@ -44,10 +44,10 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - Actual production secret provisioning on Render is intentionally deferred to the final deployment stage.
 
 ## Current limitations — Section 06 is not complete
-- Backend endpoints exist, but the supervisor screen to display and automatically refresh the QR every 45 seconds is not implemented.
+- Flutter supervisor UI now displays a server-issued QR and rotates it every 45 seconds; employee UI scans the QR and sends location when available. Android/iOS camera and location permission declarations were added. CI and real-device acceptance are still pending.
 - Offline attendance is not supported. Client timestamps must not be accepted; queued operations must remain unconfirmed until server verification, and that workflow is not implemented.
 - GPS can be spoofed on some devices. Accuracy and distance checks alone do not prove device integrity; device attestation or another control must be evaluated before production use.
-- Correction rejection with optional reviewer notes and audit history is implemented; employee notifications, a live supervisor attendance dashboard, and full handling of night shifts, holidays, lateness and early departure are still missing.
+- Correction rejection with optional reviewer notes and audit history is implemented; employee notifications and full handling of night shifts, holidays, lateness and early departure remain missing. A Flutter branch dashboard now polls attendance records every 30 seconds; this is periodic refresh, not a WebSocket live stream.
 - Geofencing currently applies to QR check-in and blocks direct app check-in when enabled; geofenced check-out is not implemented.
 - PostgreSQL concurrency/replay and branch-isolation integration tests, plus real-device field acceptance, remain required. Current unit tests are preliminary and do not prove resistance to GPS spoofing.
 
@@ -57,10 +57,11 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - [x] Nonce digest stored instead of raw token.
 - [x] Per-employee challenge replay constraint.
 - [x] Geofence enforced when configured; direct app route cannot bypass it.
-- [ ] Supervisor QR display and automatic rotation UI.
+- [x] Supervisor QR display and automatic 45-second rotation UI (CI and field acceptance pending).
+- [x] Employee QR scanner with optional location capture (CI and field acceptance pending).
 - [x] Reject a pending correction with optional reviewer notes and audit history.
 - [ ] Notify employees about correction decisions and reviewer notes.
-- [ ] Live supervisor dashboard and attendance-state reports.
+- [x] Branch attendance dashboard with 30-second polling (not a WebSocket live stream).
 - [ ] Safe offline queue and conflict review without trusting client time.
 - [ ] PostgreSQL integration tests and cross-branch isolation tests.
 - [ ] Real-device field test and independent security review.
