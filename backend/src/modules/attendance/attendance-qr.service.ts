@@ -5,12 +5,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
-import {
-  createHash,
-  createHmac,
-  randomBytes,
-  timingSafeEqual,
-} from "crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { DatabaseService } from "../../database/database.service";
 import { AuthenticatedUser } from "../auth/auth.types";
 import { AttendanceQrCheckInDto } from "./attendance.dto";
@@ -167,9 +162,7 @@ export class AttendanceQrService {
       !Number.isInteger(payload.e) ||
       payload.e <= Math.floor(Date.now() / 1000)
     ) {
-      throw new ForbiddenException(
-        "رمز QR منتهي الصلاحية أو لا يخص هذا الفرع",
-      );
+      throw new ForbiddenException("رمز QR منتهي الصلاحية أو لا يخص هذا الفرع");
     }
 
     const branch = await this.db.query<{
@@ -216,9 +209,7 @@ export class AttendanceQrService {
       [user.id, branchId],
     );
     if (!employee.rowCount) {
-      throw new ForbiddenException(
-        "لا يوجد ملف موظف فعال مرتبط بهذا الفرع",
-      );
+      throw new ForbiddenException("لا يوجد ملف موظف فعال مرتبط بهذا الفرع");
     }
 
     const fence = branch.rows[0];
@@ -238,9 +229,7 @@ export class AttendanceQrService {
         dto.longitude === undefined ||
         dto.accuracyMeters === undefined
       ) {
-        throw new ForbiddenException(
-          "يلزم إرسال الموقع للتحقق من نطاق الفرع",
-        );
+        throw new ForbiddenException("يلزم إرسال الموقع للتحقق من نطاق الفرع");
       }
       if (
         dto.accuracyMeters < 0 ||
@@ -248,9 +237,7 @@ export class AttendanceQrService {
         !Number.isFinite(dto.latitude) ||
         !Number.isFinite(dto.longitude)
       ) {
-        throw new ForbiddenException(
-          "دقة الموقع غير كافية للتحقق من الحضور",
-        );
+        throw new ForbiddenException("دقة الموقع غير كافية للتحقق من الحضور");
       }
 
       const radius = fence.geofence_radius_meters ?? 150;
@@ -268,9 +255,7 @@ export class AttendanceQrService {
         longitude,
       );
       if (distance > radius) {
-        throw new ForbiddenException(
-          "أنت خارج النطاق الجغرافي المسموح للفرع",
-        );
+        throw new ForbiddenException("أنت خارج النطاق الجغرافي المسموح للفرع");
       }
     }
 
@@ -284,9 +269,7 @@ export class AttendanceQrService {
         [branchId, nonceHash],
       );
       if (!challenge.rowCount) {
-        throw new ForbiddenException(
-          "رمز QR غير موجود أو انتهت صلاحيته",
-        );
+        throw new ForbiddenException("رمز QR غير موجود أو انتهت صلاحيته");
       }
       try {
         await client.query(
