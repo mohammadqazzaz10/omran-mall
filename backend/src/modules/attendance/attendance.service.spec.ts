@@ -21,8 +21,8 @@ describe("AttendanceService", () => {
 
   const serviceWithClient = (client: any) => {
     const db = {
-      transaction: jest.fn(
-        async (work: (client: any) => Promise<any>) => work(client),
+      transaction: jest.fn(async (work: (client: any) => Promise<any>) =>
+        work(client),
       ),
       query: jest.fn(),
     };
@@ -41,9 +41,7 @@ describe("AttendanceService", () => {
     expect(client.query).toHaveBeenCalledTimes(1);
   });
 
-  it(
-    "uses PostgreSQL server time and the employee's own branch record",
-    async () => {
+  it("uses PostgreSQL server time and the employee's own branch record", async () => {
     const employeeId = "66666666-6666-4666-8666-666666666666";
     const record = {
       id: "77777777-7777-4777-8777-777777777777",
@@ -84,9 +82,7 @@ describe("AttendanceService", () => {
     ]);
   });
 
-  it(
-    "does not expose another employee's records through self-service",
-    async () => {
+  it("does not expose another employee's records through self-service", async () => {
     const client = {
       query: jest
         .fn()
