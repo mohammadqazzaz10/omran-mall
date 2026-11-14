@@ -73,6 +73,15 @@ export class AdminService {
       );
       if (dto.isActive === false) {
         await client.query("UPDATE user_branch_memberships SET revoked_at=COALESCE(revoked_at,NOW()) WHERE branch_id=$1 AND revoked_at IS NULL", [id]);
+      } else if (dto.isActive === true) {
+        await client.query(
+          "INSERT INTO user_branch_memberships(user_id,branch_id,company_id,granted_by) SELECT ur.user_id,$1,$2,$3 FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN users u ON u.id=ur.user_id WHERE r.company_id=$2 AND r.code=ANY($4::text[]) AND r.is_active=TRUE AND u.is_active=TRUE AND u.deleted_at IS NULL AND ur.branch_id IS NULL AND ur.department_id IS NULL ON CONFLICT(user_id,branch_id) WHERE revoked_at IS NULL DO NOTHING",
+          [id, actor.companyId, actor.id, GLOBAL_ROLES],
+        );
+        await client.query(
+          "INSERT INTO user_roles(user_id,role_id,branch_id) SELECT ur.user_id,ur.role_id,$1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN users u ON u.id=ur.user_id WHERE r.company_id=$2 AND r.code=ANY($3::text[]) AND r.is_active=TRUE AND u.is_active=TRUE AND u.deleted_at IS NULL AND ur.branch_id IS NULL AND ur.department_id IS NULL ON CONFLICT DO NOTHING",
+          [id, actor.companyId, GLOBAL_ROLES],
+        );
       }
       return updated.rows[0];
     });
@@ -204,11 +213,40 @@ export class AdminService {
 
   async updateUserStatus(userId: string, isActive: boolean, actor: AuthenticatedUser) {
     if (userId === actor.id && !isActive) throw new BadRequestException("لا يمكنك تعطيل حسابك بنفسك");
+    const actorIsSuperAdmin = await this.isSuperAdmin(actor);
     return this.db.transaction(async (client) => {
-      const updated = await client.query("UPDATE users SET is_active=$3,updated_at=NOW() WHERE id=$1 AND company_id=$2 AND deleted_at IS NULL RETURNING id,username,is_active", [userId,actor.companyId,isActive]);
-      if (!updated.rows[0]) throw new NotFoundException("حساب المستخدم غير موجود");
-      if (!isActive) await client.query("UPDATE auth_sessions SET revoked_at=COALESCE(revoked_at,NOW()),revoke_reason=COALESCE(revoke_reason,'user_deactivated') WHERE user_id=$1 AND revoked_at IS NULL", [userId]);
-      await client.query("INSERT INTO audit_logs(user_id,table_name,record_id,action,new_values) VALUES($1,'users',$2,'UPDATE',$3::jsonb)", [actor.id,userId,JSON.stringify({isActive})]);
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [actor.companyId]);
+      const target = await client.query(
+        "SELECT id FROM users WHERE id=$1 AND company_id=$2 AND deleted_at IS NULL FOR UPDATE",
+        [userId, actor.companyId],
+      );
+      if (!target.rows[0]) throw new NotFoundException("حساب المستخدم غير موجود");
+      const targetIsSuperAdmin = await client.query(
+        "SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=$1 AND r.company_id=$2 AND r.code='SUPER_ADMIN' AND ur.branch_id IS NULL AND ur.department_id IS NULL LIMIT 1",
+        [userId, actor.companyId],
+      );
+      if (targetIsSuperAdmin.rowCount === 1 && !actorIsSuperAdmin) {
+        throw new ForbiddenException("لا يمكن إلا لمدير النظام الأعلى إدارة حساب مدير نظام أعلى آخر");
+      }
+      if (targetIsSuperAdmin.rowCount === 1 && !isActive) {
+        const count = await client.query(
+          "SELECT COUNT(DISTINCT u.id)::int AS total FROM users u JOIN user_roles ur ON ur.user_id=u.id JOIN roles r ON r.id=ur.role_id WHERE u.company_id=$1 AND u.is_active=TRUE AND u.deleted_at IS NULL AND r.code='SUPER_ADMIN' AND r.is_active=TRUE AND ur.branch_id IS NULL AND ur.department_id IS NULL",
+          [actor.companyId],
+        );
+        if (count.rows[0].total <= 1) throw new BadRequestException("لا يمكن تعطيل آخر مدير نظام أعلى نشط في الشركة");
+      }
+      const updated = await client.query(
+        "UPDATE users SET is_active=$3,updated_at=NOW() WHERE id=$1 AND company_id=$2 AND deleted_at IS NULL RETURNING id,username,is_active",
+        [userId, actor.companyId, isActive],
+      );
+      if (!isActive) await client.query(
+        "UPDATE auth_sessions SET revoked_at=COALESCE(revoked_at,NOW()),revoke_reason=COALESCE(revoke_reason,'user_deactivated') WHERE user_id=$1 AND revoked_at IS NULL",
+        [userId],
+      );
+      await client.query(
+        "INSERT INTO audit_logs(user_id,table_name,record_id,action,new_values) VALUES($1,'users',$2,'UPDATE',$3::jsonb)",
+        [actor.id, userId, JSON.stringify({ isActive })],
+      );
       return updated.rows[0];
     });
   }
