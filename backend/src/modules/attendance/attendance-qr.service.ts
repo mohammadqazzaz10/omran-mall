@@ -98,20 +98,29 @@ export class AttendanceQrService {
     if (!result.rowCount) {
       throw new NotFoundException("الفرع غير موجود أو غير فعال");
     }
-    const { latitude, longitude, geofence_radius_meters: radius } = result.rows[0];
+    const {
+      latitude,
+      longitude,
+      geofence_radius_meters: radius,
+    } = result.rows[0];
     if ((latitude === null) !== (longitude === null)) {
       throw new ServiceUnavailableException(
         "إعدادات النطاق الجغرافي للفرع غير مكتملة",
       );
     }
     const enabled = latitude !== null && longitude !== null;
-    if (enabled && radius !== null && (!Number.isInteger(radius) || radius < 25 || radius > 1000)) {
+    if (
+      enabled &&
+      radius !== null &&
+      (!Number.isInteger(radius) || radius < 25 || radius > 1000)
+    ) {
       throw new ServiceUnavailableException(
         "نصف قطر النطاق الجغرافي للفرع خارج الحدود المسموحة",
       );
     }
-    return { enabled, radiusMeters: enabled ? radius ?? 150 : null };
+    return { enabled, radiusMeters: enabled ? (radius ?? 150) : null };
   }
+
   async createChallenge(branchId: string, user: AuthenticatedUser) {
     const branch = await this.db.query<{
       id: string;
