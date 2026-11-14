@@ -188,8 +188,8 @@ async function main(): Promise<void> {
       const passwordHash = await hash(password, 12);
       const userId = randomUUID();
       await client.query(
-        `INSERT INTO users (id, company_id, primary_branch_id, username, email, password_hash)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+        `INSERT INTO users (id, company_id, primary_branch_id, username, email, password_hash, must_change_password)
+         VALUES ($1, $2, $3, $4, $5, $6, TRUE)`,
         [userId, companyId, branchId, username, email, passwordHash],
       );
 
