@@ -44,7 +44,7 @@ export class BreaksGateway
     const authorization = client.handshake.headers.authorization;
     const token =
       typeof authToken === "string"
-        ? authToken.replace(/^Bearer\\s+/i, "")
+        ? authToken.replace(/^Bearer\s+/i, "")
         : typeof authorization === "string" &&
             authorization.startsWith("Bearer ")
           ? authorization.slice(7)
