@@ -80,7 +80,20 @@ class _AttendanceQrScannerScreenState
       _attemptedTokens.add(token!);
     });
     try {
-      final position = await _currentPosition();
+      final geofence = await ref
+          .read(attendanceRepositoryProvider)
+          .geofenceStatus(branch);
+      final position = geofence['enabled'] == true
+          ? await _currentPosition()
+          : null;
+      if (geofence['enabled'] == true && position == null) {
+        throw StateError(
+          _t(
+            'يلزم تفعيل خدمة الموقع والسماح للتطبيق بالوصول إليه لتسجيل الحضور في هذا الفرع.',
+            'Enable location services and grant location permission to check in at this branch.',
+          ),
+        );
+      }
       await ref.read(attendanceRepositoryProvider).checkInWithQr(
             branch,
             token,
