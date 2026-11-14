@@ -252,26 +252,22 @@ export class BreaksService {
   }
 
   async listTypes(branchId: string, user: AuthenticatedUser) {
-    const result = await this.db.query(
-      `SELECT id, branch_id, code, name_ar, name_en,
-              default_duration_minutes, max_duration_minutes, daily_quota_times,
-              cooldown_between_breaks_minutes, requires_approval,
-              deduct_from_work_hours, allowed_start_time, allowed_end_time,
-              max_simultaneous_per_department, blackout_periods,
-              notify_before_end_minutes, allow_early_return, is_active
-       FROM break_types
-       WHERE branch_id = $1
-       ORDER BY name_ar, code`,
-      [branchId],
-    );
-    if (!user.allowedBranchIds.includes(branchId)) {
-      const branch = await this.db.query(
-        "SELECT 1 FROM branches WHERE id=$1 AND company_id=$2 AND is_active=TRUE AND deleted_at IS NULL",
-        [branchId, user.companyId],
+    return this.db.transaction(async (client) => {
+      await this.assertBranch(client, branchId, user);
+      const result = await client.query(
+        `SELECT id, branch_id, code, name_ar, name_en,
+                default_duration_minutes, max_duration_minutes, daily_quota_times,
+                cooldown_between_breaks_minutes, requires_approval,
+                deduct_from_work_hours, allowed_start_time, allowed_end_time,
+                max_simultaneous_per_department, blackout_periods,
+                notify_before_end_minutes, allow_early_return, is_active
+         FROM break_types
+         WHERE branch_id = $1
+         ORDER BY name_ar, code`,
+        [branchId],
       );
-      if (!branch.rowCount) throw new NotFoundException("الفرع غير موجود");
-    }
-    return result.rows;
+      return result.rows;
+    });
   }
 
   async createType(
@@ -416,9 +412,7 @@ export class BreaksService {
         throw new ConflictException("لديك طلب استراحة معلق من النوع نفسه");
       }
 
-      if (!type.requires_approval) {
-        await this.assertCanStart(client, employee, type, duration);
-      }
+      await this.assertCanStart(client, employee, type, duration);
 
       const requestResult = await client.query(
         `INSERT INTO break_requests
@@ -456,25 +450,21 @@ export class BreaksService {
     status: string | undefined,
     user: AuthenticatedUser,
   ) {
-    if (!user.allowedBranchIds.includes(branchId)) {
-      const branch = await this.db.query(
-        "SELECT 1 FROM branches WHERE id=$1 AND company_id=$2 AND is_active=TRUE AND deleted_at IS NULL",
-        [branchId, user.companyId],
+    return this.db.transaction(async (client) => {
+      await this.assertBranch(client, branchId, user);
+      const result = await client.query(
+        `SELECT r.*, e.employee_code, e.first_name_ar, e.second_name_ar,
+                e.last_name_ar, t.name_ar AS break_type_name_ar
+         FROM break_requests r
+         JOIN employees e ON e.id = r.employee_id
+         JOIN break_types t ON t.id = r.break_type_id
+         WHERE r.branch_id = $1 AND ($2::text IS NULL OR r.status = $2)
+         ORDER BY r.created_at DESC
+         LIMIT 200`,
+        [branchId, status ?? null],
       );
-      if (!branch.rowCount) throw new NotFoundException("الفرع غير موجود");
-    }
-    const result = await this.db.query(
-      `SELECT r.*, e.employee_code, e.first_name_ar, e.second_name_ar,
-              e.last_name_ar, t.name_ar AS break_type_name_ar
-       FROM break_requests r
-       JOIN employees e ON e.id = r.employee_id
-       JOIN break_types t ON t.id = r.break_type_id
-       WHERE r.branch_id = $1 AND ($2::text IS NULL OR r.status = $2)
-       ORDER BY r.created_at DESC
-       LIMIT 200`,
-      [branchId, status ?? null],
-    );
-    return result.rows;
+      return result.rows;
+    });
   }
 
   async approveRequest(
@@ -544,25 +534,34 @@ export class BreaksService {
     dto: RejectBreakRequestDto,
     user: AuthenticatedUser,
   ) {
-    const result = await this.db.query(
-      `UPDATE break_requests
-       SET status = 'rejected', rejection_reason = $3,
-           approved_by_user_id = $4, decided_at = CURRENT_TIMESTAMP,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1 AND branch_id = $2 AND status = 'pending'
-       RETURNING *`,
-      [requestId, branchId, dto.reason, user.id],
-    );
-    if (!result.rowCount) {
-      throw new NotFoundException("طلب الاستراحة غير موجود أو تمت معالجته");
-    }
-    await this.db.query(
-      `INSERT INTO audit_logs
-        (user_id, branch_id, table_name, record_id, action, new_values)
-       VALUES ($1,$2,'break_requests',$3,'UPDATE',$4::jsonb)`,
-      [user.id, branchId, requestId, JSON.stringify(result.rows[0])],
-    );
-    return result.rows[0];
+    return this.db.transaction(async (client) => {
+      await this.assertBranch(client, branchId, user);
+      const current = await client.query(
+        `SELECT id FROM break_requests
+         WHERE id = $1 AND branch_id = $2 AND status = 'pending'
+         FOR UPDATE`,
+        [requestId, branchId],
+      );
+      if (!current.rowCount) {
+        throw new NotFoundException("طلب الاستراحة غير موجود أو تمت معالجته");
+      }
+      const result = await client.query(
+        `UPDATE break_requests
+         SET status = 'rejected', rejection_reason = $3,
+             approved_by_user_id = $4, decided_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND branch_id = $2
+         RETURNING *`,
+        [requestId, branchId, dto.reason, user.id],
+      );
+      await client.query(
+        `INSERT INTO audit_logs
+          (user_id, branch_id, table_name, record_id, action, new_values)
+         VALUES ($1,$2,'break_requests',$3,'UPDATE',$4::jsonb)`,
+        [user.id, branchId, requestId, JSON.stringify(result.rows[0])],
+      );
+      return result.rows[0];
+    });
   }
 
   async endOwnSession(
@@ -618,15 +617,10 @@ export class BreaksService {
   }
 
   async live(branchId: string, user: AuthenticatedUser) {
-    if (!user.allowedBranchIds.includes(branchId)) {
-      const branch = await this.db.query(
-        "SELECT 1 FROM branches WHERE id=$1 AND company_id=$2 AND is_active=TRUE AND deleted_at IS NULL",
-        [branchId, user.companyId],
-      );
-      if (!branch.rowCount) throw new NotFoundException("الفرع غير موجود");
-    }
-    const [sessions, requests] = await Promise.all([
-      this.db.query(
+    return this.db.transaction(async (client) => {
+      await this.assertBranch(client, branchId, user);
+      const [sessions, requests] = await Promise.all([
+        client.query(
         `SELECT s.id, s.employee_id, s.department_id, s.break_type_id,
                 s.start_time, s.expected_end_time,
                 GREATEST(0, CEIL(EXTRACT(EPOCH FROM (s.expected_end_time - CURRENT_TIMESTAMP))))::int AS remaining_seconds,
@@ -640,7 +634,7 @@ export class BreaksService {
          ORDER BY s.expected_end_time ASC`,
         [branchId],
       ),
-      this.db.query(
+      client.query(
         `SELECT r.id, r.employee_id, r.department_id, r.break_type_id,
                 r.requested_duration_minutes, r.created_at,
                 e.employee_code, e.first_name_ar, e.second_name_ar, e.last_name_ar,
@@ -653,7 +647,8 @@ export class BreaksService {
          ORDER BY r.created_at ASC`,
         [branchId],
       ),
-    ]);
-    return { activeSessions: sessions.rows, pendingRequests: requests.rows };
+      ]);
+      return { activeSessions: sessions.rows, pendingRequests: requests.rows };
+    });
   }
 }
