@@ -113,19 +113,26 @@ export class AdminService {
     if (!GLOBAL_ROLES.includes(dto.roleCode) && !dto.branchIds?.length) throw new BadRequestException("يجب تحديد فرع واحد على الأقل");
     if (dto.primaryBranchId && !GLOBAL_ROLES.includes(dto.roleCode) && !dto.branchIds?.includes(dto.primaryBranchId)) throw new BadRequestException("الفرع الأساسي يجب أن يكون ضمن فروع العضوية");
     if (dto.roleCode === "SUPERVISOR" && !dto.departmentId) throw new BadRequestException("يجب تحديد القسم لمشرف القسم");
+    if (new Set(dto.branchIds ?? []).size !== (dto.branchIds ?? []).length) throw new BadRequestException("لا تكرر الفرع نفسه في قائمة العضويات");
     const temporaryPassword = randomBytes(24).toString("base64url") + "A1!";
     const passwordHash = await hash(temporaryPassword, 12);
     try {
       return await this.db.transaction(async (client) => {
+        if (dto.primaryBranchId) {
+          const primary = await client.query("SELECT id FROM branches WHERE id=$1 AND company_id=$2 AND is_active=TRUE AND deleted_at IS NULL", [dto.primaryBranchId, actor.companyId]);
+          if (!primary.rows[0]) throw new BadRequestException("الفرع الأساسي غير تابع للشركة أو غير فعال");
+        }
         const role = await client.query("SELECT id FROM roles WHERE company_id=$1 AND code=$2 AND is_active=TRUE", [actor.companyId, dto.roleCode]);
         if (!role.rows[0]) throw new BadRequestException("الدور المحدد غير موجود في الشركة");
         const inserted = await client.query(
           "INSERT INTO users(company_id,username,email,phone,password_hash,primary_branch_id,must_change_password) VALUES($1,$2,$3,$4,$5,$6,TRUE) RETURNING id,username,email,phone,primary_branch_id,is_active,must_change_password,created_at",
-          [actor.companyId, dto.username.trim(), dto.email?.trim().toLowerCase() ?? null, dto.phone?.trim() ?? null, passwordHash, dto.primaryBranchId ?? null],
+          [actor.companyId, dto.username.trim().toLowerCase(), dto.email?.trim().toLowerCase() ?? null, dto.phone?.trim() ?? null, passwordHash, dto.primaryBranchId ?? null],
         );
         const user = inserted.rows[0];
         if (dto.employeeId) {
-          const linked = await client.query("UPDATE employees SET user_id=$1,updated_at=NOW() WHERE id=$2 AND branch_id=ANY($3::uuid[]) AND user_id IS NULL AND deleted_at IS NULL", [user.id, dto.employeeId, dto.branchIds ?? []]);
+          const linked = GLOBAL_ROLES.includes(dto.roleCode)
+            ? await client.query("UPDATE employees e SET user_id=$1,updated_at=NOW() FROM branches b WHERE e.id=$2 AND e.branch_id=b.id AND b.company_id=$3 AND b.is_active=TRUE AND e.user_id IS NULL AND e.deleted_at IS NULL", [user.id, dto.employeeId, actor.companyId])
+            : await client.query("UPDATE employees SET user_id=$1,updated_at=NOW() WHERE id=$2 AND branch_id=ANY($3::uuid[]) AND user_id IS NULL AND deleted_at IS NULL", [user.id, dto.employeeId, dto.branchIds ?? []]);
           if (linked.rowCount !== 1) throw new BadRequestException("ملف الموظف غير متاح أو لا ينتمي للفروع المحددة");
         }
         if (GLOBAL_ROLES.includes(dto.roleCode)) {
