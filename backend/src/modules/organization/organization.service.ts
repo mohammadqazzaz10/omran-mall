@@ -674,7 +674,7 @@ export class OrganizationService {
 
   async getOwnEmployeeProfile(user: AuthenticatedUser) {
     const result = await this.db.query(
-      \`SELECT e.id, e.employee_code, e.first_name_ar, e.second_name_ar,
+      `SELECT e.id, e.employee_code, e.first_name_ar, e.second_name_ar,
               e.third_name_ar, e.last_name_ar, e.full_name_en, e.personal_email,
               e.mobile_phone, e.emergency_contact_name, e.emergency_contact_phone,
               e.emergency_contact_relation, e.hire_date, e.status,
@@ -686,7 +686,7 @@ export class OrganizationService {
        JOIN departments d ON d.id=e.department_id AND d.branch_id=e.branch_id
        JOIN positions p ON p.id=e.position_id AND p.department_id=d.id
        WHERE e.user_id=$1 AND e.deleted_at IS NULL
-       LIMIT 1\`,
+       LIMIT 1`,
       [user.id, user.companyId],
     );
     if (!result.rows[0]) throw new NotFoundException("لا يوجد ملف وظيفي مرتبط بهذا الحساب");
@@ -708,7 +708,7 @@ export class OrganizationService {
     if (!old) throw new NotFoundException("لا يوجد ملف وظيفي مرتبط بهذا الحساب");
     return this.db.transaction(async (client) => {
       const updated = await client.query(
-        \`UPDATE employees SET
+        `UPDATE employees SET
            mobile_phone=COALESCE($2,mobile_phone),
            personal_email=CASE WHEN $3 THEN $4 ELSE personal_email END,
            emergency_contact_name=CASE WHEN $5 THEN $6 ELSE emergency_contact_name END,
@@ -718,7 +718,7 @@ export class OrganizationService {
          WHERE id=$1 AND user_id=$11 AND deleted_at IS NULL
          RETURNING id, employee_code, mobile_phone, personal_email,
                    emergency_contact_name, emergency_contact_phone,
-                   emergency_contact_relation, updated_at\`,
+                   emergency_contact_relation, updated_at`,
         [
           old.id,
           dto.mobilePhone ?? null,
