@@ -167,6 +167,131 @@ export class AttendanceService {
     }
   }
 
+  async checkInWithQr(
+    branchId: string,
+    user: AuthenticatedUser,
+    nonceHash: string,
+    latitude: number | null,
+    longitude: number | null,
+  ) {
+    try {
+      return await this.db.transaction(async (client) => {
+        // Keep branch validation, employee locking, QR consumption, attendance
+        // insertion, and audit logging in the same PostgreSQL transaction.
+        await this.assertBranch(client, branchId, user);
+        const employee = await this.employeeForUser(client, branchId, user);
+        const challenge = await client.query<{ id: string }>(
+          `SELECT id FROM attendance_qr_challenges
+           WHERE branch_id = $1 AND nonce_hash = $2
+             AND expires_at > CURRENT_TIMESTAMP AND revoked_at IS NULL
+           FOR UPDATE`,
+          [branchId, nonceHash],
+        );
+        if (!challenge.rowCount) {
+          throw new ForbiddenException("رمز QR غير موجود أو انتهت صلاحيته");
+        }
+        try {
+          await client.query(
+            `INSERT INTO attendance_qr_uses (challenge_id, employee_id)
+             VALUES ($1, $2)`,
+            [challenge.rows[0].id, employee.id],
+          );
+        } catch (error) {
+          if ((error as { code?: string })?.code === "23505") {
+            throw new ConflictException(
+              "تم استخدام رمز QR هذا لتسجيل حضورك مسبقاً",
+            );
+          }
+          throw error;
+        }
+
+        const clock = await client.query<{
+          work_date: string;
+          local_time: string;
+        }>(
+          `SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date::text AS work_date,
+                  TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman', 'HH24:MI') AS local_time`,
+        );
+        const { work_date: workDate, local_time: localTime } = clock.rows[0];
+        const assignment = await client.query<{
+          shift_id: string | null;
+          start_time: string | null;
+          grace_period_late_minutes: number | null;
+          is_day_off: boolean;
+        }>(
+          `SELECT sa.shift_id, s.start_time::text, s.grace_period_late_minutes, sa.is_day_off
+           FROM shift_assignments sa
+           LEFT JOIN shifts s ON s.id = sa.shift_id AND s.branch_id = sa.branch_id
+           WHERE sa.employee_id = $1 AND sa.branch_id = $2
+             AND sa.work_date = $3 AND sa.is_published = TRUE
+           LIMIT 1`,
+          [employee.id, branchId, workDate],
+        );
+        const scheduled = assignment.rows[0];
+        let lateMinutes = 0;
+        let status = "present";
+        if (scheduled?.is_day_off) status = "needs_review";
+        if (scheduled?.start_time && !scheduled.is_day_off) {
+          const [sh, sm] = scheduled.start_time
+            .slice(0, 5)
+            .split(":")
+            .map(Number);
+          const [nh, nm] = localTime.split(":").map(Number);
+          lateMinutes = Math.max(
+            0,
+            nh * 60 +
+              nm -
+              (sh * 60 + sm) -
+              (scheduled.grace_period_late_minutes ?? 0),
+          );
+          if (lateMinutes > 0) status = "late";
+        }
+        const inserted = await client.query<AttendanceRow>(
+          `INSERT INTO attendance_records
+           (employee_id, branch_id, shift_id, work_date, check_in_time,
+            check_in_method, check_in_lat, check_in_lng, late_minutes, status)
+           VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, 'qr_code', $5, $6, $7, $8::attendance_status_enum)
+           RETURNING id, employee_id, branch_id, work_date::text, check_in_time, check_out_time, status`,
+          [
+            employee.id,
+            branchId,
+            scheduled?.shift_id ?? null,
+            workDate,
+            latitude,
+            longitude,
+            lateMinutes,
+            status,
+          ],
+        );
+        await this.audit(
+          client,
+          user,
+          branchId,
+          inserted.rows[0].id,
+          "INSERT",
+          null,
+          {
+            ...inserted.rows[0],
+            check_in_method: "qr_code",
+            check_in_lat: latitude,
+            check_in_lng: longitude,
+          },
+        );
+        return {
+          ...inserted.rows[0],
+          check_in_method: "qr_code",
+          check_in_lat: latitude,
+          check_in_lng: longitude,
+        };
+      });
+    } catch (error) {
+      if ((error as { code?: string })?.code === "23505") {
+        throw new ConflictException("تم تسجيل حضورك لهذا اليوم مسبقاً");
+      }
+      throw error;
+    }
+  }
+
   async checkOut(branchId: string, user: AuthenticatedUser) {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
