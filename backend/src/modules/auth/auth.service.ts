@@ -388,7 +388,12 @@ export class AuthService {
       email: string | null;
       company_id: string;
       primary_branch_id: string | null;
-      roles: Array<{ code: string; nameAr: string; branchId: string | null; departmentId: string | null }>;
+      roles: Array<{
+        code: string;
+        nameAr: string;
+        branchId: string | null;
+        departmentId: string | null;
+      }>;
     }>(
       `SELECT id, username, email, company_id, primary_branch_id,
               COALESCE((
