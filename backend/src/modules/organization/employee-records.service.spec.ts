@@ -100,6 +100,24 @@ describe("EmployeeRecordsService", () => {
     expect(query.mock.calls[2][0]).toContain("INSERT INTO audit_logs");
   });
 
+  it("keeps historical documents visible through the employee's current branch", async () => {
+    query
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: employeeId, employee_code: "OM-1001" }],
+      })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: "old-branch-document", branch_id: "old-branch" }],
+      });
+
+    const result = await service.listDocuments(branchId, employeeId, user as any);
+
+    expect(result).toHaveLength(1);
+    expect(query.mock.calls[1][0]).not.toContain("branch_id=$2");
+    expect(query.mock.calls[1][1]).toEqual([employeeId]);
+  });
+
   it("rejects contracts with an end date before their start date", async () => {
     await expect(
       service.createContract(
