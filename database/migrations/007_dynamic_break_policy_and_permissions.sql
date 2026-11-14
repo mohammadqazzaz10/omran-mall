@@ -61,6 +61,7 @@ CREATE INDEX idx_break_requests_branch_status_created
 INSERT INTO permissions (module, action, scope, code, description_ar)
 VALUES
   ('breaks', 'view', 'branch', 'breaks.view.branch', 'عرض الاستراحات والطلبات في الفرع'),
+  ('breaks', 'types_view', 'branch', 'breaks.types.view.branch', 'عرض أنواع الاستراحات المتاحة في الفرع'),
   ('breaks', 'manage', 'branch', 'breaks.manage.branch', 'إدارة أنواع وسياسات الاستراحات'),
   ('breaks', 'request', 'own', 'breaks.request.own', 'طلب استراحة شخصية'),
   ('breaks', 'approve', 'branch', 'breaks.approve.branch', 'الموافقة على طلبات الاستراحة'),
@@ -73,6 +74,7 @@ SELECT r.id, p.id
 FROM roles r
 JOIN permissions p ON p.code IN (
   'breaks.view.branch',
+  'breaks.types.view.branch',
   'breaks.manage.branch',
   'breaks.approve.branch'
 )
@@ -85,11 +87,11 @@ SELECT r.id, p.id
 FROM roles r
 JOIN permissions p ON
   (r.code = 'BRANCH_MANAGER' AND p.code IN (
-    'breaks.view.branch', 'breaks.manage.branch', 'breaks.approve.branch'
+    'breaks.view.branch', 'breaks.types.view.branch', 'breaks.manage.branch', 'breaks.approve.branch'
   ))
   OR
   (r.code = 'SUPERVISOR' AND p.code IN (
-    'breaks.view.branch', 'breaks.approve.branch'
+    'breaks.view.branch', 'breaks.types.view.branch', 'breaks.approve.branch'
   ))
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
@@ -97,6 +99,6 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
-JOIN permissions p ON p.code IN ('breaks.request.own', 'breaks.end.own')
+JOIN permissions p ON p.code IN ('breaks.types.view.branch', 'breaks.request.own', 'breaks.end.own')
 WHERE r.code IN ('EMPLOYEE', 'CASHIER')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
