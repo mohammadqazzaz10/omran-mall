@@ -118,7 +118,9 @@ describe("AdminService privilege boundaries", () => {
       }),
     };
     const db = {
-      query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [{ id: "grant" }] }),
+      query: jest
+        .fn()
+        .mockResolvedValue({ rowCount: 1, rows: [{ id: "grant" }] }),
       transaction: jest.fn((callback: (tx: any) => unknown) =>
         callback(client),
       ),

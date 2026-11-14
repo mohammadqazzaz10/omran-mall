@@ -15,8 +15,10 @@ import {
 export class EmployeeProfileUpsertDto {
   @IsOptional() @IsString() @MaxLength(100) bankName?: string | null;
   @IsOptional() @IsString() @MaxLength(100) bankIban?: string | null;
-  @IsOptional() @IsString() @MaxLength(100) socialSecurityNumber?: string | null;
-  @IsOptional() @IsString() @MaxLength(100) taxIdentificationNumber?: string | null;
+  @IsOptional() @IsString() @MaxLength(100) socialSecurityNumber?:
+    string | null;
+  @IsOptional() @IsString() @MaxLength(100) taxIdentificationNumber?:
+    string | null;
   @IsOptional() @IsString() @MaxLength(100) educationLevel?: string | null;
   @IsOptional() @IsString() @MaxLength(150) specialization?: string | null;
   @IsOptional() @IsInt() @Min(1900) @Max(2100) graduationYear?: number | null;
@@ -44,7 +46,10 @@ export class EmployeeContractCreateDto {
   @IsDateString() startDate!: string;
   @IsOptional() @IsDateString() endDate?: string | null;
   @IsNumber({ maxDecimalPlaces: 3 }) @Min(0) basicSalary!: number;
-  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(1) @Max(24)
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(1)
+  @Max(24)
   workingHoursPerDay?: number;
   @IsOptional() @IsInt() @Min(1) @Max(7) workingDaysPerWeek?: number;
   @IsOptional() @IsBoolean() hasSocialSecurity?: boolean;

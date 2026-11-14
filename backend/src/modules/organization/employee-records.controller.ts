@@ -83,7 +83,12 @@ export class EmployeeRecordsController {
     @Param("documentId", ParseUUIDPipe) documentId: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.records.archiveDocument(branchId, employeeId, documentId, req.user);
+    return this.records.archiveDocument(
+      branchId,
+      employeeId,
+      documentId,
+      req.user,
+    );
   }
 
   @Get("contracts")
@@ -116,6 +121,12 @@ export class EmployeeRecordsController {
     @Query("limit", new DefaultValuePipe(25), ParseIntPipe) limit: number,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.records.listHistory(branchId, employeeId, req.user, page, limit);
+    return this.records.listHistory(
+      branchId,
+      employeeId,
+      req.user,
+      page,
+      limit,
+    );
   }
 }

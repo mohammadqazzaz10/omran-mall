@@ -92,7 +92,12 @@ export class EmployeeRecordsService {
     employeeId: string,
     user: AuthenticatedUser,
   ) {
-    await this.assertEmployee(this.db as unknown as PoolClient, branchId, employeeId, user);
+    await this.assertEmployee(
+      this.db as unknown as PoolClient,
+      branchId,
+      employeeId,
+      user,
+    );
     const result = await this.db.query(
       `SELECT employee_id, bank_name, bank_iban, social_security_number,
               tax_identification_number, education_level, specialization,
@@ -101,20 +106,22 @@ export class EmployeeRecordsService {
        FROM employee_profiles WHERE employee_id=$1`,
       [employeeId],
     );
-    return result.rows[0] ?? {
-      employee_id: employeeId,
-      bank_name: null,
-      bank_iban: null,
-      social_security_number: null,
-      tax_identification_number: null,
-      education_level: null,
-      specialization: null,
-      graduation_year: null,
-      address_city: "Amman",
-      address_area: null,
-      address_street: null,
-      notes: null,
-    };
+    return (
+      result.rows[0] ?? {
+        employee_id: employeeId,
+        bank_name: null,
+        bank_iban: null,
+        social_security_number: null,
+        tax_identification_number: null,
+        education_level: null,
+        specialization: null,
+        graduation_year: null,
+        address_city: "Amman",
+        address_area: null,
+        address_street: null,
+        notes: null,
+      }
+    );
   }
 
   async upsertProfile(
@@ -190,12 +197,16 @@ export class EmployeeRecordsService {
       const maskIban = (value: unknown) =>
         typeof value === "string" && value.length > 4
           ? `••••${value.slice(-4)}`
-          : value == null ? null : "••••";
+          : value == null
+            ? null
+            : "••••";
       const safe = (value: Record<string, any>) => ({
         ...value,
         bank_iban: maskIban(value.bank_iban),
         social_security_number: value.social_security_number ? "••••" : null,
-        tax_identification_number: value.tax_identification_number ? "••••" : null,
+        tax_identification_number: value.tax_identification_number
+          ? "••••"
+          : null,
       });
       await this.audit(
         client,
@@ -216,7 +227,12 @@ export class EmployeeRecordsService {
     employeeId: string,
     user: AuthenticatedUser,
   ) {
-    await this.assertEmployee(this.db as unknown as PoolClient, branchId, employeeId, user);
+    await this.assertEmployee(
+      this.db as unknown as PoolClient,
+      branchId,
+      employeeId,
+      user,
+    );
     const result = await this.db.query(
       `SELECT id, employee_id, branch_id, document_type, title,
               file_size_bytes, mime_type, issue_date, expiry_date,
@@ -236,15 +252,26 @@ export class EmployeeRecordsService {
     user: AuthenticatedUser,
   ) {
     if (dto.issueDate && dto.expiryDate && dto.expiryDate < dto.issueDate) {
-      throw new BadRequestException("تاريخ انتهاء الوثيقة لا يسبق تاريخ إصدارها");
+      throw new BadRequestException(
+        "تاريخ انتهاء الوثيقة لا يسبق تاريخ إصدارها",
+      );
     }
     if (
       dto.mimeType &&
-      !["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(dto.mimeType)
+      !["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(
+        dto.mimeType,
+      )
     ) {
-      throw new BadRequestException("نوع الملف غير مسموح؛ الأنواع المقبولة PDF وJPEG وPNG وWebP");
+      throw new BadRequestException(
+        "نوع الملف غير مسموح؛ الأنواع المقبولة PDF وJPEG وPNG وWebP",
+      );
     }
-    const storageKey = this.objectKey(dto.storageKey, user, branchId, employeeId);
+    const storageKey = this.objectKey(
+      dto.storageKey,
+      user,
+      branchId,
+      employeeId,
+    );
     return this.db.transaction(async (client) => {
       await this.assertEmployee(client, branchId, employeeId, user);
       const result = await client.query(
@@ -256,12 +283,28 @@ export class EmployeeRecordsService {
                    file_size_bytes, mime_type, issue_date, expiry_date,
                    alert_before_days, created_at`,
         [
-          employeeId, branchId, dto.documentType.trim(), dto.title.trim(),
-          storageKey, dto.fileSizeBytes ?? null, dto.mimeType ?? null,
-          dto.issueDate ?? null, dto.expiryDate ?? null, dto.alertBeforeDays ?? 30,
+          employeeId,
+          branchId,
+          dto.documentType.trim(),
+          dto.title.trim(),
+          storageKey,
+          dto.fileSizeBytes ?? null,
+          dto.mimeType ?? null,
+          dto.issueDate ?? null,
+          dto.expiryDate ?? null,
+          dto.alertBeforeDays ?? 30,
         ],
       );
-      await this.audit(client, user, branchId, "employee_documents", result.rows[0].id, "INSERT", null, result.rows[0]);
+      await this.audit(
+        client,
+        user,
+        branchId,
+        "employee_documents",
+        result.rows[0].id,
+        "INSERT",
+        null,
+        result.rows[0],
+      );
       return result.rows[0];
     });
   }
@@ -289,7 +332,16 @@ export class EmployeeRecordsService {
          updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING id,deleted_at`,
         [documentId],
       );
-      await this.audit(client, user, branchId, "employee_documents", documentId, "UPDATE", oldResult.rows[0], result.rows[0]);
+      await this.audit(
+        client,
+        user,
+        branchId,
+        "employee_documents",
+        documentId,
+        "UPDATE",
+        oldResult.rows[0],
+        result.rows[0],
+      );
       return result.rows[0];
     });
   }
@@ -299,7 +351,12 @@ export class EmployeeRecordsService {
     employeeId: string,
     user: AuthenticatedUser,
   ) {
-    await this.assertEmployee(this.db as unknown as PoolClient, branchId, employeeId, user);
+    await this.assertEmployee(
+      this.db as unknown as PoolClient,
+      branchId,
+      employeeId,
+      user,
+    );
     const result = await this.db.query(
       `SELECT id, employee_id, branch_id, contract_type, start_date, end_date,
               basic_salary, working_hours_per_day, working_days_per_week,
@@ -320,9 +377,16 @@ export class EmployeeRecordsService {
     user: AuthenticatedUser,
   ) {
     if (dto.endDate && dto.endDate < dto.startDate) {
-      throw new BadRequestException("تاريخ نهاية العقد يجب ألا يسبق تاريخ بدايته");
+      throw new BadRequestException(
+        "تاريخ نهاية العقد يجب ألا يسبق تاريخ بدايته",
+      );
     }
-    const documentKey = this.objectKey(dto.documentStorageKey, user, branchId, employeeId);
+    const documentKey = this.objectKey(
+      dto.documentStorageKey,
+      user,
+      branchId,
+      employeeId,
+    );
     return this.db.transaction(async (client) => {
       await this.assertEmployee(client, branchId, employeeId, user);
       const current = await client.query(
@@ -332,7 +396,9 @@ export class EmployeeRecordsService {
         [employeeId, branchId],
       );
       if (current.rowCount) {
-        throw new ConflictException("يوجد عقد حالي للموظف؛ يجب إنهاؤه أو إغلاقه بإجراء مستقل قبل إضافة عقد حالي جديد");
+        throw new ConflictException(
+          "يوجد عقد حالي للموظف؛ يجب إنهاؤه أو إغلاقه بإجراء مستقل قبل إضافة عقد حالي جديد",
+        );
       }
       const result = await client.query(
         `INSERT INTO employee_contracts
@@ -344,9 +410,17 @@ export class EmployeeRecordsService {
                    basic_salary, working_hours_per_day, working_days_per_week,
                    has_social_security, has_health_insurance, is_current, created_at`,
         [
-          employeeId, branchId, dto.contractType, dto.startDate, dto.endDate ?? null,
-          dto.basicSalary, dto.workingHoursPerDay ?? 8, dto.workingDaysPerWeek ?? 6,
-          dto.hasSocialSecurity ?? true, dto.hasHealthInsurance ?? true, documentKey,
+          employeeId,
+          branchId,
+          dto.contractType,
+          dto.startDate,
+          dto.endDate ?? null,
+          dto.basicSalary,
+          dto.workingHoursPerDay ?? 8,
+          dto.workingDaysPerWeek ?? 6,
+          dto.hasSocialSecurity ?? true,
+          dto.hasHealthInsurance ?? true,
+          documentKey,
         ],
       );
       await client.query(
@@ -355,7 +429,16 @@ export class EmployeeRecordsService {
          VALUES ($1,'contract_created',$2::jsonb,$3,'إنشاء عقد وظيفي',$4)`,
         [employeeId, JSON.stringify(result.rows[0]), dto.startDate, user.id],
       );
-      await this.audit(client, user, branchId, "employee_contracts", result.rows[0].id, "INSERT", null, result.rows[0]);
+      await this.audit(
+        client,
+        user,
+        branchId,
+        "employee_contracts",
+        result.rows[0].id,
+        "INSERT",
+        null,
+        result.rows[0],
+      );
       return result.rows[0];
     });
   }
@@ -367,7 +450,12 @@ export class EmployeeRecordsService {
     page = 1,
     limit = 25,
   ) {
-    await this.assertEmployee(this.db as unknown as PoolClient, branchId, employeeId, user);
+    await this.assertEmployee(
+      this.db as unknown as PoolClient,
+      branchId,
+      employeeId,
+      user,
+    );
     const safePage = Math.max(1, page);
     const safeLimit = Math.min(100, Math.max(1, limit));
     const offset = (safePage - 1) * safeLimit;
