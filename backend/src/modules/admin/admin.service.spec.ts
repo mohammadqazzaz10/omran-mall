@@ -103,4 +103,33 @@ describe("AdminService privilege boundaries", () => {
     expect(client.query).toHaveBeenCalledTimes(1);
   });
 
+
+  it("rejects custom roles that mix branch and department scopes", async () => {
+    const client = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 2,
+        rows: [
+          { id: "permission-1", code: "employees.view.branch", scope: "branch" },
+          { id: "permission-2", code: "employees.view.department", scope: "department" },
+        ],
+      }),
+    };
+    const db = {
+      query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [] }),
+      transaction: jest.fn((callback: (tx: any) => unknown) => callback(client)),
+    };
+    const service = new AdminService(db as any);
+    await expect(
+      service.createRole(
+        {
+          code: "CUSTOM_MIXED_SCOPE",
+          nameAr: "دور بنطاق مختلط",
+          permissionCodes: ["employees.view.branch", "employees.view.department"],
+        },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
 });
