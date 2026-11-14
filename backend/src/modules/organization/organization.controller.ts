@@ -5,7 +5,7 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { RequirePermission } from "../../common/decorators/permission.decorator";
 import { AuthenticatedUser } from "../auth/auth.types";
-import { DepartmentDto, EmployeeDto, EmployeeUpdateDto, PositionDto } from "./organization.dto";
+import { DepartmentDto, DepartmentUpdateDto, EmployeeDto, EmployeeUpdateDto, PositionDto, PositionUpdateDto } from "./organization.dto";
 import { OrganizationService } from "./organization.service";
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
@@ -30,7 +30,7 @@ export class OrganizationController {
 
   @Patch("departments/:departmentId")
   @RequirePermission("departments.manage.branch")
-  updateDepartment(@Param("branchId",ParseUUIDPipe) branchId:string,@Param("departmentId",ParseUUIDPipe) id:string,@Body() dto:DepartmentDto,@Req() req:AuthenticatedRequest) {
+  updateDepartment(@Param("branchId",ParseUUIDPipe) branchId:string,@Param("departmentId",ParseUUIDPipe) id:string,@Body() dto:DepartmentUpdateDto,@Req() req:AuthenticatedRequest) {
     return this.organization.updateDepartment(branchId,id,dto,req.user);
   }
 
@@ -48,7 +48,7 @@ export class OrganizationController {
 
   @Patch("positions/:positionId")
   @RequirePermission("positions.manage.branch")
-  updatePosition(@Param("branchId",ParseUUIDPipe) branchId:string,@Param("positionId",ParseUUIDPipe) id:string,@Body() dto:PositionDto,@Req() req:AuthenticatedRequest) {
+  updatePosition(@Param("branchId",ParseUUIDPipe) branchId:string,@Param("positionId",ParseUUIDPipe) id:string,@Body() dto:PositionUpdateDto,@Req() req:AuthenticatedRequest) {
     return this.organization.updatePosition(branchId,id,dto,req.user);
   }
 
