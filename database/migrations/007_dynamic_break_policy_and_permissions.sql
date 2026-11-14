@@ -8,6 +8,12 @@ ALTER TABLE break_types
   ADD COLUMN allow_early_return BOOLEAN NOT NULL DEFAULT TRUE;
 
 ALTER TABLE break_types
+  ADD CONSTRAINT chk_break_type_duration
+    CHECK (default_duration_minutes > 0 AND max_duration_minutes >= default_duration_minutes),
+  ADD CONSTRAINT chk_break_type_daily_quota
+    CHECK (daily_quota_times > 0),
+  ADD CONSTRAINT chk_break_type_cooldown
+    CHECK (cooldown_between_breaks_minutes >= 0),
   ADD CONSTRAINT chk_break_type_allowed_window
     CHECK (
       (allowed_start_time IS NULL AND allowed_end_time IS NULL)
