@@ -135,6 +135,16 @@ export class BreaksService {
       throw new BadRequestException("مدة الاستراحة تتجاوز الحد المسموح");
     }
 
+    const department = await client.query(
+      `SELECT id FROM departments
+       WHERE id = $1 AND branch_id = $2 AND deleted_at IS NULL
+       FOR UPDATE`,
+      [employee.department_id, employee.branch_id],
+    );
+    if (!department.rowCount) {
+      throw new ConflictException("قسم الموظف غير متاح حالياً");
+    }
+
     const active = await client.query(
       `SELECT id FROM break_sessions
        WHERE employee_id = $1 AND actual_end_time IS NULL
@@ -370,6 +380,33 @@ export class BreaksService {
 
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
+      const currentResult = await client.query<BreakTypeRow>(
+        `SELECT * FROM break_types
+         WHERE id = $1 AND branch_id = $2
+         FOR UPDATE`,
+        [typeId, branchId],
+      );
+      const current = currentResult.rows[0];
+      if (!current) throw new NotFoundException("نوع الاستراحة غير موجود");
+
+      const defaultDuration =
+        dto.defaultDurationMinutes ?? current.default_duration_minutes;
+      const maxDuration = dto.maxDurationMinutes ?? current.max_duration_minutes;
+      if (defaultDuration < 1 || maxDuration < defaultDuration) {
+        throw new BadRequestException("سياسة مدة الاستراحة غير صحيحة");
+      }
+      const hasStart = Object.prototype.hasOwnProperty.call(dto, "allowedStartTime");
+      const hasEnd = Object.prototype.hasOwnProperty.call(dto, "allowedEndTime");
+      const startTime = hasStart
+        ? dto.allowedStartTime ?? null
+        : current.allowed_start_time;
+      const endTime = hasEnd
+        ? dto.allowedEndTime ?? null
+        : current.allowed_end_time;
+      if ((startTime === null) !== (endTime === null)) {
+        throw new BadRequestException("يجب تحديد بداية ونهاية الوقت المسموح معاً");
+      }
+
       const result = await client.query(
         `UPDATE break_types
          SET ${assignments.join(", ")}, updated_at = CURRENT_TIMESTAMP
