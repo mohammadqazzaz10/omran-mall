@@ -48,7 +48,7 @@ WHERE e.id = s.employee_id
 ALTER TABLE break_requests
   ADD CONSTRAINT fk_break_request_employee_branch
     FOREIGN KEY (employee_id, branch_id)
-    REFERENCES employees(id, branch_id) ON DELETE RESTRICT,
+    REFERENCES employees(id, branch_id) ON DELETE CASCADE,
   ADD CONSTRAINT fk_break_request_department_branch
     FOREIGN KEY (department_id, branch_id)
     REFERENCES departments(id, branch_id) ON DELETE RESTRICT,
