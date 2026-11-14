@@ -11,6 +11,7 @@ Implement the company/branch/department/position hierarchy with server-side acce
 - Apply `BranchIsolationGuard` to branch-scoped organization, attendance, and break controllers, in addition to permission/membership checks in PermissionGuard.
 - Validation of the target branch, department, position, and optional direct manager before changing the employee.
 - Preservation of source and destination branch/department/position, reason, and effective date in `employee_history`.
+- In this increment, the effective date must be the database's current date; future-dated or retroactive transfers require a separate workflow.
 - Movement of the linked account's branch membership, removal of source-specific role grants, preservation of company-wide administrator roles, and no automatic copying of privileges into the destination branch.
 - Historical attendance remains associated with its original branch.
 
