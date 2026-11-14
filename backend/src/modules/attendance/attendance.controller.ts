@@ -7,10 +7,12 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { RequirePermission } from "../../common/decorators/permission.decorator";
+import { BranchIsolationGuard } from "../../common/guards/branch-isolation.guard";
 import { AuthenticatedUser } from "../auth/auth.types";
 import { AttendanceCorrectionDto } from "./attendance.dto";
 import { AttendanceService } from "./attendance.service";
@@ -19,6 +21,7 @@ type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 
 @ApiTags("Attendance")
 @ApiBearerAuth()
+@UseGuards(BranchIsolationGuard)
 @Controller("branches/:branchId/attendance")
 export class AttendanceController {
   constructor(private readonly attendance: AttendanceService) {}
