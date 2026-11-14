@@ -14,7 +14,8 @@ import type { Request } from "express";
 import { RequirePermission } from "../../common/decorators/permission.decorator";
 import { BranchIsolationGuard } from "../../common/guards/branch-isolation.guard";
 import { AuthenticatedUser } from "../auth/auth.types";
-import { AttendanceCorrectionDto } from "./attendance.dto";
+import { AttendanceCorrectionDto, AttendanceQrCheckInDto } from "./attendance.dto";
+import { AttendanceQrService } from "./attendance-qr.service";
 import { AttendanceService } from "./attendance.service";
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
@@ -24,7 +25,29 @@ type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 @UseGuards(BranchIsolationGuard)
 @Controller("branches/:branchId/attendance")
 export class AttendanceController {
-  constructor(private readonly attendance: AttendanceService) {}
+  constructor(
+    private readonly attendance: AttendanceService,
+    private readonly attendanceQr: AttendanceQrService,
+  ) {}
+
+  @Post("qr/challenges")
+  @RequirePermission("attendance.qr.manage.branch")
+  createQrChallenge(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.attendanceQr.createChallenge(branchId, req.user);
+  }
+
+  @Post("check-in/qr")
+  @RequirePermission("attendance.check_in.own")
+  checkInWithQr(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Body() dto: AttendanceQrCheckInDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.attendanceQr.checkInWithQr(branchId, dto, req.user);
+  }
 
   @Post("check-in")
   @RequirePermission("attendance.check_in.own")
