@@ -36,6 +36,7 @@ All routes are under:
 - Contract permissions are limited to HR_MANAGER and SUPER_ADMIN because contract records expose salary.
 - History access is limited to HR_MANAGER and SUPER_ADMIN because historical snapshots may contain personal or financial data.
 - A second current contract is rejected until an explicit contract close/termination workflow exists. Existing contracts are never silently closed or rewritten.
+- Documents and contracts retain their original branch attribution, while HR authorized for the employee's current branch can still retrieve the employee's historical records after a transfer.
 - Flutter screens and an employee-submitted change request/approval workflow are not included yet.
 
 ## Remaining work before this section can be considered complete
