@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -107,8 +108,20 @@ class _AttendanceQrScannerScreenState
       );
       Navigator.of(context).pop(true);
     } catch (error) {
+      _attemptedTokens.remove(token);
       if (!mounted) return;
-      _showMessage(error.toString());
+      final offline = error is DioException &&
+          (error.type == DioExceptionType.connectionError ||
+              error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.receiveTimeout);
+      _showMessage(
+        offline
+            ? _t(
+                'لا يمكن تسجيل الحضور دون اتصال. رمز QR صالح لمدة 45 ثانية ولا يُحفظ لإعادة الإرسال. اتصل بالإنترنت ثم امسح الرمز الحالي من جديد.',
+                'Attendance cannot be recorded offline. QR codes expire after 45 seconds and are not queued for replay. Reconnect and scan the currently displayed code again.',
+              )
+            : error.toString(),
+      );
       setState(() => _busy = false);
     }
   }
