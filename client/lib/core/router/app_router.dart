@@ -10,6 +10,7 @@ import '../../features/auth/role_landing_screen.dart';
 import '../../features/auth/session_management_screen.dart';
 import '../../features/employee/employee_home_screen.dart';
 import '../../features/breaks/breaks_home_screen.dart';
+import '../../features/breaks/breaks_management_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -68,6 +69,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (path == '/supervisor' && !hasRole(auth, 'SUPERVISOR')) {
         return homeFor(auth);
       }
+      if (path == '/breaks/manage' &&
+          !hasRole(auth, 'SUPER_ADMIN') &&
+          !hasRole(auth, 'GENERAL_MANAGER') &&
+          !hasRole(auth, 'BRANCH_MANAGER') &&
+          !hasRole(auth, 'SUPERVISOR')) {
+        return homeFor(auth);
+      }
       return null;
     },
     routes: [
@@ -88,6 +96,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/breaks',
         builder: (context, state) => const BreaksHomeScreen(),
+      ),
+      GoRoute(
+        path: '/breaks/manage',
+        builder: (context, state) => const BreaksManagementScreen(),
       ),
       GoRoute(
         path: '/employee',
