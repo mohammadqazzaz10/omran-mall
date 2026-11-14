@@ -147,6 +147,47 @@ class AdminRepository {
     return data.map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
+
+  Future<Map<String, dynamic>> createRole({
+    required String code,
+    required String nameAr,
+    String? nameEn,
+    String? description,
+    required List<String> permissionCodes,
+  }) async {
+    final response = await client.dio.post<dynamic>(
+      'admin/roles',
+      data: {
+        'code': code,
+        'nameAr': nameAr,
+        if (nameEn != null && nameEn.isNotEmpty) 'nameEn': nameEn,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+        'permissionCodes': permissionCodes,
+      },
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> updateRole(
+    String roleId, {
+    required String nameAr,
+    String? nameEn,
+    String? description,
+    required List<String> permissionCodes,
+  }) async {
+    final response = await client.dio.patch<dynamic>(
+      'admin/roles/' + roleId,
+      data: {
+        'nameAr': nameAr,
+        'nameEn': nameEn,
+        'description': description,
+        'permissionCodes': permissionCodes,
+      },
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
   Future<List<Map<String, dynamic>>> listPermissions() async {
     final response = await client.dio.get<dynamic>('admin/permissions');
     final data = response.data;
