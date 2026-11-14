@@ -67,7 +67,7 @@ void main() {
   test('restores a valid session and role profile', () async {
     final repository = FakeAuthRepository();
     final controller = AuthController(repository);
-    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
 
     expect(controller.state.isAuthenticated, isTrue);
     expect(controller.state.user?['username'], 'employee');
@@ -78,7 +78,7 @@ void main() {
   test('routes a restored temporary-password account to password rotation', () async {
     final repository = FakeAuthRepository()..forcePasswordChange = true;
     final controller = AuthController(repository);
-    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
 
     expect(controller.state.isAuthenticated, isTrue);
     expect(controller.state.mustChangePassword, isTrue);
@@ -88,7 +88,7 @@ void main() {
   test('successful password rotation loads the authenticated profile', () async {
     final repository = FakeAuthRepository()..forcePasswordChange = true;
     final controller = AuthController(repository);
-    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
 
     await controller.changePassword('TemporaryA1!', 'NewPasswordA1!');
 
@@ -101,7 +101,7 @@ void main() {
   test('failed session restoration clears local credentials', () async {
     final repository = FakeAuthRepository()..refreshToken = null;
     final controller = AuthController(repository);
-    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
 
     expect(controller.state.isAuthenticated, isFalse);
     expect(repository.refreshToken, isNull);
