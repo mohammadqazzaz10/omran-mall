@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { compare } from "bcrypt";
+import { compare, hash } from "bcrypt";
 import { createHash, randomBytes } from "crypto";
 import type { Request } from "express";
 import { DatabaseService } from "../../database/database.service";
@@ -21,6 +21,7 @@ type UserRow = {
   is_active: boolean;
   failed_login_attempts: number;
   lockout_until: Date | null;
+  must_change_password: boolean;
 };
 
 const hashToken = (token: string): string =>
@@ -84,7 +85,7 @@ export class AuthService {
     const lookup = dto.username.trim();
     const result = await this.db.query<UserRow>(
       `SELECT id, company_id, primary_branch_id, username, password_hash,
-              is_active, failed_login_attempts, lockout_until
+              is_active, failed_login_attempts, lockout_until, must_change_password
        FROM users
        WHERE (LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1))
          AND deleted_at IS NULL
@@ -193,6 +194,7 @@ export class AuthService {
         companyId: user.company_id,
         primaryBranchId: user.primary_branch_id,
         allowedBranchIds: branchIds,
+        mustChangePassword: user.must_change_password,
       },
     };
   }
@@ -229,7 +231,7 @@ export class AuthService {
 
       const userResult = await client.query<UserRow>(
         `SELECT id, company_id, primary_branch_id, username, password_hash,
-                is_active, failed_login_attempts, lockout_until
+                is_active, failed_login_attempts, lockout_until, must_change_password
          FROM users WHERE id = $1 AND is_active = TRUE AND deleted_at IS NULL`,
         [rotated.rows[0].user_id],
       );
@@ -268,7 +270,70 @@ export class AuthService {
       refreshToken: `${sessionId}.${nextSecret}`,
       tokenType: "Bearer",
       expiresIn: durationToSeconds(process.env.JWT_EXPIRATION, 900, 60 * 60),
+      mustChangePassword: result.must_change_password,
     };
+  }
+
+  async listSessions(userId: string, currentSessionId: string) {
+    const result = await this.db.query(
+      `SELECT id, device_id, device_name, user_agent, host(ip_address) AS ip_address,
+              created_at, last_used_at, refresh_expires_at, (id=$2) AS is_current
+       FROM auth_sessions
+       WHERE user_id=$1 AND revoked_at IS NULL AND refresh_expires_at>CURRENT_TIMESTAMP
+       ORDER BY last_used_at DESC`,
+      [userId, currentSessionId],
+    );
+    return result.rows;
+  }
+
+  async revokeOwnedSession(userId: string, currentSessionId: string, targetSessionId: string) {
+    if (targetSessionId === currentSessionId) {
+      throw new ForbiddenException("استخدم تسجيل الخروج لإنهاء الجلسة الحالية");
+    }
+    const result = await this.db.transaction(async (client) => {
+      const revoked = await client.query(
+        `UPDATE auth_sessions SET revoked_at=CURRENT_TIMESTAMP, revoke_reason='user_revoked'
+         WHERE id=$1 AND user_id=$2 AND revoked_at IS NULL RETURNING id`,
+        [targetSessionId, userId],
+      );
+      if (revoked.rowCount !== 1) return false;
+      await client.query(
+        `INSERT INTO audit_logs(user_id,table_name,record_id,action,new_values)
+         VALUES($1,'auth_sessions',$2,'REVOKE',$3::jsonb)`,
+        [userId, targetSessionId, JSON.stringify({ reason: "user_revoked" })],
+      );
+      return true;
+    });
+    if (!result) throw new UnauthorizedException("الجلسة غير موجودة أو منتهية");
+    return { success: true };
+  }
+
+  async changePassword(userId: string, sessionId: string, currentPassword: string, newPassword: string) {
+    if (currentPassword === newPassword) throw new ForbiddenException("يجب اختيار كلمة مرور جديدة مختلفة");
+    const found = await this.db.query<{ password_hash: string; must_change_password: boolean }>(
+      "SELECT password_hash,must_change_password FROM users WHERE id=$1 AND is_active=TRUE AND deleted_at IS NULL",
+      [userId],
+    );
+    const user = found.rows[0];
+    if (!user || !(await compare(currentPassword, user.password_hash))) {
+      throw new UnauthorizedException("كلمة المرور الحالية غير صحيحة");
+    }
+    const newHash = await hash(newPassword, 12);
+    await this.db.transaction(async (client) => {
+      await client.query(
+        "UPDATE users SET password_hash=$2,must_change_password=FALSE,password_changed_at=CURRENT_TIMESTAMP,failed_login_attempts=0,lockout_until=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=$1",
+        [userId, newHash],
+      );
+      await client.query(
+        "UPDATE auth_sessions SET revoked_at=CURRENT_TIMESTAMP,revoke_reason='password_changed' WHERE user_id=$1 AND id<>$2 AND revoked_at IS NULL",
+        [userId, sessionId],
+      );
+      await client.query(
+        "INSERT INTO audit_logs(user_id,table_name,record_id,action) VALUES($1,'users',$2,'PASSWORD_CHANGE')",
+        [userId, userId],
+      );
+    });
+    return { success: true, mustChangePassword: false };
   }
 
   async revokeSession(sessionId: string, reason = "logout"): Promise<void> {
