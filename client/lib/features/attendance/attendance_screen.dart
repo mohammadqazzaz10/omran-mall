@@ -37,7 +37,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       'SUPER_ADMIN',
       'GENERAL_MANAGER',
       'HR_MANAGER',
+      'HR_OFFICER',
+      'PERSONNEL_OFFICER',
       'BRANCH_MANAGER',
+      'ASSISTANT_MANAGER',
       'SUPERVISOR',
     }.contains(role));
   }
