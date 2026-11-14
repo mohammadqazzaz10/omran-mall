@@ -20,7 +20,7 @@ export class UpdateBranchDto {
   @IsOptional() @IsBoolean() isActive?: boolean;
 }
 export class CreateUserDto {
-  @IsString() @MinLength(3) @MaxLength(100) username!: string;
+  @IsString() @MinLength(3) @MaxLength(100) @Matches(/^[A-Za-z0-9._-]+$/) username!: string;
   @IsOptional() @IsEmail() @MaxLength(255) email?: string;
   @IsOptional() @IsString() @MinLength(7) @MaxLength(50) phone?: string;
   @IsOptional() @IsUUID() primaryBranchId?: string;
