@@ -272,53 +272,60 @@ describe("AttendanceService", () => {
     ]);
     expect(client.query.mock.calls[3][0]).toContain("audit_logs");
   });
-  it("subtracts recorded break minutes when an attendance correction recalculates work time", async () => {
-    const correctionId = "99999999-9999-4999-8999-999999999999";
-    const attendanceId = "77777777-7777-4777-8777-777777777777";
-    const client = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-        .mockResolvedValueOnce({
-          rows: [{
-            id: correctionId,
-            attendance_record_id: attendanceId,
-            employee_id: "66666666-6666-4666-8666-666666666666",
-            branch_id: branchId,
-            requested_check_in: "2026-11-14T05:00:00.000Z",
-            requested_check_out: "2026-11-14T13:00:00.000Z",
-            status: "pending",
-          }],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({
-          rows: [{
-            id: attendanceId,
-            employee_id: "66666666-6666-4666-8666-666666666666",
-            branch_id: branchId,
-            work_date: "2026-11-14",
-            check_in_time: "2026-11-14T05:30:00.000Z",
-            check_out_time: "2026-11-14T13:30:00.000Z",
-            status: "present",
-          }],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({
-          rows: [{ id: attendanceId, total_work_minutes: 450 }],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
-    };
-    const { service, db } = serviceWithClient(client);
+  it(
+    "subtracts recorded break minutes when an attendance correction recalculates work time",
+    async () => {
+      const correctionId = "99999999-9999-4999-8999-999999999999";
+      const attendanceId = "77777777-7777-4777-8777-777777777777";
+      const client = {
+        query: jest
+          .fn()
+          .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                id: correctionId,
+                attendance_record_id: attendanceId,
+                employee_id: "66666666-6666-4666-8666-666666666666",
+                branch_id: branchId,
+                requested_check_in: "2026-11-14T05:00:00.000Z",
+                requested_check_out: "2026-11-14T13:00:00.000Z",
+                status: "pending",
+              },
+            ],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                id: attendanceId,
+                employee_id: "66666666-6666-4666-8666-666666666666",
+                branch_id: branchId,
+                work_date: "2026-11-14",
+                check_in_time: "2026-11-14T05:30:00.000Z",
+                check_out_time: "2026-11-14T13:30:00.000Z",
+                status: "present",
+              },
+            ],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({
+            rows: [{ id: attendanceId, total_work_minutes: 450 }],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+      };
+      const { service, db } = serviceWithClient(client);
 
-    await expect(
-      service.approveCorrection(branchId, correctionId, user),
-    ).resolves.toMatchObject({ correctionId, status: "approved" });
+      await expect(
+        service.approveCorrection(branchId, correctionId, user),
+      ).resolves.toMatchObject({ correctionId, status: "approved" });
 
-    const update = client.query.mock.calls[3];
-    expect(update[0]).toContain("COALESCE(total_break_minutes, 0)");
-    expect(db.transaction).toHaveBeenCalledTimes(1);
-  });
+      const update = client.query.mock.calls[3];
+      expect(update[0]).toContain("COALESCE(total_break_minutes, 0)");
+      expect(db.transaction).toHaveBeenCalledTimes(1);
+    },
+  );
 
 });
