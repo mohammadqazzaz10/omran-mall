@@ -13,7 +13,7 @@ import { DepartmentDto, EmployeeDto, EmployeeUpdateDto, PositionDto } from "./or
 export class OrganizationService {
   constructor(private readonly db: DatabaseService) {}
 
-  private async assertBranch(client: PoolClient, branchId: string, user: AuthenticatedUser) {
+  private async assertBranch(client: any, branchId: string, user: AuthenticatedUser) {
     const result = await client.query(
       `SELECT id FROM branches
        WHERE id = $1 AND company_id = $2 AND is_active = TRUE AND deleted_at IS NULL
@@ -46,7 +46,7 @@ export class OrganizationService {
   }
 
   async listDepartments(branchId: string, user: AuthenticatedUser) {
-    await this.assertBranch(this.db as unknown as PoolClient, branchId, user);
+    await this.assertBranch(this.db, branchId, user);
     const result = await this.db.query(
       `SELECT d.id, d.branch_id, d.parent_id, d.code, d.name_ar, d.name_en,
               d.manager_employee_id, d.max_simultaneous_break_percentage,
@@ -155,7 +155,7 @@ export class OrganizationService {
       const result=await client.query(
         `UPDATE positions SET department_id=$3,code=$4,title_ar=$5,title_en=$6,job_level=$7,
          basic_salary_min=$8,basic_salary_max=$9,description=$10,updated_at=NOW()
-         WHERE id=$1 RETURNING *`,
+         WHERE id=$1 AND EXISTS (SELECT 1 FROM departments d WHERE d.id=positions.department_id AND d.branch_id=$2) RETURNING *`,
         [id,branchId,departmentId,dto.code?.trim()??old.code,dto.titleAr?.trim()??old.title_ar,
          dto.titleEn===undefined?old.title_en:dto.titleEn?.trim()??null,dto.jobLevel??old.job_level,
          min,max,dto.description??old.description],
