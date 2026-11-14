@@ -80,7 +80,7 @@ export class EmployeeUpdateDto {
   @IsOptional() @IsDateString() hireDate?: string;
   @IsOptional() @IsDateString() probationEndDate?: string;
   @IsOptional() @IsDateString() contractEndDate?: string;
-  @IsOptional() @IsIn(["active", "on_leave", "suspended", "transferred"]) status?: string;
+  @IsOptional() @IsIn(["active", "on_leave", "suspended"]) status?: string;
 }
 
 export class DepartmentUpdateDto {
