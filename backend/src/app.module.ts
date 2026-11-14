@@ -1,8 +1,9 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { BreaksGateway } from "./modules/breaks/breaks.gateway";
-import { DatabaseService } from "./database/database.service";
+import { DatabaseModule } from "./database/database.module";
 import { HealthController } from "./health/health.controller";
+import { AuthModule } from "./modules/auth/auth.module";
 
 @Module({
   imports: [
@@ -10,8 +11,10 @@ import { HealthController } from "./health/health.controller";
       isGlobal: true,
       envFilePath: ".env",
     }),
+    DatabaseModule,
+    AuthModule,
   ],
   controllers: [HealthController],
-  providers: [BreaksGateway, DatabaseService],
+  providers: [BreaksGateway],
 })
 export class AppModule {}
