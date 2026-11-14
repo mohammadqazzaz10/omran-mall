@@ -117,6 +117,23 @@ export class BreaksGateway
         for (const row of branchGrants.rows) branchIds.add(row.branch_id);
       }
 
+      const departmentGrants = await this.db.query<{ department_id: string }>(
+        `SELECT DISTINCT ur.department_id
+         FROM user_roles ur
+         JOIN roles r ON r.id = ur.role_id AND r.company_id = $2
+         JOIN role_permissions rp ON rp.role_id = r.id
+         JOIN permissions p ON p.id = rp.permission_id
+         WHERE ur.user_id = $1
+           AND ur.branch_id = ANY($3::uuid[])
+           AND ur.department_id IS NOT NULL
+           AND r.is_active = TRUE
+           AND p.code = 'breaks.view.branch'`,
+        [payload.sub, payload.companyId, membershipIds],
+      );
+      const departmentIds = departmentGrants.rows.map(
+        (row) => row.department_id,
+      );
+
       const companyBreakAccess = await this.db.query(
         `SELECT 1
          FROM user_roles ur
@@ -148,7 +165,7 @@ export class BreaksGateway
       );
       const employeeIds = employees.rows.map((row) => row.id);
 
-      if (branchIds.size === 0 && employeeIds.length === 0) {
+      if (branchIds.size === 0 && departmentIds.length === 0 && employeeIds.length === 0) {
         this.reject(client);
         return;
       }
@@ -157,8 +174,10 @@ export class BreaksGateway
       client.data.companyId = payload.companyId;
       client.data.branchIds = [...branchIds];
       client.data.employeeIds = employeeIds;
+      client.data.departmentIds = departmentIds;
       await client.join([
         ...[...branchIds].map((id) => `branch_${id}`),
+        ...departmentIds.map((id) => `department_${id}`),
         ...employeeIds.map((id) => `employee_${id}`),
       ]);
     } catch (error) {
@@ -174,12 +193,10 @@ export class BreaksGateway
     this.logger.log(`Breaks socket disconnected: ${client.id}`);
   }
 
-  private employeeRoom(data: unknown): string | null {
-    if (!data || typeof data !== "object" || !("employee_id" in data)) {
-      return null;
-    }
-    const employeeId = (data as { employee_id?: unknown }).employee_id;
-    return typeof employeeId === "string" ? `employee_${employeeId}` : null;
+  private roomFor(data: unknown, field: "employee_id" | "department_id", prefix: string): string | null {
+    if (!data || typeof data !== "object" || !(field in data)) return null;
+    const value = (data as Record<string, unknown>)[field];
+    return typeof value === "string" ? `${prefix}_${value}` : null;
   }
 
   broadcastBreakStarted(branchId: string, sessionData: unknown): void {
@@ -189,8 +206,10 @@ export class BreaksGateway
       session: sessionData,
     };
     this.server?.to(`branch_${branchId}`).emit("break_started", payload);
-    const room = this.employeeRoom(sessionData);
-    if (room) this.server?.to(room).emit("break_started", payload);
+    const employeeRoom = this.roomFor(sessionData, "employee_id", "employee");
+    const departmentRoom = this.roomFor(sessionData, "department_id", "department");
+    if (employeeRoom) this.server?.to(employeeRoom).emit("break_started", payload);
+    if (departmentRoom) this.server?.to(departmentRoom).emit("break_started", payload);
   }
 
   broadcastBreakAlert(branchId: string, alertData: unknown): void {
@@ -200,8 +219,10 @@ export class BreaksGateway
       alert: alertData,
     };
     this.server?.to(`branch_${branchId}`).emit("break_alert", payload);
-    const room = this.employeeRoom(alertData);
-    if (room) this.server?.to(room).emit("break_alert", payload);
+    const employeeRoom = this.roomFor(alertData, "employee_id", "employee");
+    const departmentRoom = this.roomFor(alertData, "department_id", "department");
+    if (employeeRoom) this.server?.to(employeeRoom).emit("break_alert", payload);
+    if (departmentRoom) this.server?.to(departmentRoom).emit("break_alert", payload);
   }
 
   broadcastBreakEnded(branchId: string, sessionData: unknown): void {
@@ -211,7 +232,9 @@ export class BreaksGateway
       session: sessionData,
     };
     this.server?.to(`branch_${branchId}`).emit("break_ended", payload);
-    const room = this.employeeRoom(sessionData);
-    if (room) this.server?.to(room).emit("break_ended", payload);
+    const employeeRoom = this.roomFor(sessionData, "employee_id", "employee");
+    const departmentRoom = this.roomFor(sessionData, "department_id", "department");
+    if (employeeRoom) this.server?.to(employeeRoom).emit("break_ended", payload);
+    if (departmentRoom) this.server?.to(departmentRoom).emit("break_ended", payload);
   }
 }
