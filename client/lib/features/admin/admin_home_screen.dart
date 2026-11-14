@@ -134,122 +134,189 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
     }
   }
 
-  Future<void> _createEmployeeAccount(List<Map<String, dynamic>> branches) async {
+  Future<void> _createEmployeeAccount(
+    List<Map<String, dynamic>> branches,
+  ) async {
     if (branches.isEmpty) return;
     final strings = AppLocalizations.of(context);
+    final repository = ref.read(adminRepositoryProvider);
     final username = TextEditingController();
-    final employeeId = TextEditingController();
     final formKey = GlobalKey<FormState>();
     String roleCode = 'EMPLOYEE';
     String branchId = branches.first['id'].toString();
+    List<Map<String, dynamic>> employees = [];
+    String? employeeId;
+    bool loadingEmployees = true;
 
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(strings.createUserButton),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: username,
-                    decoration:
-                        InputDecoration(labelText: strings.usernameLabel),
-                    validator: (value) =>
-                        value == null || value.trim().length < 3
-                            ? strings.usernameLabel
-                            : null,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: roleCode,
-                    decoration:
-                        InputDecoration(labelText: strings.roleLabel),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'EMPLOYEE',
-                        child: Text('EMPLOYEE'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'CASHIER',
-                        child: Text('CASHIER'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() => roleCode = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: branchId,
-                    decoration:
-                        InputDecoration(labelText: strings.branchLabel),
-                    items: branches
-                        .map(
-                          (branch) => DropdownMenuItem<String>(
-                            value: branch['id'].toString(),
-                            child: Text(
-                              branch['name_ar']?.toString() ??
-                                  branch['code'].toString(),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() => branchId = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: employeeId,
-                    decoration: InputDecoration(
-                      labelText: 'Employee UUID',
-                      helperText: isArabic(context)
-                          ? 'اربط الحساب بملف موظف موجود مسبقاً'
-                          : 'Link this account to an existing employee record',
+    try {
+      final initialEmployees = await repository.listEmployees(branchId);
+      employees = initialEmployees
+          .where((employee) => employee['user_id'] == null)
+          .toList();
+      employeeId = employees.isEmpty ? null : employees.first['id'].toString();
+      loadingEmployees = false;
+
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text(strings.createUserButton),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: username,
+                      decoration:
+                          InputDecoration(labelText: strings.usernameLabel),
+                      validator: (value) =>
+                          value == null || value.trim().length < 3
+                              ? strings.usernameLabel
+                              : null,
                     ),
-                    validator: (value) =>
-                        value == null || value.trim().isEmpty
-                            ? 'Employee UUID'
-                            : null,
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: roleCode,
+                      decoration:
+                          InputDecoration(labelText: strings.roleLabel),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'EMPLOYEE',
+                          child: Text('EMPLOYEE'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'CASHIER',
+                          child: Text('CASHIER'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() => roleCode = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: branchId,
+                      decoration:
+                          InputDecoration(labelText: strings.branchLabel),
+                      items: branches
+                          .map(
+                            (branch) => DropdownMenuItem<String>(
+                              value: branch['id'].toString(),
+                              child: Text(
+                                branch['name_ar']?.toString() ??
+                                    branch['code'].toString(),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) async {
+                        if (value == null) return;
+                        setDialogState(() {
+                          branchId = value;
+                          loadingEmployees = true;
+                          employees = [];
+                          employeeId = null;
+                        });
+                        try {
+                          final result =
+                              await repository.listEmployees(branchId);
+                          if (!dialogContext.mounted) return;
+                          setDialogState(() {
+                            employees = result
+                                .where((employee) => employee['user_id'] == null)
+                                .toList();
+                            employeeId = employees.isEmpty
+                                ? null
+                                : employees.first['id'].toString();
+                            loadingEmployees = false;
+                          });
+                        } catch (_) {
+                          if (!dialogContext.mounted) return;
+                          setDialogState(() => loadingEmployees = false);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    if (loadingEmployees)
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(),
+                      )
+                    else if (employees.isEmpty)
+                      Text(
+                        isArabic(context)
+                            ? 'لا يوجد موظفون غير مرتبطين بحساب في هذا الفرع'
+                            : 'No employees without an account were found in this branch.',
+                        textAlign: TextAlign.center,
+                      )
+                    else
+                      DropdownButtonFormField<String>(
+                        value: employeeId,
+                        decoration: InputDecoration(
+                          labelText: strings.employeeCodeLabel,
+                        ),
+                        items: employees
+                            .map(
+                              (employee) => DropdownMenuItem<String>(
+                                value: employee['id'].toString(),
+                                child: Text(
+                                  employee['employee_code'].toString() +
+                                      ' — ' +
+                                      [
+                                        employee['first_name_ar'],
+                                        employee['second_name_ar'],
+                                        employee['last_name_ar'],
+                                      ]
+                                          .where((part) =>
+                                              part != null &&
+                                              part.toString().isNotEmpty)
+                                          .join(' '),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setDialogState(() => employeeId = value);
+                        },
+                        validator: (value) =>
+                            value == null ? strings.employeeCodeLabel : null,
+                      ),
+                  ],
+                ),
               ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(strings.cancelButton),
+              ),
+              FilledButton(
+                onPressed: loadingEmployees || employees.isEmpty
+                    ? null
+                    : () {
+                        if (formKey.currentState!.validate()) {
+                          Navigator.pop(dialogContext, true);
+                        }
+                      },
+                child: Text(strings.createButton),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text(strings.cancelButton),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  Navigator.pop(dialogContext, true);
-                }
-              },
-              child: Text(strings.createButton),
-            ),
-          ],
         ),
-      ),
-    );
-    if (result != true) return;
-    try {
-      final created = await ref.read(adminRepositoryProvider).createUser(
-            username: username.text.trim(),
-            roleCode: roleCode,
-            branchIds: [branchId],
-            primaryBranchId: branchId,
-            employeeId: employeeId.text.trim(),
-          );
+      );
+      if (result != true || employeeId == null) return;
+
+      final created = await repository.createUser(
+        username: username.text.trim(),
+        roleCode: roleCode,
+        branchIds: [branchId],
+        primaryBranchId: branchId,
+        employeeId: employeeId!,
+      );
       final password = created['temporaryPassword']?.toString() ?? '';
       _reload();
       if (!mounted) return;
@@ -276,7 +343,6 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       );
     } finally {
       username.dispose();
-      employeeId.dispose();
     }
   }
 
