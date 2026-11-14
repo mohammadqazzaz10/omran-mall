@@ -228,9 +228,7 @@ describe("OrganizationService branch integrity", () => {
     ).toBe(true);
     expect(
       query.mock.calls.some((call) =>
-        String(call[0]).includes(
-          "DELETE FROM user_roles ur",
-        ),
+        String(call[0]).includes("DELETE FROM user_roles ur"),
       ),
     ).toBe(true);
     expect(
