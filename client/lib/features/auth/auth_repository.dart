@@ -20,7 +20,7 @@ class AuthRepository {
     required String password,
   }) async {
     final response = await client.dio.post<dynamic>(
-      '/auth/login',
+      'auth/login',
       data: {'username': username, 'password': password},
     );
     final data = _map(response.data);
@@ -41,7 +41,7 @@ class AuthRepository {
 
   Future<Map<String, dynamic>> refresh(String refreshToken) async {
     final response = await client.dio.post<dynamic>(
-      '/auth/refresh',
+      'auth/refresh',
       data: {'refreshToken': refreshToken},
     );
     final data = _map(response.data);
@@ -59,7 +59,7 @@ class AuthRepository {
   }
 
   Future<Map<String, dynamic>> me() async {
-    final response = await client.dio.get<dynamic>('/auth/me');
+    final response = await client.dio.get<dynamic>('auth/me');
     return _map(response.data);
   }
 
@@ -68,7 +68,7 @@ class AuthRepository {
     required String newPassword,
   }) async {
     await client.dio.post<dynamic>(
-      '/auth/change-password',
+      'auth/change-password',
       data: {
         'currentPassword': currentPassword,
         'newPassword': newPassword,
@@ -83,7 +83,7 @@ class AuthRepository {
 
   Future<void> logout() async {
     try {
-      await client.dio.post<dynamic>('/auth/logout');
+      await client.dio.post<dynamic>('auth/logout');
     } on DioException {
       // Local credentials are always cleared, even when the server is offline.
     } finally {
@@ -92,14 +92,14 @@ class AuthRepository {
   }
 
   Future<List<Map<String, dynamic>>> sessions() async {
-    final response = await client.dio.get<dynamic>('/auth/sessions');
+    final response = await client.dio.get<dynamic>('auth/sessions');
     final data = response.data;
     if (data is! List) return const [];
     return data.map((item) => _map(item)).toList(growable: false);
   }
 
   Future<void> revokeSession(String sessionId) async {
-    await client.dio.post<dynamic>('/auth/sessions/' + sessionId + '/revoke');
+    await client.dio.post<dynamic>('auth/sessions/' + sessionId + '/revoke');
   }
 
   Future<String?> readRefreshToken() => tokenStore.readRefreshToken();
