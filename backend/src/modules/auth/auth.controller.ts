@@ -1,6 +1,6 @@
 import { Body, Controller, Post, Get, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { Request } from "express";
+import type { Request } from "express";
 import { AuthService } from "./auth.service";
 import { LoginDto, RefreshDto } from "./auth.dto";
 import { AccessTokenGuard } from "./access-token.guard";
