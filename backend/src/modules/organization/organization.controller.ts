@@ -18,6 +18,7 @@ import {
   DepartmentUpdateDto,
   EmployeeDto,
   EmployeeUpdateDto,
+  EmployeeTransferDto,
   PositionDto,
   PositionUpdateDto,
 } from "./organization.dto";
@@ -131,6 +132,17 @@ export class OrganizationController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.organization.updateEmployee(branchId, id, dto, req.user);
+  }
+
+  @Post("employees/:employeeId/transfer")
+  @RequirePermission("employees.transfer.company")
+  transferEmployee(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Param("employeeId", ParseUUIDPipe) id: string,
+    @Body() dto: EmployeeTransferDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.organization.transferEmployee(branchId, id, dto, req.user);
   }
 
   @Post("employees/:employeeId/archive")
