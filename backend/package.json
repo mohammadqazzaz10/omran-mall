@@ -19,7 +19,7 @@
     "db:seed": "node dist/database/seed.js",
     "db:migrate:dev": "tsx --require dotenv/config src/database/migrate.ts",
     "db:seed:dev": "tsx --require dotenv/config src/database/seed.ts",
-    "format:check": "prettier --write \"src/**/*.ts\" && cat src/modules/attendance/attendance-qr.service.ts && cat src/modules/attendance/attendance-qr.service.spec.ts && prettier --check \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
     "db:bootstrap-admin": "tsx --require dotenv/config scripts/bootstrap-admin.ts",
     "db:bootstrap-admin:check": "tsc --ignoreConfig --noEmit --target ES2023 --module nodenext --moduleResolution nodenext --esModuleInterop --skipLibCheck scripts/bootstrap-admin.ts"
   },
