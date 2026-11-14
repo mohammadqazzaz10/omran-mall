@@ -13,6 +13,8 @@ DECLARE
     v_other_department_id UUID;
     v_other_position_id UUID;
     v_other_employee_id UUID;
+    v_break_type_id UUID;
+    v_first_branch_employee_id UUID;
 BEGIN
 
     -- The migration must create a usable least-privilege permission catalogue.
@@ -304,4 +306,64 @@ BEGIN
     ) THEN
       RAISE EXCEPTION 'HR_MANAGER is missing read-only branch directory access';
     END IF;
+
+    -- Break policies must preserve employee, department and type branch ownership.
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND indexname = 'uq_break_sessions_one_active_per_employee'
+    ) THEN
+        RAISE EXCEPTION 'One-active-break-per-employee index is missing';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'break_sessions'
+          AND column_name = 'pre_end_alert_sent_at'
+    ) THEN
+        RAISE EXCEPTION 'Pre-end break alert idempotency column is missing';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM roles r
+        JOIN role_permissions rp ON rp.role_id = r.id
+        JOIN permissions p ON p.id = rp.permission_id
+        WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+          AND r.code = 'BRANCH_MANAGER'
+          AND p.code = 'breaks.manage.branch'
+    ) THEN
+        RAISE EXCEPTION 'BRANCH_MANAGER is missing break policy management permission';
+    END IF;
+
+    SELECT id INTO v_first_branch_employee_id
+    FROM employees
+    WHERE employee_code = v_employee_code_1;
+
+    INSERT INTO break_types (
+        branch_id, code, name_ar, default_duration_minutes, max_duration_minutes
+    ) VALUES (
+        'b0000000-0000-0000-0000-000000000001',
+        'ci_break_test',
+        'استراحة اختبار',
+        10,
+        15
+    ) RETURNING id INTO v_break_type_id;
+
+    BEGIN
+        INSERT INTO break_requests (
+            employee_id, branch_id, department_id, break_type_id,
+            requested_duration_minutes, status
+        ) VALUES (
+            v_first_branch_employee_id,
+            v_same_company_other_branch,
+            v_other_department_id,
+            v_break_type_id,
+            10,
+            'pending'
+        );
+        RAISE EXCEPTION 'Cross-branch break request was accepted';
+    EXCEPTION
+        WHEN foreign_key_violation THEN NULL;
+    END;
 END;$$;
