@@ -34,6 +34,14 @@ export class AttendanceController {
     private readonly attendanceQr: AttendanceQrService,
   ) {}
 
+  @Get("qr/geofence")
+  @RequirePermission("attendance.check_in.own")
+  geofenceStatus(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.attendanceQr.geofenceStatus(branchId, req.user);
+  }
   @Post("qr/challenges")
   @RequirePermission("attendance.qr.manage.branch")
   createQrChallenge(
