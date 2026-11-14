@@ -60,7 +60,7 @@ ALTER TABLE break_sessions
   ALTER COLUMN department_id SET NOT NULL,
   ADD CONSTRAINT fk_break_session_employee_branch
     FOREIGN KEY (employee_id, branch_id)
-    REFERENCES employees(id, branch_id) ON DELETE RESTRICT,
+    REFERENCES employees(id, branch_id) ON DELETE CASCADE,
   ADD CONSTRAINT fk_break_session_type_branch
     FOREIGN KEY (break_type_id, branch_id)
     REFERENCES break_types(id, branch_id) ON DELETE RESTRICT,
