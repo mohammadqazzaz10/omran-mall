@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/network/api_client.dart';
 import '../../features/auth/auth_controller.dart';
 
 final adminRepositoryProvider = Provider<AdminRepository>((ref) {
@@ -8,7 +9,7 @@ final adminRepositoryProvider = Provider<AdminRepository>((ref) {
 
 class AdminRepository {
   AdminRepository(this.client);
-  final dynamic client;
+  final ApiClient client;
 
   Future<List<Map<String, dynamic>>> listBranches() async {
     final response = await client.dio.get<dynamic>('admin/branches');
