@@ -238,9 +238,9 @@ export class EmployeeRecordsService {
               file_size_bytes, mime_type, issue_date, expiry_date,
               alert_before_days, created_at, updated_at
        FROM employee_documents
-       WHERE employee_id=$1 AND branch_id=$2 AND deleted_at IS NULL
+       WHERE employee_id=$1 AND deleted_at IS NULL
        ORDER BY expiry_date ASC NULLS LAST, created_at DESC`,
-      [employeeId, branchId],
+      [employeeId],
     );
     return result.rows;
   }
@@ -320,9 +320,9 @@ export class EmployeeRecordsService {
       const oldResult = await client.query(
         `SELECT id, employee_id, branch_id, document_type, title, expiry_date
          FROM employee_documents
-         WHERE id=$1 AND employee_id=$2 AND branch_id=$3 AND deleted_at IS NULL
+         WHERE id=$1 AND employee_id=$2 AND deleted_at IS NULL
          FOR UPDATE`,
-        [documentId, employeeId, branchId],
+        [documentId, employeeId],
       );
       if (oldResult.rowCount !== 1) {
         throw new NotFoundException("الوثيقة غير موجودة أو مؤرشفة");
@@ -363,9 +363,9 @@ export class EmployeeRecordsService {
               has_social_security, has_health_insurance, is_current,
               created_at, updated_at
        FROM employee_contracts
-       WHERE employee_id=$1 AND branch_id=$2
+       WHERE employee_id=$1
        ORDER BY start_date DESC, created_at DESC`,
-      [employeeId, branchId],
+      [employeeId],
     );
     return result.rows;
   }
