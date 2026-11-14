@@ -33,6 +33,7 @@ ALTER TABLE break_requests
 
 ALTER TABLE break_sessions
   ADD COLUMN department_id UUID,
+  ADD COLUMN pre_end_alert_sent_at TIMESTAMPTZ,
   ADD COLUMN overstay_alert_sent_at TIMESTAMPTZ;
 
 UPDATE break_sessions s
