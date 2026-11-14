@@ -7,6 +7,7 @@ Implement the company/branch/department/position hierarchy with server-side acce
 - A dedicated company-scoped permission for cross-branch employee transfers: `employees.transfer.company`.
 - The permission is granted by default only to senior company administration and HR roles; branch-level access alone does not authorize cross-branch transfers.
 - An API operation to transfer an employee from a source branch to another branch belonging to the same company.
+- Add a bilingual admin workflow to select the source employee, destination branch/department/position, optional new manager, and transfer reason; clearly disclose that permissions are not copied.
 - Apply `BranchIsolationGuard` to branch-scoped organization, attendance, and break controllers, in addition to permission/membership checks in PermissionGuard.
 - Validation of the target branch, department, position, and optional direct manager before changing the employee.
 - Preservation of source and destination branch/department/position, reason, and effective date in `employee_history`.
