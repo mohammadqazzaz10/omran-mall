@@ -88,66 +88,67 @@ describe("AttendanceService", () => {
   it(
     "keeps overnight attendance on the assigned shift work date",
     async () => {
-    const employeeId = "66666666-6666-4666-8666-666666666666";
-    const shiftId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-    const record = {
-      id: "77777777-7777-4777-8777-777777777777",
-      employee_id: employeeId,
-      branch_id: branchId,
-      work_date: "2026-11-14",
-      check_in_time: "2026-11-14T23:00:00.000Z",
-      check_out_time: null,
-      status: "present",
-    };
-    const client = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-        .mockResolvedValueOnce({
-          rows: [{ id: employeeId, status: "active" }],
-          rowCount: 1,
-        })
-        .mockResolvedValueOnce({
-          rows: [{ work_date: "2026-11-15", local_time: "02:00" }],
-        })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              assigned_work_date: "2026-11-14",
-              shift_id: shiftId,
-              start_time: "22:00",
-              end_time: "06:00",
-              is_night_shift: true,
-              grace_period_late_minutes: 15,
-              is_day_off: false,
-            },
-          ],
-        })
-        .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
-    };
-    const { service } = serviceWithClient(client);
+      const employeeId = "66666666-6666-4666-8666-666666666666";
+      const shiftId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+      const record = {
+        id: "77777777-7777-4777-8777-777777777777",
+        employee_id: employeeId,
+        branch_id: branchId,
+        work_date: "2026-11-14",
+        check_in_time: "2026-11-14T23:00:00.000Z",
+        check_out_time: null,
+        status: "present",
+      };
+      const client = {
+        query: jest
+          .fn()
+          .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+          .mockResolvedValueOnce({
+            rows: [{ id: employeeId, status: "active" }],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({
+            rows: [{ work_date: "2026-11-15", local_time: "02:00" }],
+          })
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                assigned_work_date: "2026-11-14",
+                shift_id: shiftId,
+                start_time: "22:00",
+                end_time: "06:00",
+                is_night_shift: true,
+                grace_period_late_minutes: 15,
+                is_day_off: false,
+              },
+            ],
+          })
+          .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+      };
+      const { service } = serviceWithClient(client);
 
-    await expect(service.checkIn(branchId, user)).resolves.toEqual(record);
+      await expect(service.checkIn(branchId, user)).resolves.toEqual(record);
 
-    const assignmentQuery = client.query.mock.calls[3];
-    expect(assignmentQuery[0]).toContain("s.is_night_shift = TRUE");
-    expect(assignmentQuery[0]).toContain("INTERVAL '1 day'");
-    expect(assignmentQuery[1]).toEqual([
-      employeeId,
-      branchId,
-      "2026-11-15",
-      "02:00",
-    ]);
-    expect(client.query.mock.calls[4][1]).toEqual([
-      employeeId,
-      branchId,
-      shiftId,
-      "2026-11-14",
-      225,
-      "late",
-    ]);
-  });
+      const assignmentQuery = client.query.mock.calls[3];
+      expect(assignmentQuery[0]).toContain("s.is_night_shift = TRUE");
+      expect(assignmentQuery[0]).toContain("INTERVAL '1 day'");
+      expect(assignmentQuery[1]).toEqual([
+        employeeId,
+        branchId,
+        "2026-11-15",
+        "02:00",
+      ]);
+      expect(client.query.mock.calls[4][1]).toEqual([
+        employeeId,
+        branchId,
+        shiftId,
+        "2026-11-14",
+        225,
+        "late",
+      ]);
+    },
+  );
 
   it(
     "does not expose another employee's records through self-service",
