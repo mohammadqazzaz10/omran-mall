@@ -552,6 +552,7 @@ class _BreaksManagementScreenState
                 ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    _branchSelector(data.branchId!),
                     FilledButton.icon(
                       onPressed: () => _editType(data.branchId!),
                       icon: const Icon(Icons.add),
