@@ -40,6 +40,20 @@ class RoleLandingScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.access_time),
+              title: Text(isArabic(context) ? 'الحضور والانصراف' : 'Attendance'),
+              subtitle: Text(
+                isArabic(context)
+                    ? 'تسجيل الحضور ومسح QR ولوحة متابعة الفرع'
+                    : 'Check in, scan QR, and open the branch dashboard',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/attendance'),
+            ),
+          ),
+          const SizedBox(height: 16),
           Text(
             isArabic(context)
                 ? 'تم تسجيل الدخول والتحقق من صلاحيات الحساب.'
