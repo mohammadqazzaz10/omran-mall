@@ -132,4 +132,94 @@ describe("AttendanceService", () => {
       ConflictException,
     );
   });
+
+  it("consumes QR and writes attendance plus audit through one transaction", async () => {
+    const employeeId = "66666666-6666-4666-8666-666666666666";
+    const record = {
+      id: "77777777-7777-4777-8777-777777777777",
+      employee_id: employeeId,
+      branch_id: branchId,
+      work_date: "2026-11-14",
+      check_in_time: "2026-11-14T08:00:00.000Z",
+      check_out_time: null,
+      status: "present",
+    };
+    const client = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+        .mockResolvedValueOnce({
+          rows: [{ id: employeeId, status: "active" }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          rows: [{ id: "88888888-8888-4888-8888-888888888888" }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+        .mockResolvedValueOnce({
+          rows: [{ work_date: "2026-11-14", local_time: "08:00" }],
+        })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+    };
+    const { service, db } = serviceWithClient(client);
+
+    const result = await service.checkInWithQr(
+      branchId,
+      user,
+      "a".repeat(64),
+      31.95,
+      35.91,
+    );
+
+    expect(result).toMatchObject({
+      id: record.id,
+      check_in_method: "qr_code",
+      check_in_lat: 31.95,
+      check_in_lng: 35.91,
+    });
+    expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(client.query.mock.calls[2][0]).toContain("attendance_qr_challenges");
+    expect(client.query.mock.calls[3][0]).toContain("attendance_qr_uses");
+    expect(client.query.mock.calls[6][0]).toContain("'qr_code'");
+    expect(client.query.mock.calls[7][0]).toContain("audit_logs");
+  });
+
+  it("does not write audit or commit a partial QR attendance when record insertion fails", async () => {
+    const employeeId = "66666666-6666-4666-8666-666666666666";
+    const failure = new Error("attendance insert failed");
+    const client = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+        .mockResolvedValueOnce({
+          rows: [{ id: employeeId, status: "active" }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          rows: [{ id: "88888888-8888-4888-8888-888888888888" }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+        .mockResolvedValueOnce({
+          rows: [{ work_date: "2026-11-14", local_time: "08:00" }],
+        })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockRejectedValueOnce(failure),
+    };
+    const { service, db } = serviceWithClient(client);
+
+    await expect(
+      service.checkInWithQr(branchId, user, "b".repeat(64), null, null),
+    ).rejects.toBe(failure);
+    expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(client.query).toHaveBeenCalledTimes(7);
+    expect(
+      client.query.mock.calls.some((call: any[]) =>
+        String(call[0]).includes("audit_logs"),
+      ),
+    ).toBe(false);
+  });
 });
