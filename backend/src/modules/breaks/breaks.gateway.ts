@@ -213,8 +213,15 @@ export class BreaksGateway
   }
 
   broadcastBreakAlert(branchId: string, alertData: unknown): void {
+    const event =
+      alertData &&
+      typeof alertData === "object" &&
+      "event" in alertData &&
+      typeof (alertData as { event?: unknown }).event === "string"
+        ? (alertData as { event: string }).event
+        : "BREAK_OVERSTAY_ALERT";
     const payload = {
-      event: "BREAK_OVERSTAY_ALERT",
+      event,
       timestamp: new Date().toISOString(),
       alert: alertData,
     };
