@@ -2,7 +2,8 @@ import {
   BadRequestException, ConflictException, ForbiddenException,
   Injectable, NotFoundException,
 } from "@nestjs/common";
-import { hash, randomBytes } from "bcrypt";
+import { hash } from "bcrypt";
+import { randomBytes } from "crypto";
 import { DatabaseService } from "../../database/database.service";
 import { AuthenticatedUser } from "../auth/auth.types";
 import { AssignUserRoleDto, CreateBranchDto, CreateUserDto, UpdateBranchDto } from "./admin.dto";
@@ -75,6 +76,10 @@ export class AdminService {
         await client.query("UPDATE user_branch_memberships SET revoked_at=COALESCE(revoked_at,NOW()) WHERE branch_id=$1 AND revoked_at IS NULL", [id]);
       } else if (dto.isActive === true) {
         await client.query(
+          "INSERT INTO user_branch_memberships(user_id,branch_id,company_id,granted_by) SELECT DISTINCT ur.user_id,$1,$2,$3 FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN users u ON u.id=ur.user_id WHERE ur.branch_id=$1 AND r.company_id=$2 AND r.is_active=TRUE AND u.is_active=TRUE AND u.deleted_at IS NULL ON CONFLICT(user_id,branch_id) WHERE revoked_at IS NULL DO NOTHING",
+          [id, actor.companyId, actor.id],
+        );
+        await client.query(
           "INSERT INTO user_branch_memberships(user_id,branch_id,company_id,granted_by) SELECT ur.user_id,$1,$2,$3 FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN users u ON u.id=ur.user_id WHERE r.company_id=$2 AND r.code=ANY($4::text[]) AND r.is_active=TRUE AND u.is_active=TRUE AND u.deleted_at IS NULL AND ur.branch_id IS NULL AND ur.department_id IS NULL ON CONFLICT(user_id,branch_id) WHERE revoked_at IS NULL DO NOTHING",
           [id, actor.companyId, actor.id, GLOBAL_ROLES],
         );
@@ -122,6 +127,7 @@ export class AdminService {
     if (!GLOBAL_ROLES.includes(dto.roleCode) && !dto.branchIds?.length) throw new BadRequestException("يجب تحديد فرع واحد على الأقل");
     if (dto.primaryBranchId && !GLOBAL_ROLES.includes(dto.roleCode) && !dto.branchIds?.includes(dto.primaryBranchId)) throw new BadRequestException("الفرع الأساسي يجب أن يكون ضمن فروع العضوية");
     if (dto.roleCode === "SUPERVISOR" && !dto.departmentId) throw new BadRequestException("يجب تحديد القسم لمشرف القسم");
+    if (["EMPLOYEE", "CASHIER"].includes(dto.roleCode) && !dto.employeeId) throw new BadRequestException("يجب ربط حساب الموظف بملفه الوظيفي");
     if (new Set(dto.branchIds ?? []).size !== (dto.branchIds ?? []).length) throw new BadRequestException("لا تكرر الفرع نفسه في قائمة العضويات");
     const temporaryPassword = randomBytes(24).toString("base64url") + "A1!";
     const passwordHash = await hash(temporaryPassword, 12);
