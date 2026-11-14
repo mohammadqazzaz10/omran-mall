@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: quality-checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -39,25 +39,11 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
-          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 24
       - name: Install locked backend dependencies
         run: npm ci
-      - name: Apply and commit organization source formatting
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-          npx prettier --write src/modules/organization/*.ts
-          if ! git diff --quiet -- src/modules/organization; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/modules/organization/*.ts
-            git commit -m "style: format organization module"
-            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
-          fi
       - run: npm run format:check
       - run: npm run build
       - name: Type-check first-admin bootstrap utility
