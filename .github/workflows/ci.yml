@@ -172,7 +172,7 @@ jobs:
       - run: flutter pub get --enforce-lockfile
         working-directory: client
       - name: Build Android Debug APK with verbose Gradle diagnostics
-        run: flutter build apk --debug --verbose
+        run: flutter build apk --debug --target-platform android-arm64 --verbose
         working-directory: client
       - uses: actions/upload-artifact@v6
         with:
