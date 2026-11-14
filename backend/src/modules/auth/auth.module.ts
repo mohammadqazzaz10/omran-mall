@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module } from "@nestjs/common";\nimport { APP_GUARD } from "@nestjs/core";
 import { JwtModule } from "@nestjs/jwt";
 import { DatabaseModule } from "../../database/database.module";
 import { AccessTokenGuard } from "./access-token.guard";
@@ -27,7 +27,7 @@ if (!jwtSecret || jwtSecret.length < 32) {
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AccessTokenGuard],
+  providers: [AuthService, { provide: APP_GUARD, useClass: AccessTokenGuard }],
   exports: [AuthService, AccessTokenGuard, JwtModule],
 })
 export class AuthModule {}
