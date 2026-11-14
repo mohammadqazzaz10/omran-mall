@@ -26,7 +26,12 @@ describe("BreaksService", () => {
       ),
       query: jest.fn(),
     };
-    return { service: new BreaksService(db as any), db };
+    const gateway = {
+      broadcastBreakStarted: jest.fn(),
+      broadcastBreakEnded: jest.fn(),
+      broadcastBreakAlert: jest.fn(),
+    };
+    return { service: new BreaksService(db as any, gateway as any), db, gateway };
   };
 
   it("refuses to configure breaks for a branch outside the authenticated company", async () => {
@@ -52,7 +57,10 @@ describe("BreaksService", () => {
 
   it("rejects invalid duration policy before opening a database transaction", async () => {
     const db = { transaction: jest.fn() };
-    const service = new BreaksService(db as any);
+    const service = new BreaksService(
+      db as any,
+      { broadcastBreakStarted: jest.fn() } as any,
+    );
 
     await expect(
       service.createType(
