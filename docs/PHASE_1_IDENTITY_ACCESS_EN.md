@@ -33,3 +33,28 @@
 - Production secrets, staging/UAT, backup/restore tests, penetration review, and final Render integration remain deferred until the last release stage.
 
 A green CI run validates only the exact commit and jobs that completed; it does not mean the full platform is complete.
+
+
+## Update — 2026-11-14: merged identity baseline and authorization follow-up
+
+### Merged to main
+- PR #3 was squash-merged after CI succeeded on exact head `9b38aa6145e2b73f19ab0adac6b7d31d10e2873d`.
+- Reference CI run #164 passed backend build/format/Jest/PostgreSQL migrations and invariants/Docker image, Flutter analyze/tests, Flutter Web Release, and Android Debug.
+- Merge commit: `efeea4a0188d7ed6f4fad343df38ac7ff124c8f9`.
+
+### Follow-up branch: `phase-1/authorization-admin-foundation`
+- Adds migration 003 for built-in company roles, a permission catalogue, and least-privilege role grants.
+- Company administrators receive explicit branch memberships and branch-scoped role grants; authorization does not rely on a role name alone.
+- Cashier/employee roles receive no generic `own` permissions until record ownership is enforced in the service layer.
+- Adds a one-time CLI bootstrap that atomically creates the initial company, primary branch, and SUPER_ADMIN, hashes a strong password with bcrypt, refuses to run if the company already has a user, and writes an audit event.
+- CI type-checks the bootstrap utility and PostgreSQL invariants assert that branch managers do not receive company-wide user/role administration grants.
+
+### Still incomplete / release blockers
+- Protected API workflows for managing users, roles, permissions, and branch memberships.
+- Password change/recovery, forced password change after bootstrap, device/session management, MFA, and edge-level login rate limiting.
+- PostgreSQL RLS or equivalent transaction-scoped isolation, runtime DB role without BYPASSRLS, and cross-branch leakage tests.
+- Authenticated WebSocket handshake, room membership, and per-event authorization.
+- All employee and operational modules and connected Flutter workflows.
+- Render remains deferred to the final release stage. No production deployment is authorized by these development checks.
+
+A successful CI run validates only its exact commit and completed jobs; it does not establish that the full product is complete.
