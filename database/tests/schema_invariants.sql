@@ -6,7 +6,7 @@ DECLARE
     v_employee_code_1 TEXT;
     v_employee_code_2 TEXT;
     v_user_id UUID;
-    v_role_id UUID;
+    v_role_id UUID;\n    v_other_company_id UUID;\n    v_other_branch_id UUID;
 BEGIN
     INSERT INTO positions (department_id, code, title_ar)
     VALUES (
