@@ -82,6 +82,8 @@ export class OrganizationService {
   async updateDepartment(branchId: string, id: string, dto: Partial<DepartmentDto>, user: AuthenticatedUser) {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [branchId]);
+      if (Object.keys(dto).length === 0) throw new BadRequestException("لم يتم إرسال أي تغييرات");
       const old = await this.getDepartmentForUpdate(client, branchId, id);
       const parentId = dto.parentId === undefined ? old.parent_id : dto.parentId;
       const managerId = dto.managerEmployeeId === undefined ? old.manager_employee_id : dto.managerEmployeeId;
@@ -253,6 +255,8 @@ export class OrganizationService {
   async updateEmployee(branchId:string,id:string,dto:EmployeeUpdateDto,user:AuthenticatedUser) {
     return this.db.transaction(async(client)=>{
       await this.assertBranch(client,branchId,user);
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [branchId]);
+      if (Object.keys(dto).length === 0) throw new BadRequestException("لم يتم إرسال أي تغييرات");
       const oldResult=await client.query(
         `SELECT * FROM employees WHERE id=$1 AND branch_id=$2 AND deleted_at IS NULL FOR UPDATE`,
         [id,branchId],
