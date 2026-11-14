@@ -780,13 +780,29 @@ export class OrganizationService {
           );
         }
         await client.query(
-          "DELETE FROM user_roles WHERE user_id=$1 AND branch_id=$2",
+          `DELETE FROM user_roles ur
+           USING roles r
+           WHERE ur.role_id=r.id
+             AND ur.user_id=$1
+             AND ur.branch_id=$2
+             AND r.code NOT IN ('SUPER_ADMIN','GENERAL_MANAGER','HR_MANAGER')`,
           [employee.user_id, sourceBranchId],
         );
         await client.query(
-          `UPDATE user_branch_memberships
+          `UPDATE user_branch_memberships ubm
            SET revoked_at=CURRENT_TIMESTAMP
-           WHERE user_id=$1 AND branch_id=$2 AND revoked_at IS NULL`,
+           WHERE ubm.user_id=$1 AND ubm.branch_id=$2
+             AND ubm.revoked_at IS NULL
+             AND NOT EXISTS (
+               SELECT 1
+               FROM user_roles ur
+               JOIN roles r ON r.id=ur.role_id
+               WHERE ur.user_id=$1
+                 AND ur.branch_id IS NULL
+                 AND ur.department_id IS NULL
+                 AND r.code IN ('SUPER_ADMIN','GENERAL_MANAGER','HR_MANAGER')
+                 AND r.is_active=TRUE
+             )`,
           [employee.user_id, sourceBranchId],
         );
         await client.query(
