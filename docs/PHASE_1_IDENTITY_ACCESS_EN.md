@@ -96,3 +96,29 @@ This work is not merged until the exact branch head passes CI. Branch/user/role/
 - Render integration and production deployment remain deferred until the final acceptance and security gates pass.
 
 **Status:** implementation and CI validation in progress; not production-ready.
+
+
+## Flutter Authentication and Administration Client — 2026-11-14
+
+### Implemented on `phase-1/flutter-auth-admin-ui-v2`
+- Configurable Dio API client using `API_BASE_URL`, with automatic Bearer-token attachment.
+- Secure access/refresh token storage and serialized refresh-token rotation.
+- Session restoration on app startup and local credential clearing when a session expires or is revoked.
+- Arabic/English login and mandatory temporary-password rotation screens.
+- Role-aware route selection using scoped roles returned by `/auth/me`.
+- Employee self-profile screen backed by `/me/employee`.
+- Active device-session list and revocation of other sessions.
+- Initial branch/user/role administration dashboard, including one-time display and copy support for temporary credentials.
+- HR receives read-only company branch-directory access, not branch write permission; company administrators can reach inactive branches to reactivate them.
+- Arabic and English UI strings have been added.
+
+### Remaining client and platform scope
+- The PR is not merged until CI passes on its final head SHA.
+- Supervisor, branch manager, HR, and executive dashboards are still foundational landing pages, not complete operational workspaces.
+- Employee lifecycle/profile creation UI is incomplete; account provisioning currently links an existing employee record.
+- Role/membership removal, branch editing, account recovery, and full employee administration UI remain open.
+- Push/Web Push, attendance, shifts, breaks, requests, payroll, reporting, and the remaining operations modules are not complete.
+- PostgreSQL RLS and transaction-scoped tenant isolation remain open.
+- Render integration and production deployment are deferred to the final release stage.
+
+**Status:** authentication and initial administration client integration is under CI validation; this is not a production-ready complete client.
