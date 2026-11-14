@@ -11,6 +11,7 @@ describe("AuthService refresh rotation", () => {
     is_active: true,
     failed_login_attempts: 0,
     lockout_until: null,
+    must_change_password: false,
   };
 
   it("rejects malformed session identifiers before database access", async () => {
@@ -82,4 +83,39 @@ describe("AuthService refresh rotation", () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(jwt.signAsync).not.toHaveBeenCalled();
   });
+  it("returns scoped role summaries from the authenticated profile endpoint", async () => {
+    const db = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          rows: [{
+            id: user.id,
+            username: user.username,
+            email: null,
+            company_id: user.company_id,
+            primary_branch_id: user.primary_branch_id,
+            roles: [{ code: "EMPLOYEE", nameAr: "موظف", branchId: user.primary_branch_id, departmentId: null }],
+          }],
+        })
+        .mockResolvedValueOnce({
+          rows: [{ branch_id: user.primary_branch_id }],
+        }),
+    } as any;
+    const jwt = { signAsync: jest.fn() } as any;
+    const service = new AuthService(db, jwt);
+
+    const result = await service.me(user.id, "session-1");
+
+    expect(result.roles).toEqual([
+      {
+        code: "EMPLOYEE",
+        nameAr: "موظف",
+        branchId: user.primary_branch_id,
+        departmentId: null,
+      },
+    ]);
+    expect(db.query.mock.calls[0][0]).toContain("jsonb_agg");
+    expect(db.query.mock.calls[1][1]).toEqual([user.id]);
+  });
+
 });
