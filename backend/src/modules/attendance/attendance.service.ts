@@ -143,10 +143,13 @@ export class AttendanceService {
             .split(":")
             .map(Number);
           const [nh, nm] = localTime.split(":").map(Number);
+          const shiftClockMinutes =
+            nh * 60 +
+            nm +
+            (scheduled.assigned_work_date !== currentWorkDate ? 1440 : 0);
           lateMinutes = Math.max(
             0,
-            nh * 60 +
-              nm -
+            shiftClockMinutes -
               (sh * 60 + sm) -
               (scheduled.grace_period_late_minutes ?? 0),
           );
@@ -273,10 +276,13 @@ export class AttendanceService {
             .split(":")
             .map(Number);
           const [nh, nm] = localTime.split(":").map(Number);
+          const shiftClockMinutes =
+            nh * 60 +
+            nm +
+            (scheduled.assigned_work_date !== currentWorkDate ? 1440 : 0);
           lateMinutes = Math.max(
             0,
-            nh * 60 +
-              nm -
+            shiftClockMinutes -
               (sh * 60 + sm) -
               (scheduled.grace_period_late_minutes ?? 0),
           );
