@@ -9,8 +9,6 @@ DECLARE
     v_role_id UUID;
     v_other_company_id UUID;
     v_other_branch_id UUID;
-    v_other_company_id UUID;
-    v_other_branch_id UUID;
 BEGIN
     INSERT INTO positions (department_id, code, title_ar)
     VALUES (
