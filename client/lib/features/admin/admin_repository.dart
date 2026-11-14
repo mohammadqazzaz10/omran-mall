@@ -40,10 +40,17 @@ class AdminRepository {
     return Map<String, dynamic>.from(response.data as Map);
   }
 
-  Future<List<Map<String, dynamic>>> listEmployees(String branchId) async {
+  Future<List<Map<String, dynamic>>> listEmployees(
+    String branchId, {
+    bool activeOnly = true,
+  }) async {
     final response = await client.dio.get<dynamic>(
       'branches/' + branchId + '/employees',
-      queryParameters: {'page': 1, 'limit': 100, 'status': 'active'},
+      queryParameters: {
+        'page': 1,
+        'limit': 100,
+        if (activeOnly) 'status': 'active',
+      },
     );
     final data = response.data;
     if (data is! Map || data['items'] is! List) return const [];
