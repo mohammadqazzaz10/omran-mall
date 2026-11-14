@@ -31,7 +31,7 @@ export class BreaksController {
   constructor(private readonly breaks: BreaksService) {}
 
   @Get("types")
-  @RequirePermission("breaks.view.branch")
+  @RequirePermission("breaks.types.view.branch")
   listTypes(
     @Param("branchId", ParseUUIDPipe) branchId: string,
     @Req() req: AuthenticatedRequest,
