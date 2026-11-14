@@ -83,7 +83,64 @@ describe("AttendanceService", () => {
         "present",
       ]);
     },
-  );;
+  );
+
+  it("keeps overnight attendance on the assigned shift work date", async () => {
+    const employeeId = "66666666-6666-4666-8666-666666666666";
+    const shiftId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const record = {
+      id: "77777777-7777-4777-8777-777777777777",
+      employee_id: employeeId,
+      branch_id: branchId,
+      work_date: "2026-11-14",
+      check_in_time: "2026-11-14T23:00:00.000Z",
+      check_out_time: null,
+      status: "present",
+    };
+    const client = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+        .mockResolvedValueOnce({
+          rows: [{ id: employeeId, status: "active" }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          rows: [{ work_date: "2026-11-15", local_time: "02:00" }],
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              assigned_work_date: "2026-11-14",
+              shift_id: shiftId,
+              start_time: "22:00",
+              end_time: "06:00",
+              is_night_shift: true,
+              grace_period_late_minutes: 15,
+              is_day_off: false,
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+    };
+    const { service } = serviceWithClient(client);
+
+    await expect(service.checkIn(branchId, user)).resolves.toEqual(record);
+
+    const assignmentQuery = client.query.mock.calls[3];
+    expect(assignmentQuery[0]).toContain("s.is_night_shift = TRUE");
+    expect(assignmentQuery[0]).toContain("INTERVAL '1 day'");
+    expect(assignmentQuery[1]).toEqual([employeeId, branchId, "2026-11-15", "02:00"]);
+    expect(client.query.mock.calls[4][1]).toEqual([
+      employeeId,
+      branchId,
+      shiftId,
+      "2026-11-14",
+      0,
+      "present",
+    ]);
+  });
 
   it(
     "does not expose another employee's records through self-service",
@@ -104,7 +161,7 @@ describe("AttendanceService", () => {
       );
       expect(db.query).toHaveBeenCalledTimes(2);
     },
-  );;
+  );
 
   it("rejects malformed report dates before querying attendance", async () => {
     const db = { query: jest.fn() };
@@ -200,7 +257,7 @@ describe("AttendanceService", () => {
       expect(client.query.mock.calls[6][0]).toContain("'qr_code'");
       expect(client.query.mock.calls[7][0]).toContain("audit_logs");
     },
-  );;
+  );
 
   it(
     "does not write audit or commit a partial QR attendance when record insertion fails",
@@ -239,7 +296,7 @@ describe("AttendanceService", () => {
         ),
       ).toBe(false);
     },
-  );;
+  );
 
   it(
     "rejects a pending correction with reviewer notes and an audit record",
@@ -286,7 +343,7 @@ describe("AttendanceService", () => {
       ]);
       expect(client.query.mock.calls[3][0]).toContain("audit_logs");
     },
-  );;
+  );
   it(
     "subtracts recorded break minutes when an attendance correction recalculates work time",
     async () => {
