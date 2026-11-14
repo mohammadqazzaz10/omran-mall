@@ -100,7 +100,10 @@ export class AttendanceService {
           `SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date::text AS work_date,
                   TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman', 'HH24:MI') AS local_time`,
         );
-        const { work_date: currentWorkDate, local_time: localTime } = clock.rows[0];
+        const {
+          work_date: currentWorkDate,
+          local_time: localTime,
+        } = clock.rows[0];
         const assignment = await client.query<{
           assigned_work_date: string;
           shift_id: string | null;
@@ -227,7 +230,10 @@ export class AttendanceService {
           `SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date::text AS work_date,
                   TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman', 'HH24:MI') AS local_time`,
         );
-        const { work_date: currentWorkDate, local_time: localTime } = clock.rows[0];
+        const {
+          work_date: currentWorkDate,
+          local_time: localTime,
+        } = clock.rows[0];
         const assignment = await client.query<{
           assigned_work_date: string;
           shift_id: string | null;
