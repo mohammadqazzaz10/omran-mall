@@ -359,7 +359,10 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
   Future<void> _transferEmployee(
     List<Map<String, dynamic>> branches,
   ) async {
-    if (branches.length < 2) {
+    final activeBranches = branches
+        .where((branch) => branch['is_active'] == true)
+        .toList();
+    if (activeBranches.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -376,8 +379,8 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
     final repository = ref.read(adminRepositoryProvider);
     final reason = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    String sourceBranchId = branches.first['id'].toString();
-    String targetBranchId = branches
+    String sourceBranchId = activeBranches.first['id'].toString();
+    String targetBranchId = activeBranches
         .firstWhere((branch) => branch['id'].toString() != sourceBranchId)['id']
         .toString();
     String? employeeId;
@@ -392,7 +395,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
 
     try {
       final initial = await Future.wait([
-        repository.listEmployees(sourceBranchId),
+        repository.listEmployees(sourceBranchId, activeOnly: false),
         repository.listDepartments(targetBranchId),
         repository.listPositions(targetBranchId),
         repository.listEmployees(targetBranchId),
@@ -441,7 +444,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                           decoration: InputDecoration(
                             labelText: isArabic(context) ? 'فرع المصدر' : 'Source branch',
                           ),
-                          items: branches.map((branch) {
+                          items: activeBranches.map((branch) {
                             final id = branch['id'].toString();
                             return DropdownMenuItem(
                               value: id,
@@ -453,7 +456,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                           onChanged: (value) async {
                             if (value == null) return;
                             final nextTarget = value == targetBranchId
-                                ? branches.firstWhere(
+                                ? activeBranches.firstWhere(
                                     (branch) => branch['id'].toString() != value,
                                   )['id'].toString()
                                 : targetBranchId;
@@ -468,7 +471,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                             });
                             try {
                               final data = await Future.wait([
-                                repository.listEmployees(sourceBranchId),
+                                repository.listEmployees(sourceBranchId, activeOnly: false),
                                 repository.listDepartments(targetBranchId),
                                 repository.listPositions(targetBranchId),
                                 repository.listEmployees(targetBranchId),
@@ -535,7 +538,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                           decoration: InputDecoration(
                             labelText: isArabic(context) ? 'الفرع الجديد' : 'Destination branch',
                           ),
-                          items: branches
+                          items: activeBranches
                               .where((branch) => branch['id'].toString() != sourceBranchId)
                               .map((branch) => DropdownMenuItem(
                                     value: branch['id'].toString(),
