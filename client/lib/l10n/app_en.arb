@@ -48,5 +48,6 @@
   "sessionRevokedMessage": "Session revoked",
   "homeTitle": "Home",
   "welcomeTitle": "Welcome to Omran Mall",
-  "networkError": "Could not connect to the server. Check connectivity and API base URL."
+  "networkError": "Could not connect to the server. Check connectivity and API base URL.",
+  "mobilePhoneLabel": "Mobile phone"
 }
