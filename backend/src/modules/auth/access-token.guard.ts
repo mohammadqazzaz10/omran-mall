@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Reflector } from "@nestjs/core";
+import { IS_PUBLIC_KEY } from "../../common/decorators/public.decorator";
 import { DatabaseService } from "../../database/database.service";
 import { AccessTokenPayload, AuthenticatedUser } from "./auth.types";
 
