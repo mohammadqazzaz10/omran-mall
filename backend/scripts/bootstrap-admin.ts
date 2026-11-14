@@ -53,6 +53,20 @@ async function main(): Promise<void> {
       const nameEn = process.env.BOOTSTRAP_COMPANY_NAME_EN?.trim() || null;
       const branchNameEn = process.env.BOOTSTRAP_BRANCH_NAME_EN?.trim() || null;
 
+      if (!/^[A-Z0-9][A-Z0-9_-]{1,49}$/.test(companyCode) ||
+          !/^[A-Z0-9][A-Z0-9_-]{1,49}$/.test(branchCode)) {
+        throw new Error("Company and branch codes must be 2-50 uppercase letters, numbers, hyphens, or underscores");
+      }
+      if (username.length < 3 || username.length > 100) {
+        throw new Error("BOOTSTRAP_ADMIN_USERNAME must be 3-100 characters");
+      }
+      if (companyNameAr.length > 255 || branchNameAr.length > 255) {
+        throw new Error("Arabic company and branch names must not exceed 255 characters");
+      }
+      if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+        throw new Error("BOOTSTRAP_ADMIN_EMAIL is not a valid email address");
+      }
+
       await client.query(
         `INSERT INTO companies (id, code, name_ar, name_en, currency, timezone)
          VALUES ($1, $2, $3, $4, 'JOD', 'Asia/Amman')
@@ -79,6 +93,13 @@ async function main(): Promise<void> {
          ON CONFLICT (company_id, code) DO NOTHING`,
         [companyId],
       );
+      const permissionCatalog = await client.query(
+        "SELECT code FROM permissions WHERE code IN ('employees.view.branch', 'branches.view.company', 'users.manage.company')",
+      );
+      if (permissionCatalog.rowCount !== 3) {
+        throw new Error("Permission catalogue is incomplete. Apply the latest database migrations first.");
+      }
+
       await client.query(
         `INSERT INTO role_permissions (role_id, permission_id)
          SELECT r.id, p.id
