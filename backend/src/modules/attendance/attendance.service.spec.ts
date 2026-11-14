@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { AttendanceService } from "./attendance.service";
 import { AuthenticatedUser } from "../auth/auth.types";
 
