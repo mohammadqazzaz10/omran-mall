@@ -88,6 +88,18 @@ export class OrganizationService {
       if (parentId) {
         if (parentId === id) throw new BadRequestException("لا يمكن جعل القسم تابعاً لنفسه");
         await this.assertDepartment(client, branchId, parentId);
+        const cycle = await client.query(
+          `WITH RECURSIVE ancestors AS (
+             SELECT id, parent_id FROM departments WHERE id=$1 AND branch_id=$2
+             UNION ALL
+             SELECT d.id, d.parent_id FROM departments d
+             JOIN ancestors a ON d.id=a.parent_id
+             WHERE d.branch_id=$2
+           )
+           SELECT 1 FROM ancestors WHERE id=$3 LIMIT 1`,
+          [parentId, branchId, id],
+        );
+        if (cycle.rowCount) throw new BadRequestException("لا يمكن إنشاء تسلسل هرمي دائري للأقسام");
       }
       if (managerId) await this.assertEmployee(client, branchId, managerId);
       const result = await client.query(
@@ -255,6 +267,18 @@ export class OrganizationService {
       if(managerId) {
         if(managerId===id) throw new BadRequestException("لا يمكن تعيين الموظف مديراً مباشراً لنفسه");
         await this.assertEmployee(client,branchId,managerId);
+        const cycle=await client.query(
+          `WITH RECURSIVE management_chain AS (
+             SELECT id,direct_manager_id FROM employees WHERE id=$1 AND branch_id=$2
+             UNION ALL
+             SELECT e.id,e.direct_manager_id FROM employees e
+             JOIN management_chain m ON e.id=m.direct_manager_id
+             WHERE e.branch_id=$2
+           )
+           SELECT 1 FROM management_chain WHERE id=$3 LIMIT 1`,
+          [managerId,branchId,id],
+        );
+        if(cycle.rowCount) throw new BadRequestException("لا يمكن إنشاء تسلسل إداري دائري");
       }
       const map:Record<string,string> = {
         firstNameAr:"first_name_ar",secondNameAr:"second_name_ar",thirdNameAr:"third_name_ar",
