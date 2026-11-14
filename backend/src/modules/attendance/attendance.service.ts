@@ -100,22 +100,37 @@ export class AttendanceService {
           `SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date::text AS work_date,
                   TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman', 'HH24:MI') AS local_time`,
         );
-        const { work_date: workDate, local_time: localTime } = clock.rows[0];
+        const { work_date: currentWorkDate, local_time: localTime } = clock.rows[0];
         const assignment = await client.query<{
+          assigned_work_date: string;
           shift_id: string | null;
           start_time: string | null;
+          end_time: string | null;
+          is_night_shift: boolean;
           grace_period_late_minutes: number | null;
           is_day_off: boolean;
         }>(
-          `SELECT sa.shift_id, s.start_time::text, s.grace_period_late_minutes, sa.is_day_off
+          `SELECT sa.work_date::text AS assigned_work_date, sa.shift_id,
+                  s.start_time::text, s.end_time::text, s.is_night_shift,
+                  s.grace_period_late_minutes, sa.is_day_off
            FROM shift_assignments sa
            LEFT JOIN shifts s ON s.id = sa.shift_id AND s.branch_id = sa.branch_id
            WHERE sa.employee_id = $1 AND sa.branch_id = $2
-             AND sa.work_date = $3 AND sa.is_published = TRUE
+             AND sa.is_published = TRUE
+             AND (
+               sa.work_date = $3::date
+               OR (
+                 s.is_night_shift = TRUE
+                 AND sa.work_date = ($3::date - INTERVAL '1 day')::date
+                 AND $4::time < s.end_time
+               )
+             )
+           ORDER BY CASE WHEN sa.work_date = $3::date THEN 0 ELSE 1 END
            LIMIT 1`,
-          [employee.id, branchId, workDate],
+          [employee.id, branchId, currentWorkDate, localTime],
         );
         const scheduled = assignment.rows[0];
+        const workDate = scheduled?.assigned_work_date ?? currentWorkDate;
         let lateMinutes = 0;
         let status = "present";
         if (scheduled?.is_day_off) status = "needs_review";
@@ -212,22 +227,37 @@ export class AttendanceService {
           `SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date::text AS work_date,
                   TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman', 'HH24:MI') AS local_time`,
         );
-        const { work_date: workDate, local_time: localTime } = clock.rows[0];
+        const { work_date: currentWorkDate, local_time: localTime } = clock.rows[0];
         const assignment = await client.query<{
+          assigned_work_date: string;
           shift_id: string | null;
           start_time: string | null;
+          end_time: string | null;
+          is_night_shift: boolean;
           grace_period_late_minutes: number | null;
           is_day_off: boolean;
         }>(
-          `SELECT sa.shift_id, s.start_time::text, s.grace_period_late_minutes, sa.is_day_off
+          `SELECT sa.work_date::text AS assigned_work_date, sa.shift_id,
+                  s.start_time::text, s.end_time::text, s.is_night_shift,
+                  s.grace_period_late_minutes, sa.is_day_off
            FROM shift_assignments sa
            LEFT JOIN shifts s ON s.id = sa.shift_id AND s.branch_id = sa.branch_id
            WHERE sa.employee_id = $1 AND sa.branch_id = $2
-             AND sa.work_date = $3 AND sa.is_published = TRUE
+             AND sa.is_published = TRUE
+             AND (
+               sa.work_date = $3::date
+               OR (
+                 s.is_night_shift = TRUE
+                 AND sa.work_date = ($3::date - INTERVAL '1 day')::date
+                 AND $4::time < s.end_time
+               )
+             )
+           ORDER BY CASE WHEN sa.work_date = $3::date THEN 0 ELSE 1 END
            LIMIT 1`,
-          [employee.id, branchId, workDate],
+          [employee.id, branchId, currentWorkDate, localTime],
         );
         const scheduled = assignment.rows[0];
+        const workDate = scheduled?.assigned_work_date ?? currentWorkDate;
         let lateMinutes = 0;
         let status = "present";
         if (scheduled?.is_day_off) status = "needs_review";
