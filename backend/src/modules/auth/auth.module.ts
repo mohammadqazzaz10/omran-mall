@@ -10,7 +10,9 @@ import { durationToSeconds } from "./auth.config";
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret || jwtSecret.length < 32 || jwtSecret.startsWith("REPLACE_")) {
-  throw new Error("JWT_SECRET must be a unique secret of at least 32 characters");
+  throw new Error(
+    "JWT_SECRET must be a unique secret of at least 32 characters",
+  );
 }
 const accessTokenTtlSeconds = durationToSeconds(
   process.env.JWT_EXPIRATION,

@@ -54,9 +54,9 @@ describe("PermissionGuard", () => {
     const reflector = makeReflector({ "omran:isPublic": true });
     const guard = new PermissionGuard(db, reflector as any);
 
-    await expect(
-      guard.canActivate(contextFor({ headers: {} })),
-    ).resolves.toBe(true);
+    await expect(guard.canActivate(contextFor({ headers: {} }))).resolves.toBe(
+      true,
+    );
     expect(db.query).not.toHaveBeenCalled();
   });
 

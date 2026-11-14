@@ -18,8 +18,13 @@ function validateProductionConfig(): void {
     );
   }
 
-  if ((process.env.JWT_SECRET || "").length < 32 || (process.env.JWT_SECRET || "").startsWith("REPLACE_")) {
-    throw new Error("Production JWT_SECRET must be a unique secret of at least 32 characters");
+  if (
+    (process.env.JWT_SECRET || "").length < 32 ||
+    (process.env.JWT_SECRET || "").startsWith("REPLACE_")
+  ) {
+    throw new Error(
+      "Production JWT_SECRET must be a unique secret of at least 32 characters",
+    );
   }
 
   const databaseUrl = new URL(process.env.DATABASE_URL as string);

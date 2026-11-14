@@ -27,7 +27,9 @@ describe("AccessTokenGuard", () => {
     reflector.getAllAndOverride.mockReturnValue(true);
     const guard = new AccessTokenGuard(jwt, db, reflector as any);
 
-    await expect(guard.canActivate(contextFor({ headers: {} }))).resolves.toBe(true);
+    await expect(guard.canActivate(contextFor({ headers: {} }))).resolves.toBe(
+      true,
+    );
     expect(jwt.verifyAsync).not.toHaveBeenCalled();
     expect(db.query).not.toHaveBeenCalled();
   });

@@ -1,4 +1,8 @@
-import { Injectable, OnModuleDestroy, ServiceUnavailableException } from "@nestjs/common";
+import {
+  Injectable,
+  OnModuleDestroy,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 
 /**

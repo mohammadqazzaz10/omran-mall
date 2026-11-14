@@ -77,7 +77,10 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException("اسم المستخدم أو كلمة المرور غير صحيحة");
     }
-    if (!user.is_active || (user.lockout_until && user.lockout_until > new Date())) {
+    if (
+      !user.is_active ||
+      (user.lockout_until && user.lockout_until > new Date())
+    ) {
       throw new UnauthorizedException("الحساب غير متاح مؤقتاً");
     }
 
@@ -100,7 +103,9 @@ export class AuthService {
 
     const branchIds = await this.memberships(user.id);
     if (branchIds.length === 0) {
-      throw new ForbiddenException("لا يوجد فرع مخول لهذا الحساب؛ راجع مدير النظام");
+      throw new ForbiddenException(
+        "لا يوجد فرع مخول لهذا الحساب؛ راجع مدير النظام",
+      );
     }
 
     const refreshToken = randomBytes(48).toString("base64url");
@@ -175,7 +180,11 @@ export class AuthService {
       throw new UnauthorizedException("جلسة الدخول غير صالحة");
     }
     const sessionId = refreshToken.slice(0, separator);
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) {
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        sessionId,
+      )
+    ) {
       throw new UnauthorizedException("جلسة الدخول غير صالحة");
     }
     const oldSecret = refreshToken.slice(separator + 1);
@@ -213,7 +222,9 @@ export class AuthService {
     });
 
     if (!result) {
-      throw new UnauthorizedException("انتهت الجلسة أو تم إبطالها؛ سجل الدخول مجدداً");
+      throw new UnauthorizedException(
+        "انتهت الجلسة أو تم إبطالها؛ سجل الدخول مجدداً",
+      );
     }
     const branchIds = await this.memberships(result.id);
     if (branchIds.length === 0) {

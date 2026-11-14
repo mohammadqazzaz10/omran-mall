@@ -25,7 +25,9 @@ export class PermissionGuard implements CanActivate {
     if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets)) {
       return true;
     }
-    if (this.reflector.getAllAndOverride<boolean>(SKIP_PERMISSION_KEY, targets)) {
+    if (
+      this.reflector.getAllAndOverride<boolean>(SKIP_PERMISSION_KEY, targets)
+    ) {
       return true;
     }
 

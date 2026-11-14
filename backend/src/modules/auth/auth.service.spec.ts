@@ -21,9 +21,9 @@ describe("AuthService refresh rotation", () => {
     const jwt = { signAsync: jest.fn() } as any;
     const service = new AuthService(db, jwt);
 
-    await expect(
-      service.refresh("not-a-uuid.secret"),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(service.refresh("not-a-uuid.secret")).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
     expect(db.transaction).not.toHaveBeenCalled();
     expect(db.query).not.toHaveBeenCalled();
   });
@@ -43,7 +43,9 @@ describe("AuthService refresh rotation", () => {
       ),
       query: jest.fn().mockResolvedValue({ rows: [{ branch_id: branchId }] }),
     } as any;
-    const jwt = { signAsync: jest.fn().mockResolvedValue("new-access-token") } as any;
+    const jwt = {
+      signAsync: jest.fn().mockResolvedValue("new-access-token"),
+    } as any;
     const service = new AuthService(db, jwt);
 
     const result = await service.refresh(`${sessionId}.old-refresh-secret`);

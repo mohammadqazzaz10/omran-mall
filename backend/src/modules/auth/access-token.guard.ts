@@ -33,9 +33,7 @@ export class AccessTokenGuard implements CanActivate {
 
     let payload: AccessTokenPayload;
     try {
-      payload = await this.jwt.verifyAsync<AccessTokenPayload>(
-        header.slice(7),
-      );
+      payload = await this.jwt.verifyAsync<AccessTokenPayload>(header.slice(7));
     } catch {
       throw new UnauthorizedException("رمز الدخول غير صالح أو منتهي");
     }
