@@ -87,9 +87,7 @@ describe("OrganizationService branch integrity", () => {
       ),
     ).toBe(false);
   });
-  it(
-    "blocks an employee transfer while attendance is still open",
-    async () => {
+  it("blocks transfers when attendance is open", async () => {
     query
       .mockResolvedValueOnce({
         rowCount: 1,
@@ -138,12 +136,9 @@ describe("OrganizationService branch integrity", () => {
         String(call[0]).includes("UPDATE employees"),
       ),
     ).toBe(false);
-    },
-  );
+  });
 
-  it(
-    "records a controlled cross-branch transfer without copying old branch roles",
-    async () => {
+  it("transfers an employee and clears old branch roles", async () => {
     const employeeId = "00000000-0000-4000-8000-000000000009";
     const targetBranchId = "00000000-0000-4000-8000-000000000006";
     query
@@ -230,12 +225,9 @@ describe("OrganizationService branch integrity", () => {
         String(call[0]).includes("INSERT INTO user_branch_memberships"),
       ),
     ).toBe(true);
-    },
-  );
+  });
 
-  it(
-    "loads only the employee record linked to the authenticated user",
-    async () => {
+  it("loads the authenticated user's employee profile", async () => {
     query.mockResolvedValueOnce({
       rows: [{ id: "employee-1", employee_code: "OM-1001" }],
     });
