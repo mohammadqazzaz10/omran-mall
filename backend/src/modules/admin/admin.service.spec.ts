@@ -100,6 +100,45 @@ describe("AdminService privilege boundaries", () => {
     expect(client.query).toHaveBeenCalledTimes(1);
   });
 
+  it("blocks HR-sensitive employee record permissions from custom roles", async () => {
+    const superAdmin = {
+      ...actor,
+      id: "99999999-9999-4999-8999-999999999999",
+    };
+    const client = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 1,
+        rows: [
+          {
+            id: "permission-id",
+            code: "employee_contracts.view.branch",
+            scope: "branch",
+          },
+        ],
+      }),
+    };
+    const db = {
+      query: jest
+        .fn()
+        .mockResolvedValue({ rowCount: 1, rows: [{ id: "grant" }] }),
+      transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(client),
+      ),
+    };
+    const service = new AdminService(db as any);
+    await expect(
+      service.createRole(
+        {
+          code: "CUSTOM_PAYROLL_VIEWER",
+          nameAr: "مشاهد العقود",
+          permissionCodes: ["employee_contracts.view.branch"],
+        },
+        superAdmin,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
   it("prevents editing built-in system roles even for a Super Admin", async () => {
     const superAdmin = { ...actor, id: "99999999-9999-4999-8999-999999999999" };
     const client = {

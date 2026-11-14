@@ -35,6 +35,9 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
   bool get _canManageUsers =>
       _roleCodes.contains('SUPER_ADMIN') || _roleCodes.contains('HR_MANAGER');
 
+  bool get _canManageEmployeeRecords =>
+      _roleCodes.contains('SUPER_ADMIN') || _roleCodes.contains('HR_MANAGER');
+
   bool get _canTransferEmployees =>
       _roleCodes.contains('SUPER_ADMIN') ||
       _roleCodes.contains('GENERAL_MANAGER') ||
@@ -997,6 +1000,24 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => _transferEmployee(data.branches),
+                    ),
+                  ),
+                if (_canManageEmployeeRecords)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.folder_shared_outlined),
+                      title: Text(
+                        isArabic(context)
+                            ? 'الملفات الوظيفية الشاملة'
+                            : 'Comprehensive employee records',
+                      ),
+                      subtitle: Text(
+                        isArabic(context)
+                            ? 'البيانات الإضافية والوثائق والعقود والسجل الوظيفي'
+                            : 'HR profile data, documents, contracts, and employment history',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/employee-records'),
                     ),
                   ),
                 if (_canManageBreaks)
