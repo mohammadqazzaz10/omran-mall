@@ -187,9 +187,16 @@ export class AdminService {
     const blocked = result.rows.filter(
       (permission: any) =>
         !["branch", "department", "own"].includes(permission.scope) ||
-        ["companies", "users", "roles", "sessions"].includes(
-          permission.code.split(".")[0],
-        ) ||
+        [
+          "companies",
+          "users",
+          "roles",
+          "sessions",
+          "employee_profiles",
+          "employee_documents",
+          "employee_contracts",
+          "employee_history",
+        ].includes(permission.code.split(".")[0]) ||
         ["branches.manage.company", "employees.transfer.company"].includes(
           permission.code,
         ),
