@@ -183,6 +183,12 @@ describe("AttendanceService", () => {
     expect(db.transaction).toHaveBeenCalledTimes(1);
     expect(client.query.mock.calls[2][0]).toContain("attendance_qr_challenges");
     expect(client.query.mock.calls[3][0]).toContain("attendance_qr_uses");
+    expect(client.query.mock.calls[3][0]).toContain("branch_id");
+    expect(client.query.mock.calls[3][1]).toEqual([
+      "88888888-8888-4888-8888-888888888888",
+      employeeId,
+      branchId,
+    ]);
     expect(client.query.mock.calls[6][0]).toContain("'qr_code'");
     expect(client.query.mock.calls[7][0]).toContain("audit_logs");
   });
