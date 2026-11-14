@@ -11,6 +11,7 @@ import {
   DepartmentDto,
   EmployeeDto,
   EmployeeUpdateDto,
+  EmployeeTransferDto,
   PositionDto,
 } from "./organization.dto";
 
@@ -583,7 +584,7 @@ export class OrganizationService {
   async transferEmployee(
     sourceBranchId: string,
     employeeId: string,
-    dto: import("./organization.dto").EmployeeTransferDto,
+    dto: EmployeeTransferDto,
     user: AuthenticatedUser,
   ) {
     return this.db.transaction(async (client) => {
@@ -612,13 +613,14 @@ export class OrganizationService {
       }
       const employee = employeeResult.rows[0];
 
-      const effectiveDate = dto.effectiveDate ?? new Date().toISOString().slice(0, 10);
       const dateCheck = await client.query(
-        "SELECT $1::date <= CURRENT_DATE AS is_not_future",
-        [effectiveDate],
+        "SELECT CURRENT_DATE::text AS today",
       );
-      if (!dateCheck.rows[0]?.is_not_future) {
-        throw new BadRequestException("لا يمكن تنفيذ نقل مؤجل؛ يجب تنفيذ النقل في تاريخ سريانه");
+      const effectiveDate = dto.effectiveDate ?? dateCheck.rows[0].today;
+      if (effectiveDate !== dateCheck.rows[0].today) {
+        throw new BadRequestException(
+          "يجب أن يساوي تاريخ النقل تاريخ اليوم؛ النقل المؤجل أو الرجعي يحتاج إجراءً مستقلاً",
+        );
       }
 
       const department = await client.query(
@@ -734,6 +736,15 @@ export class OrganizationService {
       );
 
       if (employee.user_id) {
+        const linkedUser = await client.query(
+          "SELECT id FROM users WHERE id=$1 AND company_id=$2 FOR UPDATE",
+          [employee.user_id, user.companyId],
+        );
+        if (linkedUser.rowCount !== 1) {
+          throw new BadRequestException(
+            "حساب الموظف المرتبط لا يتبع الشركة نفسها؛ أوقف النقل وراجع ربط الحساب",
+          );
+        }
         await client.query(
           "DELETE FROM user_roles WHERE user_id=$1 AND branch_id=$2",
           [employee.user_id, sourceBranchId],
