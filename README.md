@@ -77,7 +77,7 @@ flowchart TD
    - **GoRouter:** لإدارة التوجيه، المسارات العميقة (Deep Links)، وحماية المسارات حسب الدور (Role-Based Routing Guards).
 2. **الخادم الخلفي (Backend):**
    - **NestJS (Node.js / TypeScript):** معمارية مؤسسية Modular قائمة على نمط Clean Architecture وحقن الاعتماديات (Dependency Injection).
-   - **Prisma / TypeORM:** للتعامل مع قاعدة البيانات مع دعم المعاملات الذرية (ACID Transactions) والتهجير المنظم (Migrations).
+   - **node-postgres (`pg`):** اتصال PostgreSQL عبر `DatabaseService` مركزية ومعاملات صريحة؛ تُدار التغييرات عبر SQL migrations مرقمة ذات checksum. لا يستخدم المستودع Prisma أو TypeORM حالياً.
    - **Socket.io / WebSockets:** لتحديث شاشات المديرين والمؤقتات اللحظية بدون Polling.
 3. **قاعدة البيانات والتخزين:**
    - **PostgreSQL 16:** لتخزين البيانات العلائقية المعقدة، القيود (Constraints)، وفهارس البحث السريع وعزل الفروع.
@@ -331,6 +331,11 @@ gantt
 
 
 ## وثائق المشروع المرجعية
+
+- [القسم 01 — الرؤية والمبادئ (عربي)](docs/SECTION_01_VISION_AND_PRINCIPLES.md)
+- [Section 01 — Vision and Principles (English)](docs/SECTION_01_VISION_AND_PRINCIPLES_EN.md)
+- [القسم 02 — البنية التقنية والهندسية (عربي)](docs/SECTION_02_TECHNICAL_ARCHITECTURE_AR.md)
+- [Section 02 — Technical Architecture (English)](docs/SECTION_02_TECHNICAL_ARCHITECTURE_EN.md)
 
 - **[Master Requirements & Technical Specification — Arabic](docs/MASTER_REQUIREMENTS_AR.md)** — النسخة العربية الأصلية والمرجع الأساسي.
 - **[Master Requirements & Technical Specification — English](docs/MASTER_REQUIREMENTS_EN.md)** — complete English companion translation.
