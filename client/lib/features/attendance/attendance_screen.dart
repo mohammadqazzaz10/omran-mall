@@ -204,6 +204,16 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   label: Text(_t('عرض رمز QR للفرع', 'Display branch QR')),
                                 ),
                               ],
+                              if (_canManageQr) ...[
+                                const SizedBox(height: 8),
+                                OutlinedButton.icon(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => context.push('/attendance/dashboard'),
+                                  icon: const Icon(Icons.monitor_heart_outlined),
+                                  label: Text(_t('لوحة متابعة الحضور', 'Attendance dashboard')),
+                                ),
+                              ],
                               if (_busy) const Padding(
                                 padding: EdgeInsets.only(top: 12),
                                 child: LinearProgressIndicator(),
