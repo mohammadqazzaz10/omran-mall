@@ -66,7 +66,7 @@ ALTER TABLE departments
   ADD CONSTRAINT fk_department_manager_same_branch
   FOREIGN KEY (manager_employee_id, branch_id)
   REFERENCES employees(id, branch_id)
-  ON DELETE SET NULL;
+  ON DELETE RESTRICT;
 
 ALTER TABLE employees
   ADD CONSTRAINT fk_employee_department_same_branch
