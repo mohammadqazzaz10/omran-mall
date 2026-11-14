@@ -244,4 +244,36 @@ describe("PermissionGuard", () => {
     ]);
   });
 
+  it("limits department-assigned supervisors to department-scoped break permissions", async () => {
+    const db = { query: jest.fn().mockResolvedValue({ rowCount: 1 }) } as any;
+    const reflector = makeReflector({
+      "omran:requiredPermission": "breaks.view.branch",
+    });
+    const guard = new PermissionGuard(db, reflector as any);
+    const departmentUser = {
+      ...user,
+      departmentId: "77777777-7777-4777-8777-777777777777",
+    };
+
+    await expect(
+      guard.canActivate(
+        contextFor({
+          user: departmentUser,
+          params: { branchId: user.primaryBranchId },
+          headers: {},
+        }),
+      ),
+    ).resolves.toBe(true);
+    expect(db.query.mock.calls[0][0]).toContain("p.module = 'breaks'");
+    expect(db.query.mock.calls[0][1]).toEqual([
+      user.id,
+      user.companyId,
+      user.primaryBranchId,
+      "breaks.view.branch",
+      true,
+      true,
+      user.allowedBranchIds,
+    ]);
+  });
+
 });
