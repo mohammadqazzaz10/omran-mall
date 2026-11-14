@@ -44,14 +44,32 @@ VALUES
   ('sessions', 'revoke', 'own', 'sessions.revoke.own', 'إبطال جلسة دخول شخصية')
 ON CONFLICT (code) DO NOTHING;
 
--- The company-wide administrator roles receive company permissions and
--- explicit branch grants for branch-scoped permissions on every active branch.
+-- SUPER_ADMIN receives the complete company and branch catalogue.
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.scope IN ('company', 'branch')
+WHERE r.code = 'SUPER_ADMIN'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- GENERAL_MANAGER can manage branch operations and view company-level
+-- structure, but cannot alter system roles or provision privileged users.
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 JOIN permissions p ON
-  (p.scope = 'company' AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER'))
-  OR (p.scope = 'branch' AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER'))
+  p.scope = 'branch'
+  OR (
+    p.scope = 'company'
+    AND p.code IN (
+      'companies.view.company',
+      'branches.view.company',
+      'branches.manage.company',
+      'users.view.company',
+      'roles.view.company'
+    )
+  )
+WHERE r.code = 'GENERAL_MANAGER'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- Branch managers receive operational branch permissions, but cannot manage
@@ -95,7 +113,7 @@ JOIN roles r ON r.id = ur.role_id
 JOIN branches b ON b.company_id = r.company_id
 WHERE ur.branch_id IS NULL
   AND ur.department_id IS NULL
-  AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER')
+  AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER', 'HR_MANAGER')
   AND r.is_active = TRUE
   AND b.is_active = TRUE
   AND b.deleted_at IS NULL
@@ -108,7 +126,7 @@ JOIN roles r ON r.id = ur.role_id
 JOIN branches b ON b.company_id = r.company_id
 WHERE ur.branch_id IS NULL
   AND ur.department_id IS NULL
-  AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER')
+  AND r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER', 'HR_MANAGER')
   AND r.is_active = TRUE
   AND b.is_active = TRUE
   AND b.deleted_at IS NULL
