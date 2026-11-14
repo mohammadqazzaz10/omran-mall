@@ -9,7 +9,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 function validateProductionConfig(): void {
   if (process.env.NODE_ENV !== "production") return;
 
-  const missing = ["DATABASE_URL", "CORS_ORIGINS"].filter(
+  const missing = ["DATABASE_URL", "CORS_ORIGINS", "JWT_SECRET"].filter(
     (key) => !process.env[key]?.trim(),
   );
   if (missing.length > 0) {
@@ -18,7 +18,7 @@ function validateProductionConfig(): void {
     );
   }
 
-  const databaseUrl = new URL(process.env.DATABASE_URL as string);
+  if ((process.env.JWT_SECRET || "").length < 32 || (process.env.JWT_SECRET || "").startsWith("REPLACE_")) {\n    throw new Error("Production JWT_SECRET must be a unique secret of at least 32 characters");\n  }\n\n  const databaseUrl = new URL(process.env.DATABASE_URL as string);
   if (!["postgres:", "postgresql:"].includes(databaseUrl.protocol)) {
     throw new Error("Production DATABASE_URL must use PostgreSQL");
   }
