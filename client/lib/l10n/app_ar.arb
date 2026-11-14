@@ -82,5 +82,12 @@
   "maxConcurrentLabel": "الحد الأقصى للخروج من القسم",
   "requiresApprovalLabel": "تتطلب موافقة المشرف",
   "saveBreakTypeButton": "حفظ نوع الاستراحة",
-  "breakTypeSavedMessage": "تم حفظ إعدادات الاستراحة"
+  "breakTypeSavedMessage": "تم حفظ إعدادات الاستراحة",
+  "breakManagementTitle": "إدارة الاستراحات",
+  "noPendingBreakRequests": "لا توجد طلبات استراحة معلقة",
+  "noEmployeesOnBreak": "لا يوجد موظفون في استراحة حالياً",
+  "deductFromWorkHoursLabel": "خصم الاستراحة من ساعات العمل",
+  "allowEarlyReturnLabel": "السماح بإنهاء الاستراحة مبكراً",
+  "isActiveLabel": "نوع الاستراحة مفعل",
+  "editButton": "تعديل"
 }
