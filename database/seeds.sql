@@ -138,6 +138,14 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
+JOIN permissions p ON p.code='branches.view.company'
+WHERE r.company_id='a0000000-0000-0000-0000-000000000001'
+  AND r.code='HR_MANAGER'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
 JOIN permissions p ON p.scope = 'department' AND p.module = 'employees'
 WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
   AND r.code = 'SUPERVISOR'

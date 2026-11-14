@@ -180,4 +180,31 @@ describe("PermissionGuard", () => {
       user.allowedBranchIds,
     ]);
   });
+  it("allows a company-scoped administrator to reach an inactive branch for reactivation", async () => {
+    const companyUser = {
+      ...user,
+      primaryBranchId: null,
+      allowedBranchIds: [],
+    };
+    const inactiveBranchId = "66666666-6666-4666-8666-666666666666";
+    const db = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rowCount: 1 })
+        .mockResolvedValueOnce({ rowCount: 1 }),
+    } as any;
+    const reflector = makeReflector({
+      "omran:requiredPermission": "branches.manage.company",
+    });
+    const guard = new PermissionGuard(db, reflector as any);
+    const request: Record<string, any> = {
+      user: companyUser,
+      params: { branchId: inactiveBranchId },
+      headers: {},
+    };
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(request.branchId).toBe(inactiveBranchId);
+    expect(db.query).toHaveBeenCalledTimes(2);
+  });
 });

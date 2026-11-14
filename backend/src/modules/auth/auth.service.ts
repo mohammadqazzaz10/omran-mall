@@ -388,8 +388,25 @@ export class AuthService {
       email: string | null;
       company_id: string;
       primary_branch_id: string | null;
+      roles: Array<{
+        code: string;
+        nameAr: string;
+        branchId: string | null;
+        departmentId: string | null;
+      }>;
     }>(
-      `SELECT id, username, email, company_id, primary_branch_id
+      `SELECT id, username, email, company_id, primary_branch_id,
+              COALESCE((
+                SELECT jsonb_agg(DISTINCT jsonb_build_object(
+                  'code', r.code,
+                  'nameAr', r.name_ar,
+                  'branchId', ur.branch_id,
+                  'departmentId', ur.department_id
+                ))
+                FROM user_roles ur
+                JOIN roles r ON r.id=ur.role_id AND r.company_id=users.company_id
+                WHERE ur.user_id=users.id AND r.is_active=TRUE
+              ), '[]'::jsonb) AS roles
        FROM users WHERE id = $1 AND is_active = TRUE AND deleted_at IS NULL`,
       [userId],
     );
@@ -402,6 +419,7 @@ export class AuthService {
       companyId: user.company_id,
       primaryBranchId: user.primary_branch_id,
       allowedBranchIds: await this.memberships(userId),
+      roles: user.roles,
       sessionId,
     };
   }

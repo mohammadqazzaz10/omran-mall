@@ -345,7 +345,7 @@ export class OrganizationService {
       offset,
     ];
     const result = await this.db.query(
-      `SELECT e.id,e.employee_code,e.first_name_ar,e.second_name_ar,e.third_name_ar,e.last_name_ar,
+      `SELECT e.id,e.user_id,e.employee_code,e.first_name_ar,e.second_name_ar,e.third_name_ar,e.last_name_ar,
        e.full_name_en,e.mobile_phone,e.hire_date,e.status,e.department_id,e.position_id,
        d.name_ar AS department_name_ar,p.title_ar AS position_title_ar,e.created_at,e.updated_at
        FROM employees e JOIN branches b ON b.id=e.branch_id

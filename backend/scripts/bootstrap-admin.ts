@@ -144,7 +144,7 @@ async function main(): Promise<void> {
         `INSERT INTO role_permissions (role_id, permission_id)
          SELECT r.id, p.id FROM roles r
          JOIN permissions p ON
-           (p.scope = 'company' AND p.module = 'users')
+           (p.scope = 'company' AND (p.module = 'users' OR p.code = 'branches.view.company'))
            OR (p.scope = 'branch' AND p.module IN ('employees', 'departments', 'positions'))
          WHERE r.company_id = $1 AND r.code = 'HR_MANAGER'
          ON CONFLICT (role_id, permission_id) DO NOTHING`,
