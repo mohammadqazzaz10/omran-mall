@@ -121,12 +121,7 @@ describe("BreaksService", () => {
     expect(listQuery[0]).toContain(
       "($3::boolean = TRUE OR r.department_id = ANY($4::uuid[]))",
     );
-    expect(listQuery[1]).toEqual([
-      branchId,
-      "pending",
-      false,
-      [departmentId],
-    ]);
+    expect(listQuery[1]).toEqual([branchId, "pending", false, [departmentId]]);
   });
 
   it("allows branch-wide managers to view all branch requests", async () => {
@@ -143,5 +138,4 @@ describe("BreaksService", () => {
 
     expect(client.query.mock.calls[2][1]).toEqual([branchId, null, true, []]);
   });
-
 });
