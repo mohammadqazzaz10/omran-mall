@@ -42,7 +42,7 @@ JOIN users u ON u.id = ur.user_id
 JOIN roles r ON r.id = ur.role_id AND r.company_id = u.company_id
 JOIN branches b ON b.id = ur.branch_id AND b.company_id = u.company_id
 WHERE ur.branch_id IS NOT NULL
-ON CONFLICT (user_id, branch_id) DO NOTHING;
+ON CONFLICT (user_id, branch_id) WHERE revoked_at IS NULL DO NOTHING;
 
 CREATE TABLE auth_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
