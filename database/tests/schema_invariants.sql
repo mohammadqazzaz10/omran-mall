@@ -304,4 +304,4 @@ BEGIN
     ) THEN
       RAISE EXCEPTION 'HR_MANAGER is missing read-only branch directory access';
     END IF;
-END;$;
+END;$$;
