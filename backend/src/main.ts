@@ -9,12 +9,21 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 function validateProductionConfig(): void {
   if (process.env.NODE_ENV !== "production") return;
 
-  const missing = ["DATABASE_URL", "CORS_ORIGINS"].filter(
+  const missing = ["DATABASE_URL", "CORS_ORIGINS", "JWT_SECRET"].filter(
     (key) => !process.env[key]?.trim(),
   );
   if (missing.length > 0) {
     throw new Error(
       "Missing required production configuration: " + missing.join(", "),
+    );
+  }
+
+  if (
+    (process.env.JWT_SECRET || "").length < 32 ||
+    (process.env.JWT_SECRET || "").startsWith("REPLACE_")
+  ) {
+    throw new Error(
+      "Production JWT_SECRET must be a unique secret of at least 32 characters",
     );
   }
 

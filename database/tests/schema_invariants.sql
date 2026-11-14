@@ -7,6 +7,8 @@ DECLARE
     v_employee_code_2 TEXT;
     v_user_id UUID;
     v_role_id UUID;
+    v_other_company_id UUID;
+    v_other_branch_id UUID;
 BEGIN
     INSERT INTO positions (department_id, code, title_ar)
     VALUES (
@@ -70,6 +72,68 @@ BEGIN
     EXCEPTION
         WHEN unique_violation THEN
             NULL;
+    END;
+
+    INSERT INTO user_branch_memberships (user_id, branch_id, company_id)
+    VALUES (
+        v_user_id,
+        'b0000000-0000-0000-0000-000000000001',
+        'a0000000-0000-0000-0000-000000000001'
+    );
+
+    BEGIN
+        INSERT INTO user_branch_memberships (user_id, branch_id, company_id)
+        VALUES (
+            v_user_id,
+            'b0000000-0000-0000-0000-000000000001',
+            'a0000000-0000-0000-0000-000000000001'
+        );
+        RAISE EXCEPTION 'Duplicate active branch membership was accepted';
+    EXCEPTION
+        WHEN unique_violation THEN NULL;
+    END;
+
+    -- Revoked memberships must be grantable again without reusing an active row.
+    UPDATE user_branch_memberships
+    SET revoked_at = CURRENT_TIMESTAMP
+    WHERE user_id = v_user_id
+      AND branch_id = 'b0000000-0000-0000-0000-000000000001';
+
+    INSERT INTO user_branch_memberships (user_id, branch_id, company_id)
+    VALUES (
+        v_user_id,
+        'b0000000-0000-0000-0000-000000000001',
+        'a0000000-0000-0000-0000-000000000001'
+    );
+
+    IF (
+        SELECT COUNT(*)
+        FROM user_branch_memberships
+        WHERE user_id = v_user_id
+          AND branch_id = 'b0000000-0000-0000-0000-000000000001'
+          AND revoked_at IS NULL
+    ) <> 1 THEN
+        RAISE EXCEPTION 'A revoked branch membership could not be granted again';
+    END IF;
+
+    INSERT INTO companies (code, name_ar)
+    VALUES ('CI-OTHER-' || gen_random_uuid()::text, 'شركة اختبار أخرى')
+    RETURNING id INTO v_other_company_id;
+
+    INSERT INTO branches (company_id, code, name_ar)
+    VALUES (v_other_company_id, 'CI-OTHER-BRANCH', 'فرع شركة أخرى')
+    RETURNING id INTO v_other_branch_id;
+
+    BEGIN
+        INSERT INTO user_branch_memberships (user_id, branch_id, company_id)
+        VALUES (
+            v_user_id,
+            v_other_branch_id,
+            'a0000000-0000-0000-0000-000000000001'
+        );
+        RAISE EXCEPTION 'Cross-company branch membership was accepted';
+    EXCEPTION
+        WHEN foreign_key_violation THEN NULL;
     END;
 END;
 $$;

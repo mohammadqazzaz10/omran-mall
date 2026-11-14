@@ -1,9 +1,14 @@
-import { Injectable, OnModuleDestroy } from "@nestjs/common";
-import { Pool } from "pg";
+import {
+  Injectable,
+  OnModuleDestroy,
+  ServiceUnavailableException,
+} from "@nestjs/common";
+import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 
 /**
- * Small PostgreSQL connection owner used by readiness checks and future
- * repositories. It never treats a missing DATABASE_URL as a healthy database.
+ * Central PostgreSQL connection owner. Services use parameterized queries and
+ * explicit transactions through this class; missing DB configuration fails
+ * closed instead of silently degrading to an in-memory mode.
  */
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
@@ -14,7 +19,7 @@ export class DatabaseService implements OnModuleDestroy {
     this.pool = connectionString
       ? new Pool({
           connectionString,
-          max: 10,
+          max: Number(process.env.DB_POOL_MAX || 10),
           idleTimeoutMillis: 30_000,
           connectionTimeoutMillis: 5_000,
           ssl:
@@ -25,9 +30,37 @@ export class DatabaseService implements OnModuleDestroy {
       : null;
   }
 
+  private getPool(): Pool {
+    if (!this.pool) {
+      throw new ServiceUnavailableException("قاعدة البيانات غير مهيأة");
+    }
+    return this.pool;
+  }
+
+  query<T extends QueryResultRow = any>(
+    text: string,
+    values: any[] = [],
+  ): Promise<QueryResult<T>> {
+    return this.getPool().query<T>(text, values);
+  }
+
+  async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.getPool().connect();
+    try {
+      await client.query("BEGIN");
+      const result = await work(client);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async isReady(): Promise<boolean> {
     if (!this.pool) return false;
-
     try {
       await this.pool.query("SELECT 1");
       return true;
