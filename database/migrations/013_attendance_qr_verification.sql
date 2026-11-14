@@ -1,6 +1,9 @@
 -- Section 06: rotating branch QR challenges and per-employee replay protection.
 -- Tokens are never stored in plaintext; only a SHA-256 nonce digest is persisted.
 
+ALTER TABLE employees
+  ADD CONSTRAINT uq_employees_id_branch UNIQUE (id, branch_id);
+
 CREATE TABLE attendance_qr_challenges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
@@ -9,7 +12,8 @@ CREATE TABLE attendance_qr_challenges (
   revoked_at TIMESTAMPTZ,
   created_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT chk_attendance_qr_expiry CHECK (expires_at > created_at)
+  CONSTRAINT chk_attendance_qr_expiry CHECK (expires_at > created_at),
+  CONSTRAINT uq_attendance_qr_challenge_branch UNIQUE (id, branch_id)
 );
 
 CREATE INDEX idx_attendance_qr_challenges_active
@@ -17,10 +21,17 @@ CREATE INDEX idx_attendance_qr_challenges_active
   WHERE revoked_at IS NULL;
 
 CREATE TABLE attendance_qr_uses (
-  challenge_id UUID NOT NULL REFERENCES attendance_qr_challenges(id) ON DELETE CASCADE,
-  employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  challenge_id UUID NOT NULL,
+  employee_id UUID NOT NULL,
+  branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
   used_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (challenge_id, employee_id)
+  PRIMARY KEY (challenge_id, employee_id),
+  CONSTRAINT fk_attendance_qr_use_challenge_branch
+    FOREIGN KEY (challenge_id, branch_id)
+    REFERENCES attendance_qr_challenges(id, branch_id) ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_qr_use_employee_branch
+    FOREIGN KEY (employee_id, branch_id)
+    REFERENCES employees(id, branch_id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_attendance_qr_uses_employee
