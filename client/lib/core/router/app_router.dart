@@ -9,6 +9,7 @@ import '../../features/auth/login_screen.dart';
 import '../../features/auth/role_landing_screen.dart';
 import '../../features/auth/session_management_screen.dart';
 import '../../features/employee/employee_home_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   String homeFor(AuthState auth) {
@@ -102,13 +103,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/branch-manager',
         builder: (context, state) => const RoleLandingScreen(
-          title: 'مدير الفرع',
+          title: AppLocalizations.of(context).branchManagerHome,
         ),
       ),
       GoRoute(
         path: '/supervisor',
         builder: (context, state) => const RoleLandingScreen(
-          title: 'مشرف القسم',
+          title: AppLocalizations.of(context).supervisorHome,
         ),
       ),
       GoRoute(
