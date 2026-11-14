@@ -43,7 +43,7 @@ class _AttendanceDashboardScreenState
   @override
   void initState() {
     super.initState();
-    _workDate = DateTime.now();
+    _workDate = DateTime.now().toUtc().add(const Duration(hours: 3));
     _records = _load();
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) _reload();
@@ -71,7 +71,7 @@ class _AttendanceDashboardScreenState
       context: context,
       initialDate: _workDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now().toUtc().add(const Duration(hours: 3, days: 1)),
     );
     if (selected != null && mounted) {
       setState(() {
@@ -85,7 +85,7 @@ class _AttendanceDashboardScreenState
     if (value == null) return '—';
     final parsed = DateTime.tryParse(value.toString());
     if (parsed == null) return value.toString();
-    final local = parsed.toLocal();
+    final local = parsed.toUtc().add(const Duration(hours: 3));
     return '${local.hour.toString().padLeft(2, '0')}:'
         '${local.minute.toString().padLeft(2, '0')}';
   }
