@@ -91,13 +91,14 @@ describe("EmployeeRecordsService", () => {
       user as any,
     );
 
-    expect(query).toHaveBeenCalledTimes(3);
+    expect(query).toHaveBeenCalledTimes(4);
     expect(query.mock.calls[0][0]).toContain("e.branch_id=$2");
     expect(query.mock.calls[1][0]).toContain("INSERT INTO employee_documents");
     expect(query.mock.calls[1][1][4]).toContain(
       `companies/${user.companyId}/branches/${branchId}/employees/${employeeId}/`,
     );
     expect(query.mock.calls[2][0]).toContain("INSERT INTO audit_logs");
+    expect(query.mock.calls[3][0]).toContain("INSERT INTO employee_history");
   });
 
   it("keeps historical documents visible through the employee's current branch", async () => {
