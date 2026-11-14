@@ -164,11 +164,13 @@ export class BreaksGateway implements OnGatewayConnection, OnGatewayDisconnect {
         [payload.sub, membershipIds],
       );
       const employeeIds = employees.rows.map((row) => row.id);
+      const employeeRooms =
+        branchIds.size === 0 && departmentIds.length === 0 ? employeeIds : [];
 
       if (
         branchIds.size === 0 &&
         departmentIds.length === 0 &&
-        employeeIds.length === 0
+        employeeRooms.length === 0
       ) {
         this.reject(client);
         return;
