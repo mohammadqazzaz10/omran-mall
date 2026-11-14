@@ -102,13 +102,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/branch-manager',
-        builder: (context, state) => const RoleLandingScreen(
+        builder: (context, state) => RoleLandingScreen(
           title: AppLocalizations.of(context).branchManagerHome,
         ),
       ),
       GoRoute(
         path: '/supervisor',
-        builder: (context, state) => const RoleLandingScreen(
+        builder: (context, state) => RoleLandingScreen(
           title: AppLocalizations.of(context).supervisorHome,
         ),
       ),
