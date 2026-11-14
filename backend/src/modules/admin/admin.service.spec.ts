@@ -47,4 +47,157 @@ describe("AdminService privilege boundaries", () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(db.query).not.toHaveBeenCalled();
   });
+
+  it("restricts custom role management to a company Super Admin", async () => {
+    const db = {
+      query: jest.fn().mockResolvedValue({ rowCount: 0, rows: [] }),
+      transaction: jest.fn(),
+    };
+    const service = new AdminService(db as any);
+    await expect(
+      service.createRole(
+        {
+          code: "CUSTOM_STOCK_VIEWER",
+          nameAr: "مشاهد المخزون",
+          permissionCodes: ["employees.view.branch"],
+        },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects company-level and identity-management permissions in custom roles", async () => {
+    const client = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 1,
+        rows: [
+          {
+            id: "permission-id",
+            code: "users.manage.company",
+            scope: "company",
+          },
+        ],
+      }),
+    };
+    const db = {
+      query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [] }),
+      transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(client),
+      ),
+    };
+    const service = new AdminService(db as any);
+    await expect(
+      service.createRole(
+        {
+          code: "CUSTOM_USER_ADMIN",
+          nameAr: "مدير حسابات",
+          permissionCodes: ["users.manage.company"],
+        },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks HR-sensitive employee record permissions from custom roles", async () => {
+    const superAdmin = {
+      ...actor,
+      id: "99999999-9999-4999-8999-999999999999",
+    };
+    const client = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 1,
+        rows: [
+          {
+            id: "permission-id",
+            code: "employee_contracts.view.branch",
+            scope: "branch",
+          },
+        ],
+      }),
+    };
+    const db = {
+      query: jest
+        .fn()
+        .mockResolvedValue({ rowCount: 1, rows: [{ id: "grant" }] }),
+      transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(client),
+      ),
+    };
+    const service = new AdminService(db as any);
+    await expect(
+      service.createRole(
+        {
+          code: "CUSTOM_PAYROLL_VIEWER",
+          nameAr: "مشاهد العقود",
+          permissionCodes: ["employee_contracts.view.branch"],
+        },
+        superAdmin,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("prevents editing built-in system roles even for a Super Admin", async () => {
+    const superAdmin = { ...actor, id: "99999999-9999-4999-8999-999999999999" };
+    const client = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 1,
+        rows: [{ id: "role-id", code: "SUPER_ADMIN", is_system_role: true }],
+      }),
+    };
+    const db = {
+      query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [] }),
+      transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(client),
+      ),
+    };
+    const service = new AdminService(db as any);
+    await expect(
+      service.updateRole("role-id", { nameAr: "تعديل غير مسموح" }, superAdmin),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects custom roles that mix branch and department scopes", async () => {
+    const client = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 2,
+        rows: [
+          {
+            id: "permission-1",
+            code: "employees.view.branch",
+            scope: "branch",
+          },
+          {
+            id: "permission-2",
+            code: "employees.view.department",
+            scope: "department",
+          },
+        ],
+      }),
+    };
+    const db = {
+      query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [] }),
+      transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(client),
+      ),
+    };
+    const service = new AdminService(db as any);
+    await expect(
+      service.createRole(
+        {
+          code: "CUSTOM_MIXED_SCOPE",
+          nameAr: "دور بنطاق مختلط",
+          permissionCodes: [
+            "employees.view.branch",
+            "employees.view.department",
+          ],
+        },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
 });

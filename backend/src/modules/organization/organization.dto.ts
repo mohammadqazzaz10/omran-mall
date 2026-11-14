@@ -118,3 +118,12 @@ export class PositionUpdateDto {
     number | null;
   @IsOptional() @IsString() @MaxLength(5000) description?: string | null;
 }
+
+export class EmployeeTransferDto {
+  @IsUUID() targetBranchId!: string;
+  @IsUUID() targetDepartmentId!: string;
+  @IsUUID() targetPositionId!: string;
+  @IsOptional() @IsUUID() targetDirectManagerId?: string | null;
+  @IsOptional() @IsDateString() effectiveDate?: string;
+  @IsString() @MinLength(10) @MaxLength(2000) reason!: string;
+}

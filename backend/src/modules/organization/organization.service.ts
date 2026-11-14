@@ -11,6 +11,7 @@ import {
   DepartmentDto,
   EmployeeDto,
   EmployeeUpdateDto,
+  EmployeeTransferDto,
   PositionDto,
 } from "./organization.dto";
 
@@ -571,6 +572,266 @@ export class OrganizationService {
       .catch((error) =>
         this.mapConflict(error, "تعذر تحديث ملف الموظف بسبب تعارض في البيانات"),
       );
+  }
+
+  /**
+   * Move an employee between branches in the same company. Historical
+   * attendance and other branch-stamped records are intentionally untouched.
+   * Branch-scoped grants are removed, never copied; destination roles must be
+   * assigned explicitly after the transfer.
+   */
+  async transferEmployee(
+    sourceBranchId: string,
+    employeeId: string,
+    dto: EmployeeTransferDto,
+    user: AuthenticatedUser,
+  ) {
+    return this.db.transaction(async (client) => {
+      await this.assertBranch(client, sourceBranchId, user);
+      if (!dto.reason || dto.reason.trim().length < 10) {
+        throw new BadRequestException("سبب النقل يجب ألا يقل عن 10 أحرف فعلية");
+      }
+      if (dto.targetBranchId === sourceBranchId) {
+        throw new BadRequestException("الفرع المستهدف هو الفرع الحالي للموظف");
+      }
+      const targetBranch = await client.query(
+        `SELECT id FROM branches
+         WHERE id=$1 AND company_id=$2 AND is_active=TRUE AND deleted_at IS NULL
+         FOR SHARE`,
+        [dto.targetBranchId, user.companyId],
+      );
+      if (targetBranch.rowCount !== 1) {
+        throw new BadRequestException(
+          "الفرع المستهدف غير موجود أو غير فعال ضمن الشركة",
+        );
+      }
+
+      const employeeResult = await client.query(
+        `SELECT * FROM employees
+         WHERE id=$1 AND branch_id=$2 AND deleted_at IS NULL
+         FOR UPDATE`,
+        [employeeId, sourceBranchId],
+      );
+      if (employeeResult.rowCount !== 1) {
+        throw new NotFoundException("الموظف غير موجود في فرع المصدر");
+      }
+      const employee = employeeResult.rows[0];
+
+      const dateCheck = await client.query(
+        "SELECT CURRENT_DATE::text AS today",
+      );
+      const effectiveDate = dto.effectiveDate ?? dateCheck.rows[0].today;
+      if (effectiveDate !== dateCheck.rows[0].today) {
+        throw new BadRequestException(
+          "يجب أن يساوي تاريخ النقل تاريخ اليوم؛ النقل المؤجل أو الرجعي يحتاج إجراءً مستقلاً",
+        );
+      }
+
+      const department = await client.query(
+        `SELECT id FROM departments
+         WHERE id=$1 AND branch_id=$2 AND deleted_at IS NULL AND is_active=TRUE`,
+        [dto.targetDepartmentId, dto.targetBranchId],
+      );
+      if (department.rowCount !== 1) {
+        throw new BadRequestException(
+          "القسم المستهدف لا يتبع الفرع الجديد أو غير فعال",
+        );
+      }
+      const position = await client.query(
+        `SELECT id FROM positions
+         WHERE id=$1 AND department_id=$2 AND deleted_at IS NULL AND is_active=TRUE`,
+        [dto.targetPositionId, dto.targetDepartmentId],
+      );
+      if (position.rowCount !== 1) {
+        throw new BadRequestException(
+          "المسمى الوظيفي لا يتبع القسم المستهدف أو غير فعال",
+        );
+      }
+      if (dto.targetDirectManagerId) {
+        if (dto.targetDirectManagerId === employeeId) {
+          throw new BadRequestException(
+            "لا يمكن تعيين الموظف مديراً مباشراً لنفسه",
+          );
+        }
+        await this.assertEmployee(
+          client,
+          dto.targetBranchId,
+          dto.targetDirectManagerId,
+        );
+      }
+
+      const openAttendance = await client.query(
+        `SELECT 1 FROM attendance_records
+         WHERE employee_id=$1 AND branch_id=$2 AND check_out_time IS NULL
+         LIMIT 1`,
+        [employeeId, sourceBranchId],
+      );
+      if (openAttendance.rowCount) {
+        throw new BadRequestException(
+          "يجب إغلاق سجل الحضور المفتوح قبل نقل الموظف",
+        );
+      }
+      const openBreak = await client.query(
+        `SELECT 1 FROM break_sessions
+         WHERE employee_id=$1 AND branch_id=$2 AND actual_end_time IS NULL
+         LIMIT 1`,
+        [employeeId, sourceBranchId],
+      );
+      if (openBreak.rowCount) {
+        throw new BadRequestException(
+          "يجب إنهاء الاستراحة المفتوحة قبل نقل الموظف",
+        );
+      }
+      const futureShifts = await client.query(
+        `SELECT 1 FROM shift_assignments
+         WHERE employee_id=$1 AND branch_id=$2
+           AND work_date >= CURRENT_DATE AND is_published=TRUE
+         LIMIT 1`,
+        [employeeId, sourceBranchId],
+      );
+      if (futureShifts.rowCount) {
+        throw new BadRequestException(
+          "يجب إعادة جدولة الورديات المنشورة في الفرع القديم قبل النقل",
+        );
+      }
+      const directReports = await client.query(
+        `SELECT 1 FROM employees
+         WHERE direct_manager_id=$1 AND branch_id=$2 AND deleted_at IS NULL
+         LIMIT 1`,
+        [employeeId, sourceBranchId],
+      );
+      if (directReports.rowCount) {
+        throw new BadRequestException(
+          "يجب إعادة تعيين الموظفين التابعين إدارياً قبل نقل المدير",
+        );
+      }
+      const managedDepartments = await client.query(
+        `SELECT 1 FROM departments
+         WHERE manager_employee_id=$1 AND branch_id=$2 AND deleted_at IS NULL
+         LIMIT 1`,
+        [employeeId, sourceBranchId],
+      );
+      if (managedDepartments.rowCount) {
+        throw new BadRequestException(
+          "يجب تعيين مدير بديل للقسم قبل نقل الموظف",
+        );
+      }
+
+      const oldSnapshot = {
+        branchId: employee.branch_id,
+        departmentId: employee.department_id,
+        positionId: employee.position_id,
+        directManagerId: employee.direct_manager_id,
+      };
+      const updated = await client.query(
+        `UPDATE employees
+         SET branch_id=$2, department_id=$3, position_id=$4,
+             direct_manager_id=$5, updated_at=CURRENT_TIMESTAMP
+         WHERE id=$1 AND branch_id=$6
+         RETURNING id, user_id, employee_code, branch_id, department_id,
+                   position_id, direct_manager_id, updated_at`,
+        [
+          employeeId,
+          dto.targetBranchId,
+          dto.targetDepartmentId,
+          dto.targetPositionId,
+          dto.targetDirectManagerId ?? null,
+          sourceBranchId,
+        ],
+      );
+      if (updated.rowCount !== 1) {
+        throw new ConflictException(
+          "تغير ملف الموظف أثناء تنفيذ النقل؛ أعد المحاولة",
+        );
+      }
+      const newSnapshot = {
+        branchId: updated.rows[0].branch_id,
+        departmentId: updated.rows[0].department_id,
+        positionId: updated.rows[0].position_id,
+        directManagerId: updated.rows[0].direct_manager_id,
+      };
+      await client.query(
+        `INSERT INTO employee_history
+          (employee_id,event_type,old_data,new_data,effective_date,reason,action_by_user_id)
+         VALUES ($1,'transfer',$2::jsonb,$3::jsonb,$4,$5,$6)`,
+        [
+          employeeId,
+          JSON.stringify(oldSnapshot),
+          JSON.stringify(newSnapshot),
+          effectiveDate,
+          dto.reason.trim(),
+          user.id,
+        ],
+      );
+
+      if (employee.user_id) {
+        const linkedUser = await client.query(
+          "SELECT id FROM users WHERE id=$1 AND company_id=$2 FOR UPDATE",
+          [employee.user_id, user.companyId],
+        );
+        if (linkedUser.rowCount !== 1) {
+          throw new BadRequestException(
+            "حساب الموظف المرتبط لا يتبع الشركة نفسها؛ أوقف النقل وراجع ربط الحساب",
+          );
+        }
+        await client.query(
+          `DELETE FROM user_roles ur
+           USING roles r
+           WHERE ur.role_id=r.id
+             AND ur.user_id=$1
+             AND ur.branch_id=$2
+             AND r.code NOT IN ('SUPER_ADMIN','GENERAL_MANAGER','HR_MANAGER')`,
+          [employee.user_id, sourceBranchId],
+        );
+        await client.query(
+          `UPDATE user_branch_memberships ubm
+           SET revoked_at=CURRENT_TIMESTAMP
+           WHERE ubm.user_id=$1 AND ubm.branch_id=$2
+             AND ubm.revoked_at IS NULL
+             AND NOT EXISTS (
+               SELECT 1
+               FROM user_roles ur
+               JOIN roles r ON r.id=ur.role_id
+               WHERE ur.user_id=$1
+                 AND ur.branch_id IS NULL
+                 AND ur.department_id IS NULL
+                 AND r.code IN ('SUPER_ADMIN','GENERAL_MANAGER','HR_MANAGER')
+                 AND r.is_active=TRUE
+             )`,
+          [employee.user_id, sourceBranchId],
+        );
+        await client.query(
+          `INSERT INTO user_branch_memberships (user_id,branch_id,company_id)
+           VALUES ($1,$2,$3)
+           ON CONFLICT (user_id,branch_id) WHERE revoked_at IS NULL DO NOTHING`,
+          [employee.user_id, dto.targetBranchId, user.companyId],
+        );
+        await client.query(
+          `UPDATE users SET primary_branch_id=$2,updated_at=CURRENT_TIMESTAMP
+           WHERE id=$1 AND primary_branch_id=$3`,
+          [employee.user_id, dto.targetBranchId, sourceBranchId],
+        );
+      }
+
+      await this.audit(
+        client,
+        user,
+        sourceBranchId,
+        "employees",
+        employeeId,
+        "UPDATE",
+        { ...oldSnapshot, reason: dto.reason.trim() },
+        { ...newSnapshot, effectiveDate },
+      );
+      return {
+        employeeId,
+        employeeCode: updated.rows[0].employee_code,
+        from: oldSnapshot,
+        to: newSnapshot,
+        effectiveDate,
+        note: "لم تُنسخ صلاحيات الفرع القديم؛ يجب إسناد صلاحيات الفرع الجديد بشكل مستقل.",
+      };
+    });
   }
 
   async archiveEmployee(branchId: string, id: string, user: AuthenticatedUser) {

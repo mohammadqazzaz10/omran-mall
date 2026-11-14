@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/auth_controller.dart';
 import '../../l10n/app_localizations.dart';
+import 'package:go_router/go_router.dart';
 
 class RoleLandingScreen extends ConsumerWidget {
   const RoleLandingScreen({
@@ -26,16 +27,26 @@ class RoleLandingScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
+      body: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.free_breakfast_outlined),
+              title: Text(strings.breakManagementTitle),
+              subtitle: Text(strings.pendingBreakRequestsTitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/breaks/manage'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
             isArabic(context)
-                ? 'تم تسجيل الدخول والتحقق من صلاحيات الحساب. يجري توصيل وحدات هذا الدور تباعاً.'
-                : 'You are signed in and authorized. This role’s operational modules are being connected in the next implementation phase.',
+                ? 'تم تسجيل الدخول والتحقق من صلاحيات الحساب.'
+                : 'You are signed in and authorized.',
             textAlign: TextAlign.center,
           ),
-        ),
+        ],
       ),
     );
   }

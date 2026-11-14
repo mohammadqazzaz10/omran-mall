@@ -95,9 +95,9 @@ async function main(): Promise<void> {
         [companyId],
       );
       const permissionCatalog = await client.query(
-        "SELECT code FROM permissions WHERE code IN ('employees.view.branch', 'branches.view.company', 'users.manage.company')",
+        "SELECT code FROM permissions WHERE code IN ('employees.view.branch', 'branches.view.company', 'users.manage.company', 'employees.transfer.company', 'users.assign_roles.company', 'employee_profiles.view.branch', 'employee_profiles.manage.branch', 'employee_documents.view.branch', 'employee_documents.manage.branch', 'employee_contracts.view.branch', 'employee_contracts.manage.branch', 'employee_history.view.branch')",
       );
-      if (permissionCatalog.rowCount !== 3) {
+      if (permissionCatalog.rowCount !== 12) {
         throw new Error("Permission catalogue is incomplete. Apply the latest database migrations first.");
       }
 
@@ -124,7 +124,8 @@ async function main(): Promise<void> {
                'branches.manage.company',
                'users.view.company',
                'roles.view.company',
-               'users.assign_roles.company'
+               'users.assign_roles.company',
+               'employees.transfer.company'
              )
            )
          WHERE r.company_id = $1 AND r.code = 'GENERAL_MANAGER'
@@ -144,8 +145,16 @@ async function main(): Promise<void> {
         `INSERT INTO role_permissions (role_id, permission_id)
          SELECT r.id, p.id FROM roles r
          JOIN permissions p ON
-           (p.scope = 'company' AND (p.module = 'users' OR p.code = 'branches.view.company'))
-           OR (p.scope = 'branch' AND p.module IN ('employees', 'departments', 'positions'))
+           (p.scope = 'company' AND (p.module = 'users' OR p.code IN ('branches.view.company', 'employees.transfer.company')))
+           OR (p.scope = 'branch' AND p.module IN (
+             'employees',
+             'departments',
+             'positions',
+             'employee_profiles',
+             'employee_documents',
+             'employee_contracts',
+             'employee_history'
+           ))
          WHERE r.company_id = $1 AND r.code = 'HR_MANAGER'
          ON CONFLICT (role_id, permission_id) DO NOTHING`,
         [companyId],
@@ -164,6 +173,37 @@ async function main(): Promise<void> {
          SELECT r.id, p.id FROM roles r
          JOIN permissions p ON p.code IN ('employees.view.own', 'employees.edit.own')
          WHERE r.company_id = $1 AND r.code IN ('CASHIER', 'EMPLOYEE')
+         ON CONFLICT (role_id, permission_id) DO NOTHING`,
+        [companyId],
+      );
+
+      // Grant the break feature permissions after creating the company role
+      // catalogue; migrations run before a new company and its roles exist.
+      await client.query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT r.id, p.id
+         FROM roles r
+         JOIN permissions p ON
+           (r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER', 'BRANCH_MANAGER')
+             AND p.code IN (
+               'breaks.view.branch',
+               'breaks.types.view.branch',
+               'breaks.manage.branch',
+               'breaks.approve.branch'
+             ))
+           OR
+           (r.code = 'SUPERVISOR' AND p.code IN (
+             'breaks.view.branch',
+             'breaks.types.view.branch',
+             'breaks.approve.branch'
+           ))
+           OR
+           (r.code IN ('EMPLOYEE', 'CASHIER') AND p.code IN (
+             'breaks.types.view.branch',
+             'breaks.request.own',
+             'breaks.end.own'
+           ))
+         WHERE r.company_id = $1
          ON CONFLICT (role_id, permission_id) DO NOTHING`,
         [companyId],
       );

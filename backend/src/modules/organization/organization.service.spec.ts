@@ -87,7 +87,158 @@ describe("OrganizationService branch integrity", () => {
       ),
     ).toBe(false);
   });
-  it("loads only the employee record linked to the authenticated user", async () => {
+
+  it("blocks transfers when attendance is open", async () => {
+    query
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: user.primaryBranchId }],
+      })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: "target-branch" }],
+      })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [
+          {
+            id: "employee-1",
+            user_id: null,
+            branch_id: user.primaryBranchId,
+            department_id: "old-dept",
+            position_id: "old-position",
+            direct_manager_id: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ today: "2026-11-14" }] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: "target-dept" }],
+      })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: "target-position" }],
+      })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: "open-attendance" }],
+      });
+
+    await expect(
+      service.transferEmployee(
+        user.primaryBranchId,
+        "employee-1",
+        {
+          targetBranchId: "00000000-0000-4000-8000-000000000006",
+          targetDepartmentId: "00000000-0000-4000-8000-000000000007",
+          targetPositionId: "00000000-0000-4000-8000-000000000008",
+          effectiveDate: "2026-11-14",
+          reason: "نقل تنظيمي معتمد إلى الفرع الجديد",
+        } as any,
+        user as any,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(query).toHaveBeenCalledTimes(7);
+    expect(
+      query.mock.calls.some((call) =>
+        String(call[0]).includes("UPDATE employees"),
+      ),
+    ).toBe(false);
+  });
+
+  it("transfers an employee and clears old branch roles", async () => {
+    const employeeId = "00000000-0000-4000-8000-000000000009";
+    const targetBranchId = "00000000-0000-4000-8000-000000000006";
+    query
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: user.primaryBranchId }],
+      })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: targetBranchId }],
+      })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [
+          {
+            id: employeeId,
+            user_id: user.id,
+            employee_code: "OM-1001",
+            branch_id: user.primaryBranchId,
+            department_id: "old-dept",
+            position_id: "old-position",
+            direct_manager_id: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ today: "2026-11-14" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "target-dept" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "target-position" }] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [
+          {
+            id: employeeId,
+            user_id: user.id,
+            employee_code: "OM-1001",
+            branch_id: targetBranchId,
+            department_id: "target-dept",
+            position_id: "target-position",
+            direct_manager_id: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: user.id }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] });
+
+    const result = await service.transferEmployee(
+      user.primaryBranchId,
+      employeeId,
+      {
+        targetBranchId,
+        targetDepartmentId: "target-dept",
+        targetPositionId: "target-position",
+        effectiveDate: "2026-11-14",
+        reason: "نقل تنظيمي معتمد إلى الفرع الجديد",
+      } as any,
+      user as any,
+    );
+
+    expect(result.employeeCode).toBe("OM-1001");
+    expect(result.from.branchId).toBe(user.primaryBranchId);
+    expect(result.to.branchId).toBe(targetBranchId);
+    expect(
+      query.mock.calls.some((call) =>
+        String(call[0]).includes("INSERT INTO employee_history"),
+      ),
+    ).toBe(true);
+    expect(
+      query.mock.calls.some((call) =>
+        String(call[0]).includes("DELETE FROM user_roles ur"),
+      ),
+    ).toBe(true);
+    expect(
+      query.mock.calls.some((call) =>
+        String(call[0]).includes("INSERT INTO user_branch_memberships"),
+      ),
+    ).toBe(true);
+  });
+
+  it("loads the authenticated user's employee profile", async () => {
     query.mockResolvedValueOnce({
       rows: [{ id: "employee-1", employee_code: "OM-1001" }],
     });
