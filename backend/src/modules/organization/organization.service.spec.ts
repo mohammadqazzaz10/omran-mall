@@ -87,6 +87,7 @@ describe("OrganizationService branch integrity", () => {
       ),
     ).toBe(false);
   });
+
   it("blocks transfers when attendance is open", async () => {
     query
       .mockResolvedValueOnce({
