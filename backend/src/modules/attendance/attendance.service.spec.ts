@@ -142,8 +142,8 @@ describe("AttendanceService", () => {
       branchId,
       shiftId,
       "2026-11-14",
-      0,
-      "present",
+      225,
+      "late",
     ]);
   });
 
