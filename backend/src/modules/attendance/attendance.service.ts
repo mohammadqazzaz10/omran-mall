@@ -414,6 +414,26 @@ export class AttendanceService {
         throw new NotFoundException("لا يوجد سجل حضور لهذا التاريخ");
       }
       const row = record.rows[0];
+      if (!dto.requestedCheckIn && !dto.requestedCheckOut) {
+        throw new BadRequestException("يجب تحديد وقت حضور أو انصراف مطلوب تصحيحه");
+      }
+      const effectiveCheckIn = dto.requestedCheckIn
+        ? new Date(dto.requestedCheckIn)
+        : row.check_in_time
+          ? new Date(row.check_in_time)
+          : null;
+      const effectiveCheckOut = dto.requestedCheckOut
+        ? new Date(dto.requestedCheckOut)
+        : row.check_out_time
+          ? new Date(row.check_out_time)
+          : null;
+      if (
+        effectiveCheckIn &&
+        effectiveCheckOut &&
+        effectiveCheckOut.getTime() <= effectiveCheckIn.getTime()
+      ) {
+        throw new BadRequestException("وقت الانصراف يجب أن يكون بعد وقت الحضور");
+      }
       const result = await client.query(
         `INSERT INTO attendance_corrections
          (attendance_record_id, employee_id, branch_id, work_date,
@@ -468,7 +488,12 @@ export class AttendanceService {
              check_out_time = COALESCE($3, check_out_time),
              total_work_minutes = CASE
                WHEN COALESCE($3, check_out_time) IS NOT NULL
-               THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (COALESCE($3, check_out_time) - COALESCE($2, check_in_time))) / 60)::int)
+               THEN GREATEST(
+                 0,
+                 FLOOR(EXTRACT(EPOCH FROM (
+                   COALESCE($3, check_out_time) - COALESCE($2, check_in_time)
+                 )) / 60)::int - COALESCE(total_break_minutes, 0)
+               )
                ELSE total_work_minutes END,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1 AND branch_id = $4
