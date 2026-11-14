@@ -90,11 +90,14 @@ describe("AttendanceService", () => {
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }),
     };
     const { service, db } = serviceWithClient(client);
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
     await expect(service.myRecords(branchId, user)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
-    expect(db.query).not.toHaveBeenCalled();
+    expect(db.query).toHaveBeenCalledTimes(2);
   });
 
   it("rejects malformed report dates before querying attendance", async () => {
