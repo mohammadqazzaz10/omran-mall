@@ -10,6 +10,52 @@ DECLARE
     v_other_company_id UUID;
     v_other_branch_id UUID;
 BEGIN
+
+    -- The migration must create a usable least-privilege permission catalogue.
+    IF NOT EXISTS (
+        SELECT 1
+        FROM roles r
+        JOIN role_permissions rp ON rp.role_id = r.id
+        JOIN permissions p ON p.id = rp.permission_id
+        WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+          AND r.code = 'SUPER_ADMIN'
+          AND p.code = 'employees.view.branch'
+    ) THEN
+        RAISE EXCEPTION 'SUPER_ADMIN is missing the branch employee-view grant';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM roles r
+        JOIN role_permissions rp ON rp.role_id = r.id
+        JOIN permissions p ON p.id = rp.permission_id
+        WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+          AND r.code = 'BRANCH_MANAGER'
+          AND p.code IN ('users.manage.company', 'roles.manage.company')
+    ) THEN
+        RAISE EXCEPTION 'BRANCH_MANAGER received an unintended company-wide grant';
+    END IF;
+    IF EXISTS (
+        SELECT 1
+        FROM roles r
+        JOIN role_permissions rp ON rp.role_id = r.id
+        JOIN permissions p ON p.id = rp.permission_id
+        WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+          AND r.code = 'GENERAL_MANAGER'
+          AND p.code IN ('users.manage.company', 'roles.manage.company', 'companies.manage.company')
+    ) THEN
+        RAISE EXCEPTION 'GENERAL_MANAGER received an unintended security-administration grant';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM roles r
+        JOIN role_permissions rp ON rp.role_id = r.id
+        WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+          AND r.code IN ('CASHIER', 'EMPLOYEE')
+    ) THEN
+        RAISE EXCEPTION 'Self-service roles must not receive unimplemented grants';
+    END IF;
     INSERT INTO positions (department_id, code, title_ar)
     VALUES (
         'c0000000-0000-0000-0000-000000000001',
