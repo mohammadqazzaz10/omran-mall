@@ -33,6 +33,23 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  private async hasCompanyRole(userId: string, companyId: string): Promise<boolean> {
+    const result = await this.db.query(
+      `SELECT 1
+       FROM user_roles ur
+       JOIN roles r
+         ON r.id = ur.role_id
+        AND r.company_id = $2
+        AND r.is_active = TRUE
+       WHERE ur.user_id = $1
+         AND ur.branch_id IS NULL
+         AND ur.department_id IS NULL
+       LIMIT 1`,
+      [userId, companyId],
+    );
+    return result.rowCount === 1;
+  }
+
   private async memberships(userId: string): Promise<string[]> {
     const result = await this.db.query<{ branch_id: string }>(
       `SELECT ubm.branch_id
@@ -102,9 +119,12 @@ export class AuthService {
     }
 
     const branchIds = await this.memberships(user.id);
-    if (branchIds.length === 0) {
+    if (
+      branchIds.length === 0 &&
+      !(await this.hasCompanyRole(user.id, user.company_id))
+    ) {
       throw new ForbiddenException(
-        "لا يوجد فرع مخول لهذا الحساب؛ راجع مدير النظام",
+        "لا توجد عضوية فرع أو صلاحية إدارية على مستوى الشركة لهذا الحساب",
       );
     }
 
@@ -227,9 +247,12 @@ export class AuthService {
       );
     }
     const branchIds = await this.memberships(result.id);
-    if (branchIds.length === 0) {
-      await this.revokeSession(sessionId, "no_branch_membership");
-      throw new ForbiddenException("لا يوجد فرع مخول لهذا الحساب");
+    if (
+      branchIds.length === 0 &&
+      !(await this.hasCompanyRole(result.id, result.company_id))
+    ) {
+      await this.revokeSession(sessionId, "no_branch_membership_or_company_role");
+      throw new ForbiddenException("لا توجد عضوية فرع أو صلاحية إدارية على مستوى الشركة");
     }
 
     return {

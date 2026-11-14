@@ -79,7 +79,24 @@ export class AccessTokenGuard implements CanActivate {
     );
     const allowedBranchIds = memberships.rows.map((row) => row.branch_id);
     if (allowedBranchIds.length === 0) {
-      throw new UnauthorizedException("لا توجد عضوية فرع فعالة لهذا الحساب");
+      const companyRole = await this.db.query(
+        `SELECT 1
+         FROM user_roles ur
+         JOIN roles r
+           ON r.id = ur.role_id
+          AND r.company_id = $2
+          AND r.is_active = TRUE
+         WHERE ur.user_id = $1
+           AND ur.branch_id IS NULL
+           AND ur.department_id IS NULL
+         LIMIT 1`,
+        [active.user_id, active.company_id],
+      );
+      if (companyRole.rowCount !== 1) {
+        throw new UnauthorizedException(
+          "لا توجد عضوية فرع أو صلاحية إدارية على مستوى الشركة لهذا الحساب",
+        );
+      }
     }
 
     const principal: AuthenticatedUser = {

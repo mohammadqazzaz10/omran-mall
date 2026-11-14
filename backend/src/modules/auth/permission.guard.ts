@@ -53,12 +53,11 @@ export class PermissionGuard implements CanActivate {
       request.headers?.["x-branch-id"] ??
       user.primaryBranchId;
 
-    if (!requestedBranch) {
-      throw new ForbiddenException("يجب تحديد الفرع المطلوب");
-    }
-
-    const branchId = String(requestedBranch);
-    if (!user.allowedBranchIds.includes(branchId)) {
+    const branchId =
+      requestedBranch === null || requestedBranch === undefined
+        ? null
+        : String(requestedBranch);
+    if (branchId && !user.allowedBranchIds.includes(branchId)) {
       throw new ForbiddenException("لا توجد عضوية فعالة لهذا الفرع");
     }
 

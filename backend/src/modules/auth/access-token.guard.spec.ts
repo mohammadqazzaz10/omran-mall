@@ -57,6 +57,39 @@ describe("AccessTokenGuard", () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
+  it("accepts a company-scoped administrator without branch memberships", async () => {
+    const jwt = { verifyAsync: jest.fn().mockResolvedValue(claims) } as any;
+    const db = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              user_id: claims.sub,
+              company_id: claims.companyId,
+              username: "company-admin",
+              primary_branch_id: null,
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ allowed: 1 }], rowCount: 1 }),
+    } as any;
+    const guard = new AccessTokenGuard(jwt, db, reflector as any);
+    const request: Record<string, any> = {
+      headers: { authorization: "Bearer valid-token" },
+    };
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(request.user).toMatchObject({
+      id: claims.sub,
+      companyId: claims.companyId,
+      primaryBranchId: null,
+      allowedBranchIds: [],
+    });
+    expect(db.query).toHaveBeenCalledTimes(3);
+  });
+
   it("loads current branch memberships from the database", async () => {
     const jwt = { verifyAsync: jest.fn().mockResolvedValue(claims) } as any;
     const db = {

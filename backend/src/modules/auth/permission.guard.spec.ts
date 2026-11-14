@@ -60,6 +60,46 @@ describe("PermissionGuard", () => {
     expect(db.query).not.toHaveBeenCalled();
   });
 
+  it("allows company-scoped permissions without a branch membership", async () => {
+    const companyUser = {
+      ...user,
+      primaryBranchId: null,
+      allowedBranchIds: [],
+    };
+    const db = { query: jest.fn().mockResolvedValue({ rowCount: 1 }) } as any;
+    const reflector = makeReflector({
+      "omran:requiredPermission": "company.settings.manage",
+    });
+    const guard = new PermissionGuard(db, reflector as any);
+    const request: Record<string, any> = { user: companyUser, headers: {} };
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(request.branchId).toBeNull();
+    expect(db.query.mock.calls[0][1]).toEqual([
+      companyUser.id,
+      companyUser.companyId,
+      null,
+      "company.settings.manage",
+    ]);
+  });
+
+  it("does not grant branch permissions when no branch is selected", async () => {
+    const companyUser = {
+      ...user,
+      primaryBranchId: null,
+      allowedBranchIds: [],
+    };
+    const db = { query: jest.fn().mockResolvedValue({ rowCount: 0 }) } as any;
+    const reflector = makeReflector({
+      "omran:requiredPermission": "attendance.view.branch",
+    });
+    const guard = new PermissionGuard(db, reflector as any);
+
+    await expect(
+      guard.canActivate(contextFor({ user: companyUser, headers: {} })),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it("checks permission grants against the selected branch", async () => {
     const db = { query: jest.fn().mockResolvedValue({ rowCount: 1 }) } as any;
     const reflector = makeReflector({

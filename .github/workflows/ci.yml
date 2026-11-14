@@ -42,33 +42,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Resolve backend dependencies
-        run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          npm audit fix --package-lock-only --ignore-scripts || true
-          npm ci
-      - name: Apply official NestJS 12 migration
-        run: |
-          npx nest upgrade --no-observe --skip-install
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          npm audit fix --package-lock-only --ignore-scripts || true
-          npm ci
-      - uses: actions/upload-artifact@v6
-        with:
-          name: backend-lockfile
-          path: backend/package-lock.json
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v6
-        with:
-          name: backend-migration-config
-          path: |
-            backend/package.json
-            backend/tsconfig.json
-            backend/tsconfig.build.json
-            backend/nest-cli.json
-            backend/jest.config.js
-          if-no-files-found: error
-      - run: npm run format
+      - name: Install locked backend dependencies
+        run: npm ci
+      - run: npm run format:check
       - run: npm run build
       - name: Apply checksum migrations and verify guarded development seeds
         run: |
@@ -90,18 +66,22 @@ jobs:
       - name: Audit resolved backend dependencies
         run: |
           npm audit --json > npm-audit.json || true
-          node -e 'const a=require("./npm-audit.json"); const v=a.metadata?.vulnerabilities; if (!v) { console.error("npm audit did not return a valid vulnerability report", a.error ?? ""); process.exit(2); } console.log("Dependency vulnerability summary:", JSON.stringify(v)); for (const [name, item] of Object.entries(a.vulnerabilities ?? {})) console.log(`${name}: ${item.severity}; direct=${item.isDirect}; fixAvailable=${JSON.stringify(item.fixAvailable)}`); if ((v.critical ?? 0) > 0) process.exit(1);'
+          node -e 'const a=require("./npm-audit.json"); const v=a.metadata?.vulnerabilities; if (!v) { console.error("npm audit did not return a valid vulnerability report", a.error ?? ""); process.exit(2); } console.log("All-dependency vulnerability summary:", JSON.stringify(v)); for (const [name, item] of Object.entries(a.vulnerabilities ?? {})) console.log(`${name}: ${item.severity}; direct=${item.isDirect}; fixAvailable=${JSON.stringify(item.fixAvailable)}`); if ((v.high ?? 0) > 0 || (v.critical ?? 0) > 0) process.exit(1);'
       - uses: actions/upload-artifact@v6
         if: always() && hashFiles('backend/npm-audit.json') != ''
         with:
           name: backend-security-audit
           path: backend/npm-audit.json
           if-no-files-found: error
-      - run: npm run format:check
+      - name: Audit production dependencies separately
+        run: |
+          npm audit --omit=dev --json > npm-audit-production.json || true
+          node -e 'const a=require("./npm-audit-production.json"); const v=a.metadata?.vulnerabilities; if (!v) { console.error("Production npm audit did not return a valid report", a.error ?? ""); process.exit(2); } console.log("Production dependency vulnerability summary:", JSON.stringify(v)); if ((v.high ?? 0) > 0 || (v.critical ?? 0) > 0) process.exit(1);'
       - uses: actions/upload-artifact@v6
+        if: always() && hashFiles('backend/npm-audit-production.json') != ''
         with:
-          name: backend-formatted-source
-          path: backend/src/
+          name: backend-production-security-audit
+          path: backend/npm-audit-production.json
           if-no-files-found: error
       - run: npm test -- --runInBand
       - name: Validate Docker Compose and build production image
@@ -196,58 +176,3 @@ jobs:
           name: android-debug-apk
           path: client/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
-  persist-generated-foundation:
-    name: Persist generated platforms and dependency lockfiles
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    needs: [backend, flutter]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-      - uses: actions/download-artifact@v8
-        with:
-          name: backend-lockfile
-          path: backend-lock
-      - uses: actions/download-artifact@v8
-        with:
-          name: backend-migration-config
-          path: backend-config
-      - uses: actions/download-artifact@v8
-        with:
-          name: backend-formatted-source
-          path: backend-generated
-      - uses: actions/download-artifact@v8
-        with:
-          name: flutter-generated-foundation
-          path: client-generated
-      - name: Commit generated project files
-        env:
-          GITHUB_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-        run: |
-          mkdir -p client
-          if tar -tzf client-generated/flutter-generated-foundation.tar.gz | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
-            echo 'Unsafe path detected in generated Flutter artifact.'
-            exit 1
-          fi
-          tar --no-same-owner --no-same-permissions -xzf client-generated/flutter-generated-foundation.tar.gz -C client
-          cp backend-lock/package-lock.json backend/package-lock.json
-          cp backend-config/package.json backend/package.json
-          cp backend-config/tsconfig.json backend/tsconfig.json
-          cp backend-config/tsconfig.build.json backend/tsconfig.build.json
-          cp backend-config/nest-cli.json backend/nest-cli.json
-          cp backend-config/jest.config.js backend/jest.config.js
-          cp -a backend-generated/. backend/src/
-          git add backend/src client/android client/ios client/web client/.metadata client/.gitignore client/pubspec.lock backend/package-lock.json backend/package.json backend/tsconfig.json backend/tsconfig.build.json backend/nest-cli.json backend/jest.config.js
-          git add -f client/android/gradlew client/android/gradlew.bat client/android/gradle/wrapper/gradle-wrapper.jar
-          if git diff --cached --quiet; then
-            echo "No generated files changed."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: add Flutter platforms and dependency lockfiles"
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
