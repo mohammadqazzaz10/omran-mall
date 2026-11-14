@@ -6,7 +6,7 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { compare } from "bcrypt";
 import { createHash, randomBytes } from "crypto";
-import { Request } from "express";
+import type { Request } from "express";
 import { DatabaseService } from "../../database/database.service";
 import { LoginDto } from "./auth.dto";
 import { AccessTokenPayload } from "./auth.types";
@@ -168,7 +168,7 @@ export class AuthService {
     if (separator < 1) {
       throw new UnauthorizedException("جلسة الدخول غير صالحة");
     }
-    const sessionId = refreshToken.slice(0, separator);
+    const sessionId = refreshToken.slice(0, separator);\n    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) {\n      throw new UnauthorizedException("جلسة الدخول غير صالحة");\n    }
     const oldSecret = refreshToken.slice(separator + 1);
     const nextSecret = randomBytes(48).toString("base64url");
 
