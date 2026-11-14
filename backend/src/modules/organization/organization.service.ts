@@ -590,10 +590,14 @@ export class OrganizationService {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, sourceBranchId, user);
       if (!dto.reason || dto.reason.trim().length < 10) {
-        throw new BadRequestException("سبب النقل يجب ألا يقل عن 10 أحرف فعلية");
+        throw new BadRequestException(
+          "سبب النقل يجب ألا يقل عن 10 أحرف فعلية",
+        );
       }
       if (dto.targetBranchId === sourceBranchId) {
-        throw new BadRequestException("الفرع المستهدف هو الفرع الحالي للموظف");
+        throw new BadRequestException(
+          "الفرع المستهدف هو الفرع الحالي للموظف",
+        );
       }
       const targetBranch = await client.query(
         `SELECT id FROM branches
@@ -602,7 +606,9 @@ export class OrganizationService {
         [dto.targetBranchId, user.companyId],
       );
       if (targetBranch.rowCount !== 1) {
-        throw new BadRequestException("الفرع المستهدف غير موجود أو غير فعال ضمن الشركة");
+        throw new BadRequestException(
+          "الفرع المستهدف غير موجود أو غير فعال ضمن الشركة",
+        );
       }
 
       const employeeResult = await client.query(
@@ -632,7 +638,9 @@ export class OrganizationService {
         [dto.targetDepartmentId, dto.targetBranchId],
       );
       if (department.rowCount !== 1) {
-        throw new BadRequestException("القسم المستهدف لا يتبع الفرع الجديد أو غير فعال");
+        throw new BadRequestException(
+          "القسم المستهدف لا يتبع الفرع الجديد أو غير فعال",
+        );
       }
       const position = await client.query(
         `SELECT id FROM positions
@@ -640,13 +648,21 @@ export class OrganizationService {
         [dto.targetPositionId, dto.targetDepartmentId],
       );
       if (position.rowCount !== 1) {
-        throw new BadRequestException("المسمى الوظيفي لا يتبع القسم المستهدف أو غير فعال");
+        throw new BadRequestException(
+          "المسمى الوظيفي لا يتبع القسم المستهدف أو غير فعال",
+        );
       }
       if (dto.targetDirectManagerId) {
         if (dto.targetDirectManagerId === employeeId) {
-          throw new BadRequestException("لا يمكن تعيين الموظف مديراً مباشراً لنفسه");
+          throw new BadRequestException(
+            "لا يمكن تعيين الموظف مديراً مباشراً لنفسه",
+          );
         }
-        await this.assertEmployee(client, dto.targetBranchId, dto.targetDirectManagerId);
+        await this.assertEmployee(
+          client,
+          dto.targetBranchId,
+          dto.targetDirectManagerId,
+        );
       }
 
       const openAttendance = await client.query(
@@ -656,7 +672,9 @@ export class OrganizationService {
         [employeeId, sourceBranchId],
       );
       if (openAttendance.rowCount) {
-        throw new BadRequestException("يجب إغلاق سجل الحضور المفتوح قبل نقل الموظف");
+        throw new BadRequestException(
+          "يجب إغلاق سجل الحضور المفتوح قبل نقل الموظف",
+        );
       }
       const openBreak = await client.query(
         `SELECT 1 FROM break_sessions
@@ -665,7 +683,9 @@ export class OrganizationService {
         [employeeId, sourceBranchId],
       );
       if (openBreak.rowCount) {
-        throw new BadRequestException("يجب إنهاء الاستراحة المفتوحة قبل نقل الموظف");
+        throw new BadRequestException(
+          "يجب إنهاء الاستراحة المفتوحة قبل نقل الموظف",
+        );
       }
       const futureShifts = await client.query(
         `SELECT 1 FROM shift_assignments
@@ -675,7 +695,9 @@ export class OrganizationService {
         [employeeId, sourceBranchId],
       );
       if (futureShifts.rowCount) {
-        throw new BadRequestException("يجب إعادة جدولة الورديات المنشورة في الفرع القديم قبل النقل");
+        throw new BadRequestException(
+          "يجب إعادة جدولة الورديات المنشورة في الفرع القديم قبل النقل",
+        );
       }
       const directReports = await client.query(
         `SELECT 1 FROM employees
@@ -684,7 +706,9 @@ export class OrganizationService {
         [employeeId, sourceBranchId],
       );
       if (directReports.rowCount) {
-        throw new BadRequestException("يجب إعادة تعيين الموظفين التابعين إدارياً قبل نقل المدير");
+        throw new BadRequestException(
+          "يجب إعادة تعيين الموظفين التابعين إدارياً قبل نقل المدير",
+        );
       }
       const managedDepartments = await client.query(
         `SELECT 1 FROM departments
@@ -693,7 +717,9 @@ export class OrganizationService {
         [employeeId, sourceBranchId],
       );
       if (managedDepartments.rowCount) {
-        throw new BadRequestException("يجب تعيين مدير بديل للقسم قبل نقل الموظف");
+        throw new BadRequestException(
+          "يجب تعيين مدير بديل للقسم قبل نقل الموظف",
+        );
       }
 
       const oldSnapshot = {
@@ -719,7 +745,9 @@ export class OrganizationService {
         ],
       );
       if (updated.rowCount !== 1) {
-        throw new ConflictException("تغير ملف الموظف أثناء تنفيذ النقل؛ أعد المحاولة");
+        throw new ConflictException(
+          "تغير ملف الموظف أثناء تنفيذ النقل؛ أعد المحاولة",
+        );
       }
       const newSnapshot = {
         branchId: updated.rows[0].branch_id,
@@ -790,7 +818,8 @@ export class OrganizationService {
         from: oldSnapshot,
         to: newSnapshot,
         effectiveDate,
-        note: "لم تُنسخ صلاحيات الفرع القديم؛ يجب إسناد صلاحيات الفرع الجديد بشكل مستقل.",
+        note:
+          "لم تُنسخ صلاحيات الفرع القديم؛ يجب إسناد صلاحيات الفرع الجديد بشكل مستقل.",
       };
     });
   }
