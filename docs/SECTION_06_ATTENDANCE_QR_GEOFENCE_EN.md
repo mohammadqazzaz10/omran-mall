@@ -15,7 +15,7 @@ Record attendance using trusted server time, support branch QR verification and 
 1. **Rotating signed QR:** The backend issues a branch-bound HMAC-SHA256 token with a 45-second lifetime. Signing uses a dedicated `ATTENDANCE_QR_SECRET` environment variable combined with the branch salt stored in PostgreSQL.
 2. **Atomic consistency:** QR consumption, attendance insertion, location persistence, and audit logging run in one PostgreSQL transaction; any failure rolls back the complete operation.
 3. **No plaintext token storage:** Only a SHA-256 digest of the nonce is stored.
-4. **Replay protection:** A unique database key records each employee's use of a given QR challenge.
+4. **Replay protection and database branch isolation:** A unique key records each employee's use of a challenge, with composite foreign keys ensuring that the challenge and employee belong to the same branch.
 5. **Branch binding:** Tokens from another branch, expired tokens, and invalid signatures are rejected.
 6. **Optional geofence:** When branch coordinates are configured, QR check-in requires latitude, longitude, and GPS accuracy of at most 100 meters. The backend computes distance from the configured branch center and checks the branch radius.
 7. **No geofence bypass:** Direct app check-in is rejected when branch geofencing is enabled; the QR route must be used.
@@ -49,7 +49,7 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - GPS can be spoofed on some devices. Accuracy and distance checks alone do not prove device integrity; device attestation or another control must be evaluated before production use.
 - Correction rejection with optional reviewer notes and audit history is implemented; employee notifications and full handling of night shifts, holidays, lateness and early departure remain missing. A Flutter branch dashboard now polls attendance records every 30 seconds; this is periodic refresh, not a WebSocket live stream.
 - Geofencing currently applies to QR check-in and blocks direct app check-in when enabled; geofenced check-out is not implemented.
-- PostgreSQL concurrency/replay and branch-isolation integration tests, plus real-device field acceptance, remain required. Current unit tests are preliminary and do not prove resistance to GPS spoofing.
+- Composite PostgreSQL foreign keys and schema-invariant assertions now cover per-employee replay uniqueness and cross-branch use rejection. A true parallel-concurrency integration test and real-device field acceptance remain required. Unit tests do not prove resistance to GPS spoofing.
 
 ## Acceptance gate
 - [x] PostgreSQL server time is authoritative for existing check-in/out.
@@ -63,7 +63,7 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - [ ] Notify employees about correction decisions and reviewer notes.
 - [x] Branch attendance dashboard with 30-second polling (not a WebSocket live stream).
 - [ ] Safe offline queue and conflict review without trusting client time.
-- [ ] PostgreSQL integration tests and cross-branch isolation tests.
+- [ ] Pass the new PostgreSQL schema-invariant tests on a clean CI database and add a true parallel-concurrency test.
 - [ ] Real-device field test and independent security review.
 
 **Status: Partial.** This increment adds backend QR/geofence foundations; it is not evidence of production-ready attendance.
