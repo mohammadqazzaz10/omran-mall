@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/network/api_client.dart';
 import '../../features/auth/auth_controller.dart';
 
 final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
@@ -8,10 +9,10 @@ final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
 
 class EmployeeRepository {
   EmployeeRepository(this.client);
-  final dynamic client;
+  final ApiClient client;
 
   Future<Map<String, dynamic>> getOwnProfile() async {
-    final response = await client.dio.get<dynamic>('/me/employee');
+    final response = await client.dio.get<dynamic>('me/employee');
     return Map<String, dynamic>.from(response.data as Map);
   }
 
