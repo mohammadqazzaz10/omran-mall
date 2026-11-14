@@ -1,9 +1,6 @@
 -- Section 06: rotating branch QR challenges and per-employee replay protection.
 -- Tokens are never stored in plaintext; only a SHA-256 nonce digest is persisted.
 
-ALTER TABLE employees
-  ADD CONSTRAINT uq_employees_id_branch UNIQUE (id, branch_id);
-
 CREATE TABLE attendance_qr_challenges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
