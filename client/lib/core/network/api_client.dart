@@ -30,9 +30,9 @@ class ApiClient {
         },
         onError: (error, handler) async {
           final path = error.requestOptions.path;
-          final isAuthEndpoint = path.contains('/auth/login') ||
-              path.contains('/auth/refresh') ||
-              path.contains('/auth/change-password');
+          final isAuthEndpoint = path.contains('auth/login') ||
+              path.contains('auth/refresh') ||
+              path.contains('auth/change-password');
           final alreadyRetried =
               error.requestOptions.extra['authRetry'] == true;
           if (error.response?.statusCode != 401 ||
