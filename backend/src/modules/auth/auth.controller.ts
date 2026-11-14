@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Post, Get, Req } from "@nestjs/common";\nimport { Public } from "../../common/decorators/public.decorator";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { AuthService } from "./auth.service";
@@ -13,12 +13,12 @@ type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
-  @Post("login")
+  @Public()\n  @Post("login")
   login(@Body() dto: LoginDto, @Req() request: Request) {
     return this.auth.login(dto, request);
   }
 
-  @Post("refresh")
+  @Public()\n  @Post("refresh")
   refresh(@Body() dto: RefreshDto) {
     return this.auth.refresh(dto.refreshToken);
   }
