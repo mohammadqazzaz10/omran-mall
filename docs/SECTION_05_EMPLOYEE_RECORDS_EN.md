@@ -37,7 +37,8 @@ All routes are under:
 - History access is limited to HR_MANAGER and SUPER_ADMIN because historical snapshots may contain personal or financial data.
 - A second current contract is rejected until an explicit contract close/termination workflow exists. Existing contracts are never silently closed or rewritten.
 - Documents and contracts retain their original branch attribution, while HR authorized for the employee's current branch can still retrieve the employee's historical records after a transfer.
-- Flutter screens and an employee-submitted change request/approval workflow are not included yet.
+- A bilingual Flutter HR screen is now available for profile extensions, document metadata, contracts, and employment history; HR can edit profile extensions and create a contract.
+- An employee-submitted change request/approval workflow, binary document upload/download, and photo management are still missing.
 
 ## Remaining work before this section can be considered complete
 1. Private S3-compatible uploads, content-type and size verification, short-lived signed upload/download URLs, and secure retention/deletion.
