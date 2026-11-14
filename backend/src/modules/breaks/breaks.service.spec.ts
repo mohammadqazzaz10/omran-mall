@@ -31,7 +31,11 @@ describe("BreaksService", () => {
       broadcastBreakEnded: jest.fn(),
       broadcastBreakAlert: jest.fn(),
     };
-    return { service: new BreaksService(db as any, gateway as any), db, gateway };
+    return {
+      service: new BreaksService(db as any, gateway as any),
+      db,
+      gateway,
+    };
   };
 
   it("refuses to configure breaks for a branch outside the authenticated company", async () => {
