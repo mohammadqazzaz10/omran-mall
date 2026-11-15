@@ -488,3 +488,97 @@ BEGIN
   END IF;
 END;
 $$;
+
+
+-- Exercise day-off nullability and overnight overlap rejection on PostgreSQL.
+DO $$
+DECLARE
+  v_employee_id UUID;
+  v_department_id UUID;
+  v_shift_night_id UUID;
+  v_shift_early_id UUID;
+  v_work_date DATE := CURRENT_DATE + 1000;
+  v_overlap_rejected BOOLEAN := FALSE;
+BEGIN
+  SELECT id, department_id
+  INTO v_employee_id, v_department_id
+  FROM employees
+  WHERE branch_id = 'b0000000-0000-0000-0000-000000000001'
+    AND status = 'active' AND deleted_at IS NULL
+  ORDER BY employee_code
+  LIMIT 1;
+
+  IF v_employee_id IS NULL THEN
+    RAISE EXCEPTION 'Section 07 invariant test requires an active seeded employee';
+  END IF;
+
+  DELETE FROM shift_assignments
+  WHERE employee_id = v_employee_id
+    AND work_date BETWEEN v_work_date AND v_work_date + 1;
+
+  INSERT INTO shifts (
+    branch_id, code, name_ar, start_time, end_time, is_night_shift,
+    shift_type, required_staff_count
+  ) VALUES (
+    'b0000000-0000-0000-0000-000000000001',
+    'ci_s07_night', 'وردية ليلية اختبار', '22:00', '06:00', TRUE, 'night', 1
+  )
+  ON CONFLICT (branch_id, code) DO UPDATE
+    SET start_time = EXCLUDED.start_time, end_time = EXCLUDED.end_time
+  RETURNING id INTO v_shift_night_id;
+
+  INSERT INTO shifts (
+    branch_id, code, name_ar, start_time, end_time, is_night_shift,
+    shift_type, required_staff_count
+  ) VALUES (
+    'b0000000-0000-0000-0000-000000000001',
+    'ci_s07_early', 'وردية صباحية اختبار', '05:30', '13:30', FALSE, 'morning', 1
+  )
+  ON CONFLICT (branch_id, code) DO UPDATE
+    SET start_time = EXCLUDED.start_time, end_time = EXCLUDED.end_time
+  RETURNING id INTO v_shift_early_id;
+
+  -- A day off must not require a shift template.
+  INSERT INTO shift_assignments (
+    employee_id, shift_id, branch_id, work_date, is_day_off,
+    is_published, department_id, status
+  ) VALUES (
+    v_employee_id, NULL, 'b0000000-0000-0000-0000-000000000001',
+    v_work_date + 2, TRUE, FALSE, v_department_id, 'draft'
+  );
+
+  INSERT INTO shift_assignments (
+    employee_id, shift_id, branch_id, work_date, is_day_off,
+    is_published, department_id, scheduled_start_at, scheduled_end_at, status
+  ) VALUES (
+    v_employee_id, v_shift_night_id, 'b0000000-0000-0000-0000-000000000001',
+    v_work_date, FALSE, FALSE, v_department_id,
+    v_work_date + TIME '22:00', (v_work_date + 1) + TIME '06:00', 'draft'
+  );
+
+  BEGIN
+    INSERT INTO shift_assignments (
+      employee_id, shift_id, branch_id, work_date, is_day_off,
+      is_published, department_id, scheduled_start_at, scheduled_end_at, status
+    ) VALUES (
+      v_employee_id, v_shift_early_id, 'b0000000-0000-0000-0000-000000000001',
+      v_work_date + 1, FALSE, FALSE, v_department_id,
+      (v_work_date + 1) + TIME '05:30',
+      (v_work_date + 1) + TIME '13:30', 'draft'
+    );
+    SET CONSTRAINTS ex_shift_assignment_employee_time IMMEDIATE;
+    RAISE EXCEPTION 'Overlapping overnight employee assignments were accepted';
+  EXCEPTION
+    WHEN exclusion_violation THEN
+      v_overlap_rejected := TRUE;
+  END;
+
+  IF NOT v_overlap_rejected THEN
+    RAISE EXCEPTION 'Overlapping overnight employee assignments were not rejected';
+  END IF;
+
+  DELETE FROM shift_assignments
+  WHERE employee_id = v_employee_id
+    AND work_date BETWEEN v_work_date AND v_work_date + 2;
+END;
+$$;
