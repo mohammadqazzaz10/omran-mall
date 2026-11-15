@@ -324,7 +324,7 @@ describe("AttendanceService", () => {
     expect(update[0]).toContain("grace_period_early_leave_minutes");
     expect(update[0]).toContain("s.is_night_shift");
     expect(update[0]).toContain("Asia/Amman");
-    expect(update[1]).toEqual([attendanceId, branchId, employeeId]);
+    expect(update[1]).toEqual([attendanceId, branchId, employeeId, null, null]);
     expect(db.transaction).toHaveBeenCalledTimes(1);
     expect(client.query.mock.calls[4][0]).toContain("audit_logs");
   });
