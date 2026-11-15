@@ -91,7 +91,7 @@ export class ShiftsService {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
       const result = await client.query(
-        `SELECT sa.id, sa.branch_id, sa.employee_id, e.employee_number,
+        `SELECT sa.id, sa.branch_id, sa.employee_id, e.employee_code,
                 e.first_name_ar, e.last_name_ar, sa.department_id, d.name_ar AS department_name,
                 sa.shift_id, s.name_ar AS shift_name, s.name_en AS shift_name_en,
                 sa.work_date, sa.is_day_off, sa.status, sa.notes,
@@ -102,7 +102,7 @@ export class ShiftsService {
          LEFT JOIN shifts s ON s.id = sa.shift_id AND s.branch_id = sa.branch_id
          WHERE sa.branch_id = $1 AND sa.work_date BETWEEN $2::date AND $3::date
            AND sa.status <> 'cancelled'
-         ORDER BY sa.work_date, d.name_ar, s.start_time NULLS FIRST, e.employee_number`,
+         ORDER BY sa.work_date, d.name_ar, s.start_time NULLS FIRST, e.employee_code`,
         [branchId, from, to],
       );
       return result.rows;
@@ -217,9 +217,9 @@ export class ShiftsService {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
       const result = await client.query(
-        `SELECT sw.*, re.employee_number AS requester_number,
+        `SELECT sw.*, re.employee_code AS requester_number,
                 re.first_name_ar AS requester_first_name, re.last_name_ar AS requester_last_name,
-                te.employee_number AS target_number,
+                te.employee_code AS target_number,
                 te.first_name_ar AS target_first_name, te.last_name_ar AS target_last_name,
                 ra.work_date AS requester_work_date, ta.work_date AS target_work_date
          FROM shift_swap_requests sw
