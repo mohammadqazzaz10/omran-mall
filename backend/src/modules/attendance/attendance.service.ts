@@ -376,7 +376,12 @@ export class AttendanceService {
     }
   }
 
-  async checkOut(branchId: string, user: AuthenticatedUser) {
+  async checkOut(
+    branchId: string,
+    user: AuthenticatedUser,
+    latitude: number | null = null,
+    longitude: number | null = null,
+  ) {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
       const employee = await this.employeeForUser(client, branchId, user);
@@ -395,6 +400,9 @@ export class AttendanceService {
       const updated = await client.query<AttendanceRow>(
         `UPDATE attendance_records
          SET check_out_time = CURRENT_TIMESTAMP,
+             check_out_method = 'mobile_app',
+             check_out_lat = $4,
+             check_out_lng = $5,
              total_break_minutes = COALESCE((
                SELECT SUM(GREATEST(0, FLOOR(EXTRACT(EPOCH FROM
                  (COALESCE(bs.actual_end_time, CURRENT_TIMESTAMP) - bs.start_time)) / 60)::int))
@@ -433,7 +441,7 @@ export class AttendanceService {
          WHERE id = $1 AND branch_id = $2 AND employee_id = $3 AND check_out_time IS NULL
          RETURNING id, employee_id, branch_id, work_date::text, check_in_time, check_out_time, status,
                    early_departure_minutes, total_work_minutes, total_break_minutes`,
-        [record.id, branchId, employee.id],
+        [record.id, branchId, employee.id, latitude, longitude],
       );
       await this.audit(
         client,
