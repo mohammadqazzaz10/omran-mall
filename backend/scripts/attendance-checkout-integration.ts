@@ -61,7 +61,9 @@ async function run() {
       CREATE TABLE attendance_records (
         id uuid PRIMARY KEY, employee_id uuid NOT NULL, branch_id uuid NOT NULL,
         shift_id uuid, work_date date NOT NULL, check_in_time timestamptz NOT NULL,
-        check_out_time timestamptz, total_break_minutes integer DEFAULT 0,
+        check_out_time timestamptz, check_out_method text,
+        check_out_lat numeric(10, 8), check_out_lng numeric(11, 8),
+        total_break_minutes integer DEFAULT 0,
         total_work_minutes integer DEFAULT 0, early_departure_minutes integer DEFAULT 0,
         status text DEFAULT 'present', updated_at timestamptz DEFAULT CURRENT_TIMESTAMP
       );
