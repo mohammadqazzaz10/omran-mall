@@ -216,5 +216,5 @@
 - [x] اجتياز اختبارات schema invariants وسباق PostgreSQL المتوازي لإعادة استخدام QR ضمن CI على هذا التحديث.
 - [ ] اختبار ميداني ومراجعة تزوير GPS/Device Attestation على أجهزة فعلية.
 
-**الحالة: جزئي وقيد CI. لا تنشر Render في هذه المرحلة.**
+**الحالة: جزئي؛ اجتازت الفحوص الأربع على commit `232bb13dd44ab63d40cb3edba7142ad474d9b200` بنجاح (Backend، Flutter analyze/tests، Android Debug APK، Flutter Web Release). لا تنشر Render في هذه المرحلة.**
 
