@@ -82,9 +82,22 @@ class AttendanceRepository {
     return Map<String, dynamic>.from(response.data as Map);
   }
 
-  Future<Map<String, dynamic>> checkOut(String branchId) async {
+  Future<Map<String, dynamic>> checkOut(
+    String branchId, {
+    double? latitude,
+    double? longitude,
+    double? accuracyMeters,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (latitude != null && longitude != null && accuracyMeters != null) {
+      payload
+        ..['latitude'] = latitude
+        ..['longitude'] = longitude
+        ..['accuracyMeters'] = accuracyMeters;
+    }
     final response = await client.dio.post<dynamic>(
       'branches/$branchId/attendance/check-out',
+      data: payload,
     );
     return Map<String, dynamic>.from(response.data as Map);
   }
