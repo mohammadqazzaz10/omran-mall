@@ -27,6 +27,11 @@ ALTER TABLE shift_assignments
   ADD COLUMN notes VARCHAR(1000),
   ADD COLUMN published_at TIMESTAMPTZ;
 
+-- Day-off rows must be allowed to clear their previously required shift FK
+-- before the legacy data backfill runs.
+ALTER TABLE shift_assignments
+  ALTER COLUMN shift_id DROP NOT NULL;
+
 UPDATE shift_assignments
 SET shift_id = NULL
 WHERE is_day_off = TRUE;
@@ -47,7 +52,6 @@ WHERE s.id = a.shift_id AND a.is_day_off = FALSE;
 
 ALTER TABLE shift_assignments
   ALTER COLUMN department_id SET NOT NULL,
-  ALTER COLUMN shift_id DROP NOT NULL,
   ADD CONSTRAINT chk_shift_assignment_status
     CHECK (status IN ('draft', 'published', 'cancelled')),
   ADD CONSTRAINT chk_shift_assignment_times
