@@ -99,11 +99,15 @@ describe("AttendanceService", () => {
         check_out_time: null,
         status: "present",
       };
-      const query = jest.fn();
-      [
+      const responses = [
         { rows: [{ id: branchId }], rowCount: 1 },
-        { rows: [{ id: employeeId, status: "active" }], rowCount: 1 },
-        { rows: [{ work_date: "2026-11-15", local_time: "02:00" }] },
+        {
+          rows: [{ id: employeeId, status: "active" }],
+          rowCount: 1,
+        },
+        {
+          rows: [{ work_date: "2026-11-15", local_time: "02:00" }],
+        },
         {
           rows: [
             {
@@ -119,7 +123,8 @@ describe("AttendanceService", () => {
         },
         { rows: [record], rowCount: 1 },
         { rows: [], rowCount: 1 },
-      ].forEach((result) => query.mockResolvedValueOnce(result));
+      ];
+      const query = jest.fn(async () => responses.shift());
       const client = { query };
       const { service } = serviceWithClient(client);
 
