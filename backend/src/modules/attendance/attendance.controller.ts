@@ -76,7 +76,7 @@ export class AttendanceController {
   @RequirePermission("attendance.check_out.own")
   checkOut(
     @Param("branchId", ParseUUIDPipe) branchId: string,
-    @Body() dto: AttendanceCheckOutDto,
+    @Body() dto: AttendanceCheckOutDto = {},
     @Req() req: AuthenticatedRequest,
   ) {
     return this.attendanceQr.checkOutWithGeofence(branchId, dto, req.user);
