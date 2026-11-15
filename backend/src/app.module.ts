@@ -8,6 +8,7 @@ import { OrganizationModule } from "./modules/organization/organization.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
+import { ShiftsModule } from "./modules/shifts/shifts.module";
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
     BreaksModule,
     AttendanceModule,
     NotificationsModule,
+    ShiftsModule,
   ],
   controllers: [HealthController],
 })

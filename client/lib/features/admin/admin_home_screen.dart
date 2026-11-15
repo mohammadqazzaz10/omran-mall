@@ -998,6 +998,16 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                 if (_canManageAttendance)
                   Card(
                     child: ListTile(
+                      leading: const Icon(Icons.schedule),
+                      title: Text(isArabic(context) ? 'الورديات والجداول' : 'Shifts & schedules'),
+                      subtitle: Text(isArabic(context) ? 'إنشاء الورديات وإسناد الموظفين ونشر الجداول' : 'Create shifts, assign employees, and publish schedules'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/shifts'),
+                    ),
+                  ),
+                if (_canManageAttendance)
+                  Card(
+                    child: ListTile(
                       leading: const Icon(Icons.access_time),
                       title: Text(
                         isArabic(context) ? 'الحضور والانصراف' : 'Attendance',
