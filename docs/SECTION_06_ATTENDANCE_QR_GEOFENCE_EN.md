@@ -48,7 +48,7 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - Flutter supervisor UI now displays a server-issued QR and rotates it every 45 seconds; employee UI scans the QR and queries geofence status first; it requests location permission only when the branch requires it. Android/iOS camera and location permission declarations were added. CI and real-device acceptance are still pending.
 - Offline attendance is not supported. Client timestamps must not be accepted; queued operations must remain unconfirmed until server verification, and that workflow is not implemented.
 - GPS can be spoofed on some devices. Accuracy and distance checks alone do not prove device integrity; device attestation or another control must be evaluated before production use.
-- Correction rejection with optional reviewer notes and audit history is implemented. Overnight check-in is now assigned to the originating shift work date with after-midnight lateness calculation; check-out now calculates early departure against the assigned shift end and grace period, including overnight shifts. Holiday policy handling still requires implementation. An in-app notification is now inserted transactionally when a correction is approved or rejected, including reviewer notes on rejection; push delivery through FCM/APNs and delivery verification while the app is closed remain outstanding. A PostgreSQL integration test for the actual early-departure minute calculation is also still required. A Flutter branch dashboard now polls attendance records every 30 seconds; this is periodic refresh, not a WebSocket live stream.
+- Correction rejection with optional reviewer notes and audit history is implemented. Overnight check-in is now assigned to the originating shift work date with after-midnight lateness calculation; check-out now calculates early departure against the assigned shift end and grace period, including overnight shifts. Holiday policy handling still requires implementation. A notification record is now inserted into the `notifications` table in the same transaction when a correction is approved or rejected, including reviewer notes on rejection. A notifications API/UI for listing and marking items as read, push delivery through FCM/APNs, and delivery verification while the app is closed remain outstanding. A PostgreSQL integration test for the actual early-departure minute calculation is also still required. A Flutter branch dashboard now polls attendance records every 30 seconds; this is periodic refresh, not a WebSocket live stream.
 - Geofencing currently applies to QR check-in and blocks direct app check-in when enabled; geofenced check-out is not implemented.
 - Composite PostgreSQL foreign keys and schema-invariant assertions now cover per-employee replay uniqueness and cross-branch use rejection. A parallel PostgreSQL uniqueness-race integration test has now been added and passed the Backend CI job on commit `711f913499a8bcd45a408430caed9dbb1f3f9d82` in [run 43676862335](https://github.com/mohammadqazzaz10/omran-mall/actions/runs/43676862335); real-device field acceptance remains required. Unit tests do not prove resistance to GPS spoofing.
 
@@ -61,7 +61,8 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - [x] Supervisor QR display and automatic 45-second rotation UI (CI and field acceptance pending).
 - [x] Employee QR scanner with optional location capture (CI and field acceptance pending).
 - [x] Reject a pending correction with optional reviewer notes and audit history.
-- [x] Persist an in-app notification for approved/rejected correction decisions, including rejection notes.
+- [x] Persist a notification record for approved/rejected correction decisions, including rejection notes.
+- [ ] Add an API/UI to list notifications and mark them as read.
 - [ ] Integrate FCM/APNs and verify delivery on physical devices while the app is closed.
 - [x] Branch attendance dashboard with 30-second polling (not a WebSocket live stream).
 - [ ] Safe offline queue and conflict review without trusting client time.
@@ -70,3 +71,4 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - [ ] Real-device field test and independent security review.
 
 **Status: Partial.** This increment adds backend QR/geofence foundations; it is not evidence of production-ready attendance.
+
