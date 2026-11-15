@@ -99,38 +99,33 @@ describe("AttendanceService", () => {
         check_out_time: null,
         status: "present",
       };
-      const client = {
-        query: jest
-          .fn()
-          .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
-          .mockResolvedValueOnce({
-            rows: [{ id: employeeId, status: "active" }],
-            rowCount: 1,
-          })
-          .mockResolvedValueOnce({
-            rows: [{ work_date: "2026-11-15", local_time: "02:00" }],
-          })
-          .mockResolvedValueOnce({
-            rows: [
-              {
-                assigned_work_date: "2026-11-14",
-                shift_id: shiftId,
-                start_time: "22:00",
-                end_time: "06:00",
-                is_night_shift: true,
-                grace_period_late_minutes: 15,
-                is_day_off: false,
-              },
-            ],
-          })
-          .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
-          .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
-      };
+      const query = jest.fn();
+      [
+        { rows: [{ id: branchId }], rowCount: 1 },
+        { rows: [{ id: employeeId, status: "active" }], rowCount: 1 },
+        { rows: [{ work_date: "2026-11-15", local_time: "02:00" }] },
+        {
+          rows: [
+            {
+              assigned_work_date: "2026-11-14",
+              shift_id: shiftId,
+              start_time: "22:00",
+              end_time: "06:00",
+              is_night_shift: true,
+              grace_period_late_minutes: 15,
+              is_day_off: false,
+            },
+          ],
+        },
+        { rows: [record], rowCount: 1 },
+        { rows: [], rowCount: 1 },
+      ].forEach((result) => query.mockResolvedValueOnce(result));
+      const client = { query };
       const { service } = serviceWithClient(client);
 
       await expect(service.checkIn(branchId, user)).resolves.toEqual(record);
 
-      const assignmentQuery = client.query.mock.calls[3];
+      const assignmentQuery = query.mock.calls[3];
       expect(assignmentQuery[0]).toContain("s.is_night_shift = TRUE");
       expect(assignmentQuery[0]).toContain("INTERVAL '1 day'");
       expect(assignmentQuery[1]).toEqual([
@@ -139,7 +134,7 @@ describe("AttendanceService", () => {
         "2026-11-15",
         "02:00",
       ]);
-      expect(client.query.mock.calls[4][1]).toEqual([
+      expect(query.mock.calls[4][1]).toEqual([
         employeeId,
         branchId,
         shiftId,
