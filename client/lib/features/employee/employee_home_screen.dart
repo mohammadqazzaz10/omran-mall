@@ -118,6 +118,15 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                 const SizedBox(height: 12),
                 Card(
                   child: ListTile(
+                    leading: const Icon(Icons.notifications_outlined),
+                    title: Text(Localizations.localeOf(context).languageCode == 'ar' ? 'الإشعارات' : 'Notifications'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/notifications'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: ListTile(
                     leading: const Icon(Icons.access_time),
                     title: Text(Localizations.localeOf(context).languageCode == 'ar' ? 'الحضور والانصراف' : 'Attendance'),
                     trailing: const Icon(Icons.chevron_right),
