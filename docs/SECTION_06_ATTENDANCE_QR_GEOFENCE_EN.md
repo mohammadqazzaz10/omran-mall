@@ -45,8 +45,8 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - Actual production secret provisioning on Render is intentionally deferred to the final deployment stage.
 
 ## Current limitations — Section 06 is not complete
-- Flutter supervisor UI now displays a server-issued QR and rotates it every 45 seconds; employee UI scans the QR and queries geofence status first; it requests location permission only when the branch requires it. Android/iOS camera and location permission declarations were added. CI and real-device acceptance are still pending.
-- Offline attendance is not supported. Client timestamps must not be accepted; queued operations must remain unconfirmed until server verification, and that workflow is not implemented.
+- Flutter supervisor UI now displays a server-issued QR and rotates it every 45 seconds; employee UI scans the QR and queries geofence status first; it requests location permission only when the branch requires it. Android/iOS camera and location permission declarations were added. All four CI checks passed on commit `232bb13dd44ab63d40cb3edba7142ad474d9b200` (Backend, Flutter analyze/tests, Android Debug APK, and Flutter Web Release). Real-device acceptance remains pending.
+- Offline attendance recording and a trusted local queue are not supported. When disconnected, the UI explains that attendance cannot be recorded; it does not store QR tokens or create unverified local records. The employee can scan the current QR again after connectivity returns. Client timestamps are never authoritative.
 - GPS can be spoofed on some devices. Accuracy and distance checks alone do not prove device integrity; device attestation or another control must be evaluated before production use.
 - Correction rejection with optional reviewer notes and audit history is implemented. Overnight check-in is now assigned to the originating shift work date with after-midnight lateness calculation; check-out now calculates early departure against the assigned shift end and grace period, including overnight shifts. Holiday policy handling still requires implementation. A notification record is now inserted into the `notifications` table in the same transaction when a correction is approved or rejected, including reviewer notes on rejection. A notifications API/UI for listing and marking items as read, push delivery through FCM/APNs, and delivery verification while the app is closed remain outstanding. A PostgreSQL integration test for the actual early-departure minute calculation is also still required. A Flutter branch dashboard now polls attendance records every 30 seconds; this is periodic refresh, not a WebSocket live stream.
 - Geofencing currently applies to QR check-in and blocks direct app check-in when enabled; geofenced check-out is not implemented.
@@ -70,5 +70,5 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - [ ] Add a PostgreSQL integration test that verifies the actual early-departure minute calculation; the current unit test checks SQL structure only.
 - [ ] Real-device field test and independent security review.
 
-**Status: Partial.** This increment adds backend QR/geofence foundations; it is not evidence of production-ready attendance.
+**Status: Partial; all four CI checks passed for the current PR head.** CI success does not cover the notifications API, FCM/APNs, holiday policy, PostgreSQL early-departure integration test, real-device acceptance, or GPS security review; this is not production-ready.
 
