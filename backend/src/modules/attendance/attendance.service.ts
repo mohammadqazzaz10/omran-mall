@@ -368,6 +368,21 @@ export class AttendanceService {
                    AND bs.start_time <= CURRENT_TIMESTAMP
                ), 0)
              ),
+             early_departure_minutes = COALESCE((
+               SELECT GREATEST(
+                 0,
+                 FLOOR(EXTRACT(EPOCH FROM (
+                   attendance_records.work_date + s.end_time
+                   + CASE WHEN s.is_night_shift
+                     THEN INTERVAL '1 day' ELSE INTERVAL '0 day' END
+                   - (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')
+                 )) / 60)::int
+                 - COALESCE(s.grace_period_early_leave_minutes, 0)
+               )
+               FROM shifts s
+               WHERE s.id = attendance_records.shift_id
+                 AND s.branch_id = attendance_records.branch_id
+             ), 0),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1 AND branch_id = $2 AND employee_id = $3 AND check_out_time IS NULL
          RETURNING id, employee_id, branch_id, work_date::text, check_in_time, check_out_time, status`,
