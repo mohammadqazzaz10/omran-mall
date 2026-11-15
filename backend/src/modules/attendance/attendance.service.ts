@@ -88,6 +88,49 @@ export class AttendanceService {
     );
   }
 
+  private async notifyCorrectionDecision(
+    client: PoolClient,
+    correction: {
+      id: string;
+      employee_id: string;
+      branch_id: string;
+    },
+    status: "approved" | "rejected",
+    reviewNotes?: string | null,
+  ) {
+    const approved = status === "approved";
+    const title = approved
+      ? "تمت الموافقة على طلب تصحيح الحضور"
+      : "تم رفض طلب تصحيح الحضور";
+    const notes = reviewNotes?.trim() || null;
+    const body = approved
+      ? "تمت مراجعة طلب تصحيح الحضور واعتماده."
+      : notes
+        ? `تمت مراجعة طلب تصحيح الحضور ورفضه. ملاحظات المراجع: ${notes}`
+        : "تمت مراجعة طلب تصحيح الحضور ورفضه.";
+    await client.query(
+      `INSERT INTO notifications (user_id, title, body, type, payload)
+       SELECT e.user_id, $4, $5, 'request_update',
+              jsonb_build_object(
+                'kind', 'attendance_correction',
+                'correctionId', $1,
+                'status', $6,
+                'reviewNotes', $7
+              )
+       FROM employees e
+       WHERE e.id = $2 AND e.branch_id = $3 AND e.user_id IS NOT NULL`,
+      [
+        correction.id,
+        correction.employee_id,
+        correction.branch_id,
+        title,
+        body,
+        status,
+        notes,
+      ],
+    );
+  }
+
   async checkIn(branchId: string, user: AuthenticatedUser) {
     try {
       return await this.db.transaction(async (client) => {
@@ -578,6 +621,7 @@ export class AttendanceService {
         record.rows[0],
         updated.rows[0],
       );
+      await this.notifyCorrectionDecision(client, row, "approved");
       return {
         correctionId,
         attendance: updated.rows[0],
@@ -626,6 +670,12 @@ export class AttendanceService {
         "UPDATE",
         row,
         updated.rows[0],
+      );
+      await this.notifyCorrectionDecision(
+        client,
+        row,
+        "rejected",
+        updated.rows[0].review_notes,
       );
       return {
         correctionId,
