@@ -8,7 +8,10 @@ import {
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { DatabaseService } from "../../database/database.service";
 import { AuthenticatedUser } from "../auth/auth.types";
-import { AttendanceCheckOutDto, AttendanceQrCheckInDto } from "./attendance.dto";
+import {
+  AttendanceCheckOutDto,
+  AttendanceQrCheckInDto,
+} from "./attendance.dto";
 import { AttendanceService } from "./attendance.service";
 
 type QrPayload = { v: 1; b: string; n: string; e: number };
