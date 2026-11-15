@@ -56,6 +56,7 @@ jobs:
           npm run db:seed
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/tests/schema_invariants.sql
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/tests/attendance_early_departure.sql
+          npx tsx scripts/attendance-checkout-integration.ts
           node scripts/attendance-qr-concurrency.js
           PGPASSWORD=omran_test_password createdb -h 127.0.0.1 -U omran_test omran_existing_schema_test
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_existing_schema_test -v ON_ERROR_STOP=1 -c 'CREATE TABLE sentinel (id INTEGER PRIMARY KEY)'
