@@ -26,7 +26,9 @@ describe("AttendanceQrService", () => {
     delete process.env.ATTENDANCE_QR_SECRET;
   });
 
-  it("reports when branch geofencing is disabled without requiring device location", async () => {
+  it(
+    "reports when branch geofencing is disabled without requiring device location",
+    async () => {
     const db = {
       query: jest.fn().mockResolvedValueOnce({
         rows: [
@@ -50,7 +52,9 @@ describe("AttendanceQrService", () => {
     });
   });
 
-  it("reports the configured geofence radius when branch location is enabled", async () => {
+  it(
+    "reports the configured geofence radius when branch location is enabled",
+    async () => {
     const db = {
       query: jest.fn().mockResolvedValueOnce({
         rows: [
@@ -74,7 +78,9 @@ describe("AttendanceQrService", () => {
     });
   });
 
-  it("issues a signed 45-second QR token and stores only the nonce digest", async () => {
+  it(
+    "issues a signed 45-second QR token and stores only the nonce digest",
+    async () => {
     const db = {
       query: jest
         .fn()
@@ -125,7 +131,9 @@ describe("AttendanceQrService", () => {
     expect(db.query).not.toHaveBeenCalled();
   });
 
-  it("requires accurate location when branch geofence is configured", async () => {
+  it(
+    "requires accurate location when branch geofence is configured",
+    async () => {
     const nonce = "b".repeat(64);
     const payload = {
       v: 1 as const,
@@ -175,46 +183,78 @@ describe("AttendanceQrService", () => {
     expect(attendance.checkIn).not.toHaveBeenCalled();
   });
 
-
-  it("requires location for check-out when branch geofence is enabled", async () => {
+  it(
+    "requires location for check-out when branch geofence is enabled",
+    async () => {
     const db = {
       query: jest.fn().mockResolvedValueOnce({
-        rows: [{ latitude: "31.95", longitude: "35.91", geofence_radius_meters: 150 }],
+        rows: [
+          {
+            latitude: "31.95",
+            longitude: "35.91",
+            geofence_radius_meters: 150,
+          },
+        ],
         rowCount: 1,
       }),
     };
     const attendance = { checkOut: jest.fn() };
     const service = new AttendanceQrService(db as any, attendance as any);
-    await expect(service.checkOutWithGeofence(branchId, {}, user)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.checkOutWithGeofence(branchId, {}, user),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(attendance.checkOut).not.toHaveBeenCalled();
   });
 
   it("rejects check-out outside the configured branch geofence", async () => {
     const db = {
       query: jest.fn().mockResolvedValueOnce({
-        rows: [{ latitude: "31.95", longitude: "35.91", geofence_radius_meters: 100 }],
+        rows: [
+          {
+            latitude: "31.95",
+            longitude: "35.91",
+            geofence_radius_meters: 100,
+          },
+        ],
         rowCount: 1,
       }),
     };
     const attendance = { checkOut: jest.fn() };
     const service = new AttendanceQrService(db as any, attendance as any);
-    await expect(service.checkOutWithGeofence(branchId, {
-      latitude: 31.96, longitude: 35.91, accuracyMeters: 5,
-    }, user)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.checkOutWithGeofence(
+        branchId,
+        { latitude: 31.96, longitude: 35.91, accuracyMeters: 5 },
+        user,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(attendance.checkOut).not.toHaveBeenCalled();
   });
 
-  it("allows check-out without GPS when branch geofencing is disabled", async () => {
+  it(
+    "allows check-out without GPS when branch geofencing is disabled",
+    async () => {
     const db = {
       query: jest.fn().mockResolvedValueOnce({
-        rows: [{ latitude: null, longitude: null, geofence_radius_meters: null }],
+        rows: [
+          { latitude: null, longitude: null, geofence_radius_meters: null },
+        ],
         rowCount: 1,
       }),
     };
-    const attendance = { checkOut: jest.fn().mockResolvedValue({ id: "attendance-id" }) };
+    const attendance = {
+      checkOut: jest.fn().mockResolvedValue({ id: "attendance-id" }),
+    };
     const service = new AttendanceQrService(db as any, attendance as any);
-    await expect(service.checkOutWithGeofence(branchId, {}, user)).resolves.toEqual({ id: "attendance-id" });
-    expect(attendance.checkOut).toHaveBeenCalledWith(branchId, user, null, null);
+    await expect(
+      service.checkOutWithGeofence(branchId, {}, user),
+    ).resolves.toEqual({ id: "attendance-id" });
+    expect(attendance.checkOut).toHaveBeenCalledWith(
+      branchId,
+      user,
+      null,
+      null,
+    );
   });
 
   it("fails closed without a QR signing secret", async () => {
@@ -235,7 +275,9 @@ describe("AttendanceQrService", () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
-  it("delegates a verified QR token to the atomic attendance transaction", async () => {
+  it(
+    "delegates a verified QR token to the atomic attendance transaction",
+    async () => {
     const nonce = "c".repeat(64);
     const payload = {
       v: 1 as const,
