@@ -176,5 +176,5 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 JOIN permissions p ON p.code IN ('shifts.view.own', 'shifts.swap.own')
-WHERE r.code IN ('EMPLOYEE', 'CASHIER', 'CASHIER_SUPERVISOR')
+WHERE r.code IN ('SUPER_ADMIN', 'GENERAL_MANAGER', 'BRANCH_MANAGER', 'ASSISTANT_MANAGER', 'SUPERVISOR', 'HR_MANAGER', 'HR_OFFICER', 'PERSONNEL_OFFICER', 'EMPLOYEE', 'CASHIER', 'CASHIER_SUPERVISOR')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
