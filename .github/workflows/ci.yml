@@ -44,6 +44,10 @@ jobs:
           node-version: 24
       - name: Install locked backend dependencies
         run: npm ci
+      - name: TEMPORARY attendance spec formatting diagnostic
+        run: |
+          npx prettier --write src/modules/attendance/attendance.service.spec.ts
+          cat src/modules/attendance/attendance.service.spec.ts
       - run: npm run format:check
       - run: npm run build
       - name: Type-check first-admin bootstrap utility
