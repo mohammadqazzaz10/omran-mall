@@ -334,6 +334,7 @@ describe("AttendanceService", () => {
     const correction = {
       id: correctionId,
       attendance_record_id: "77777777-7777-4777-8777-777777777777",
+      employee_id: "66666666-6666-4666-8666-666666666666",
       branch_id: branchId,
       status: "pending",
       reason: "Forgot to check out",
@@ -371,6 +372,17 @@ describe("AttendanceService", () => {
       branchId,
     ]);
     expect(client.query.mock.calls[3][0]).toContain("audit_logs");
+    expect(client.query.mock.calls[4][0]).toContain("INSERT INTO notifications");
+    expect(client.query.mock.calls[4][0]).toContain("e.user_id IS NOT NULL");
+    expect(client.query.mock.calls[4][1]).toEqual([
+      correctionId,
+      "66666666-6666-4666-8666-666666666666",
+      branchId,
+      "تم رفض طلب تصحيح الحضور",
+      "تمت مراجعة طلب تصحيح الحضور ورفضه. ملاحظات المراجع: Insufficient evidence",
+      "rejected",
+      "Insufficient evidence",
+    ]);
   });
   it("subtracts recorded break minutes when an attendance correction recalculates work time", async () => {
     const correctionId = "99999999-9999-4999-8999-999999999999";
@@ -422,6 +434,16 @@ describe("AttendanceService", () => {
 
     const update = client.query.mock.calls[3];
     expect(update[0]).toContain("COALESCE(total_break_minutes, 0)");
+    expect(client.query.mock.calls[6][0]).toContain("INSERT INTO notifications");
+    expect(client.query.mock.calls[6][1]).toEqual([
+      correctionId,
+      "66666666-6666-4666-8666-666666666666",
+      branchId,
+      "تمت الموافقة على طلب تصحيح الحضور",
+      "تمت مراجعة طلب تصحيح الحضور واعتماده.",
+      "approved",
+      null,
+    ]);
     expect(db.transaction).toHaveBeenCalledTimes(1);
   });
 });
