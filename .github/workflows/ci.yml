@@ -164,7 +164,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('client/android/**/*.gradle*', 'client/android/gradle/wrapper/gradle-wrapper.properties') }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('client/pubspec.lock') }}
           restore-keys: |
             gradle-${{ runner.os }}-
       - uses: subosito/flutter-action@v2
