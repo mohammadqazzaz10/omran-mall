@@ -50,7 +50,7 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - GPS can be spoofed on some devices. Accuracy and distance checks alone do not prove device integrity; device attestation or another control must be evaluated before production use.
 - Correction rejection with optional reviewer notes and audit history is implemented. Overnight check-in is now assigned to the originating shift work date with after-midnight lateness calculation; check-out now calculates early departure against the assigned shift end and grace period, including overnight shifts. Correction-result notifications and holiday policy handling still require implementation and validation. A Flutter branch dashboard now polls attendance records every 30 seconds; this is periodic refresh, not a WebSocket live stream.
 - Geofencing currently applies to QR check-in and blocks direct app check-in when enabled; geofenced check-out is not implemented.
-- Composite PostgreSQL foreign keys and schema-invariant assertions now cover per-employee replay uniqueness and cross-branch use rejection. A parallel PostgreSQL uniqueness-race integration test has now been added and awaits CI validation; real-device field acceptance remains required. Unit tests do not prove resistance to GPS spoofing.
+- Composite PostgreSQL foreign keys and schema-invariant assertions now cover per-employee replay uniqueness and cross-branch use rejection. A parallel PostgreSQL uniqueness-race integration test has now been added and passed the Backend CI job on commit `711f913499a8bcd45a408430caed9dbb1f3f9d82` in [run 43676862335](https://github.com/mohammadqazzaz10/omran-mall/actions/runs/43676862335); real-device field acceptance remains required. Unit tests do not prove resistance to GPS spoofing.
 
 ## Acceptance gate
 - [x] PostgreSQL server time is authoritative for existing check-in/out.
@@ -64,7 +64,8 @@ All routes are under `/branches/:branchId/attendance` and require an authenticat
 - [ ] Notify employees about correction decisions and reviewer notes.
 - [x] Branch attendance dashboard with 30-second polling (not a WebSocket live stream).
 - [ ] Safe offline queue and conflict review without trusting client time.
-- [ ] Pass the PostgreSQL schema-invariant and parallel uniqueness-race integration tests on a clean CI database.
+- [x] Pass the PostgreSQL schema-invariant and parallel uniqueness-race integration tests on a clean CI database in the Backend CI job for commit `711f913499a8bcd45a408430caed9dbb1f3f9d82`.
+- [ ] Add a PostgreSQL integration test that verifies the actual early-departure minute calculation; the current unit test checks SQL structure only.
 - [ ] Real-device field test and independent security review.
 
 **Status: Partial.** This increment adds backend QR/geofence foundations; it is not evidence of production-ready attendance.
