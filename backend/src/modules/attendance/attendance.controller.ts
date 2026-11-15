@@ -14,7 +14,13 @@ import type { Request } from "express";
 import { RequirePermission } from "../../common/decorators/permission.decorator";
 import { BranchIsolationGuard } from "../../common/guards/branch-isolation.guard";
 import { AuthenticatedUser } from "../auth/auth.types";
-import { AttendanceCorrectionDto } from "./attendance.dto";
+import {
+  AttendanceCheckOutDto,
+  AttendanceCorrectionDto,
+  AttendanceCorrectionRejectionDto,
+  AttendanceQrCheckInDto,
+} from "./attendance.dto";
+import { AttendanceQrService } from "./attendance-qr.service";
 import { AttendanceService } from "./attendance.service";
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
@@ -24,14 +30,45 @@ type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 @UseGuards(BranchIsolationGuard)
 @Controller("branches/:branchId/attendance")
 export class AttendanceController {
-  constructor(private readonly attendance: AttendanceService) {}
+  constructor(
+    private readonly attendance: AttendanceService,
+    private readonly attendanceQr: AttendanceQrService,
+  ) {}
 
-  @Post("check-in")
+  @Get("qr/geofence")
   @RequirePermission("attendance.check_in.own")
-  checkIn(
+  geofenceStatus(
     @Param("branchId", ParseUUIDPipe) branchId: string,
     @Req() req: AuthenticatedRequest,
   ) {
+    return this.attendanceQr.geofenceStatus(branchId, req.user);
+  }
+  @Post("qr/challenges")
+  @RequirePermission("attendance.qr.manage.branch")
+  createQrChallenge(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.attendanceQr.createChallenge(branchId, req.user);
+  }
+
+  @Post("check-in/qr")
+  @RequirePermission("attendance.check_in.own")
+  checkInWithQr(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Body() dto: AttendanceQrCheckInDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.attendanceQr.checkInWithQr(branchId, dto, req.user);
+  }
+
+  @Post("check-in")
+  @RequirePermission("attendance.check_in.own")
+  async checkIn(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    await this.attendanceQr.assertDirectCheckInAllowed(branchId, req.user);
     return this.attendance.checkIn(branchId, req.user);
   }
 
@@ -39,9 +76,10 @@ export class AttendanceController {
   @RequirePermission("attendance.check_out.own")
   checkOut(
     @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Body() dto: AttendanceCheckOutDto = {},
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.attendance.checkOut(branchId, req.user);
+    return this.attendanceQr.checkOutWithGeofence(branchId, dto, req.user);
   }
 
   @Get("me")
@@ -72,6 +110,22 @@ export class AttendanceController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.attendance.branchRecords(branchId, workDate, req.user);
+  }
+
+  @Post("corrections/:correctionId/reject")
+  @RequirePermission("attendance.approve.branch")
+  rejectCorrection(
+    @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Param("correctionId", ParseUUIDPipe) correctionId: string,
+    @Body() dto: AttendanceCorrectionRejectionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.attendance.rejectCorrection(
+      branchId,
+      correctionId,
+      dto.reviewNotes,
+      req.user,
+    );
   }
 
   @Post("corrections/:correctionId/approve")

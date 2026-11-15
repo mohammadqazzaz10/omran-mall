@@ -187,6 +187,20 @@ JOIN permissions p ON
 WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
+-- Section 06: development fixtures mirror the QR manager permission granted
+-- by migration 013 for any built-in roles present in a company.
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.code = 'attendance.qr.manage.branch'
+WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+  AND r.code IN (
+    'SUPER_ADMIN', 'GENERAL_MANAGER', 'BRANCH_MANAGER',
+    'ASSISTANT_MANAGER', 'SUPERVISOR', 'HR_MANAGER',
+    'HR_OFFICER', 'PERSONNEL_OFFICER'
+  )
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
 -- 7. Insert Default Standard Shifts for Retail Operation
 INSERT INTO shifts (
     id, branch_id, code, name_ar, name_en, start_time, end_time, grace_period_late_minutes, grace_period_early_leave_minutes, color_hex

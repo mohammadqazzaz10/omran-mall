@@ -19,6 +19,9 @@ type AttendanceRow = {
   check_in_time: string | null;
   check_out_time: string | null;
   status: string;
+  early_departure_minutes?: number;
+  total_work_minutes?: number;
+  total_break_minutes?: number;
 };
 
 @Injectable()
@@ -88,6 +91,49 @@ export class AttendanceService {
     );
   }
 
+  private async notifyCorrectionDecision(
+    client: PoolClient,
+    correction: {
+      id: string;
+      employee_id: string;
+      branch_id: string;
+    },
+    status: "approved" | "rejected",
+    reviewNotes?: string | null,
+  ) {
+    const approved = status === "approved";
+    const title = approved
+      ? "تمت الموافقة على طلب تصحيح الحضور"
+      : "تم رفض طلب تصحيح الحضور";
+    const notes = reviewNotes?.trim() || null;
+    const body = approved
+      ? "تمت مراجعة طلب تصحيح الحضور واعتماده."
+      : notes
+        ? `تمت مراجعة طلب تصحيح الحضور ورفضه. ملاحظات المراجع: ${notes}`
+        : "تمت مراجعة طلب تصحيح الحضور ورفضه.";
+    await client.query(
+      `INSERT INTO notifications (user_id, title, body, type, payload)
+       SELECT e.user_id, $4, $5, 'request_update',
+              jsonb_build_object(
+                'kind', 'attendance_correction',
+                'correctionId', $1,
+                'status', $6,
+                'reviewNotes', $7
+              )
+       FROM employees e
+       WHERE e.id = $2 AND e.branch_id = $3 AND e.user_id IS NOT NULL`,
+      [
+        correction.id,
+        correction.employee_id,
+        correction.branch_id,
+        title,
+        body,
+        status,
+        notes,
+      ],
+    );
+  }
+
   async checkIn(branchId: string, user: AuthenticatedUser) {
     try {
       return await this.db.transaction(async (client) => {
@@ -100,22 +146,38 @@ export class AttendanceService {
           `SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date::text AS work_date,
                   TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman', 'HH24:MI') AS local_time`,
         );
-        const { work_date: workDate, local_time: localTime } = clock.rows[0];
+        const { work_date: currentWorkDate, local_time: localTime } =
+          clock.rows[0];
         const assignment = await client.query<{
+          assigned_work_date: string;
           shift_id: string | null;
           start_time: string | null;
+          end_time: string | null;
+          is_night_shift: boolean;
           grace_period_late_minutes: number | null;
           is_day_off: boolean;
         }>(
-          `SELECT sa.shift_id, s.start_time::text, s.grace_period_late_minutes, sa.is_day_off
+          `SELECT sa.work_date::text AS assigned_work_date, sa.shift_id,
+                  s.start_time::text, s.end_time::text, s.is_night_shift,
+                  s.grace_period_late_minutes, sa.is_day_off
            FROM shift_assignments sa
            LEFT JOIN shifts s ON s.id = sa.shift_id AND s.branch_id = sa.branch_id
            WHERE sa.employee_id = $1 AND sa.branch_id = $2
-             AND sa.work_date = $3 AND sa.is_published = TRUE
+             AND sa.is_published = TRUE
+             AND (
+               sa.work_date = $3::date
+               OR (
+                 s.is_night_shift = TRUE
+                 AND sa.work_date = ($3::date - INTERVAL '1 day')::date
+                 AND $4::time < s.end_time
+               )
+             )
+           ORDER BY CASE WHEN sa.work_date = $3::date THEN 0 ELSE 1 END
            LIMIT 1`,
-          [employee.id, branchId, workDate],
+          [employee.id, branchId, currentWorkDate, localTime],
         );
         const scheduled = assignment.rows[0];
+        const workDate = scheduled?.assigned_work_date ?? currentWorkDate;
         let lateMinutes = 0;
         let status = "present";
         if (scheduled?.is_day_off) status = "needs_review";
@@ -125,10 +187,13 @@ export class AttendanceService {
             .split(":")
             .map(Number);
           const [nh, nm] = localTime.split(":").map(Number);
+          const shiftClockMinutes =
+            nh * 60 +
+            nm +
+            (scheduled.assigned_work_date !== currentWorkDate ? 1440 : 0);
           lateMinutes = Math.max(
             0,
-            nh * 60 +
-              nm -
+            shiftClockMinutes -
               (sh * 60 + sm) -
               (scheduled.grace_period_late_minutes ?? 0),
           );
@@ -167,7 +232,156 @@ export class AttendanceService {
     }
   }
 
-  async checkOut(branchId: string, user: AuthenticatedUser) {
+  async checkInWithQr(
+    branchId: string,
+    user: AuthenticatedUser,
+    nonceHash: string,
+    latitude: number | null,
+    longitude: number | null,
+  ) {
+    try {
+      return await this.db.transaction(async (client) => {
+        // Keep branch validation, employee locking, QR consumption, attendance
+        // insertion, and audit logging in the same PostgreSQL transaction.
+        await this.assertBranch(client, branchId, user);
+        const employee = await this.employeeForUser(client, branchId, user);
+        const challenge = await client.query<{ id: string }>(
+          `SELECT id FROM attendance_qr_challenges
+           WHERE branch_id = $1 AND nonce_hash = $2
+             AND expires_at > CURRENT_TIMESTAMP AND revoked_at IS NULL
+           FOR UPDATE`,
+          [branchId, nonceHash],
+        );
+        if (!challenge.rowCount) {
+          throw new ForbiddenException("رمز QR غير موجود أو انتهت صلاحيته");
+        }
+        try {
+          await client.query(
+            `INSERT INTO attendance_qr_uses (challenge_id, employee_id, branch_id)
+             VALUES ($1, $2, $3)`,
+            [challenge.rows[0].id, employee.id, branchId],
+          );
+        } catch (error) {
+          if ((error as { code?: string })?.code === "23505") {
+            throw new ConflictException(
+              "تم استخدام رمز QR هذا لتسجيل حضورك مسبقاً",
+            );
+          }
+          throw error;
+        }
+
+        const clock = await client.query<{
+          work_date: string;
+          local_time: string;
+        }>(
+          `SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date::text AS work_date,
+                  TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman', 'HH24:MI') AS local_time`,
+        );
+        const { work_date: currentWorkDate, local_time: localTime } =
+          clock.rows[0];
+        const assignment = await client.query<{
+          assigned_work_date: string;
+          shift_id: string | null;
+          start_time: string | null;
+          end_time: string | null;
+          is_night_shift: boolean;
+          grace_period_late_minutes: number | null;
+          is_day_off: boolean;
+        }>(
+          `SELECT sa.work_date::text AS assigned_work_date, sa.shift_id,
+                  s.start_time::text, s.end_time::text, s.is_night_shift,
+                  s.grace_period_late_minutes, sa.is_day_off
+           FROM shift_assignments sa
+           LEFT JOIN shifts s ON s.id = sa.shift_id AND s.branch_id = sa.branch_id
+           WHERE sa.employee_id = $1 AND sa.branch_id = $2
+             AND sa.is_published = TRUE
+             AND (
+               sa.work_date = $3::date
+               OR (
+                 s.is_night_shift = TRUE
+                 AND sa.work_date = ($3::date - INTERVAL '1 day')::date
+                 AND $4::time < s.end_time
+               )
+             )
+           ORDER BY CASE WHEN sa.work_date = $3::date THEN 0 ELSE 1 END
+           LIMIT 1`,
+          [employee.id, branchId, currentWorkDate, localTime],
+        );
+        const scheduled = assignment.rows[0];
+        const workDate = scheduled?.assigned_work_date ?? currentWorkDate;
+        let lateMinutes = 0;
+        let status = "present";
+        if (scheduled?.is_day_off) status = "needs_review";
+        if (scheduled?.start_time && !scheduled.is_day_off) {
+          const [sh, sm] = scheduled.start_time
+            .slice(0, 5)
+            .split(":")
+            .map(Number);
+          const [nh, nm] = localTime.split(":").map(Number);
+          const shiftClockMinutes =
+            nh * 60 +
+            nm +
+            (scheduled.assigned_work_date !== currentWorkDate ? 1440 : 0);
+          lateMinutes = Math.max(
+            0,
+            shiftClockMinutes -
+              (sh * 60 + sm) -
+              (scheduled.grace_period_late_minutes ?? 0),
+          );
+          if (lateMinutes > 0) status = "late";
+        }
+        const inserted = await client.query<AttendanceRow>(
+          `INSERT INTO attendance_records
+           (employee_id, branch_id, shift_id, work_date, check_in_time,
+            check_in_method, check_in_lat, check_in_lng, late_minutes, status)
+           VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, 'qr_code', $5, $6, $7, $8::attendance_status_enum)
+           RETURNING id, employee_id, branch_id, work_date::text, check_in_time, check_out_time, status`,
+          [
+            employee.id,
+            branchId,
+            scheduled?.shift_id ?? null,
+            workDate,
+            latitude,
+            longitude,
+            lateMinutes,
+            status,
+          ],
+        );
+        await this.audit(
+          client,
+          user,
+          branchId,
+          inserted.rows[0].id,
+          "INSERT",
+          null,
+          {
+            ...inserted.rows[0],
+            check_in_method: "qr_code",
+            check_in_lat: latitude,
+            check_in_lng: longitude,
+          },
+        );
+        return {
+          ...inserted.rows[0],
+          check_in_method: "qr_code",
+          check_in_lat: latitude,
+          check_in_lng: longitude,
+        };
+      });
+    } catch (error) {
+      if ((error as { code?: string })?.code === "23505") {
+        throw new ConflictException("تم تسجيل حضورك لهذا اليوم مسبقاً");
+      }
+      throw error;
+    }
+  }
+
+  async checkOut(
+    branchId: string,
+    user: AuthenticatedUser,
+    latitude: number | null = null,
+    longitude: number | null = null,
+  ) {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
       const employee = await this.employeeForUser(client, branchId, user);
@@ -186,6 +400,9 @@ export class AttendanceService {
       const updated = await client.query<AttendanceRow>(
         `UPDATE attendance_records
          SET check_out_time = CURRENT_TIMESTAMP,
+             check_out_method = 'mobile_app',
+             check_out_lat = $4,
+             check_out_lng = $5,
              total_break_minutes = COALESCE((
                SELECT SUM(GREATEST(0, FLOOR(EXTRACT(EPOCH FROM
                  (COALESCE(bs.actual_end_time, CURRENT_TIMESTAMP) - bs.start_time)) / 60)::int))
@@ -205,10 +422,26 @@ export class AttendanceService {
                    AND bs.start_time <= CURRENT_TIMESTAMP
                ), 0)
              ),
+             early_departure_minutes = COALESCE((
+               SELECT GREATEST(
+                 0,
+                 FLOOR(EXTRACT(EPOCH FROM (
+                   attendance_records.work_date + s.end_time
+                   + CASE WHEN s.is_night_shift
+                     THEN INTERVAL '1 day' ELSE INTERVAL '0 day' END
+                   - (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')
+                 )) / 60)::int
+                 - COALESCE(s.grace_period_early_leave_minutes, 0)
+               )
+               FROM shifts s
+               WHERE s.id = attendance_records.shift_id
+                 AND s.branch_id = attendance_records.branch_id
+             ), 0),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1 AND branch_id = $2 AND employee_id = $3 AND check_out_time IS NULL
-         RETURNING id, employee_id, branch_id, work_date::text, check_in_time, check_out_time, status`,
-        [record.id, branchId, employee.id],
+         RETURNING id, employee_id, branch_id, work_date::text, check_in_time, check_out_time, status,
+                   early_departure_minutes, total_work_minutes, total_break_minutes`,
+        [record.id, branchId, employee.id, latitude, longitude],
       );
       await this.audit(
         client,
@@ -289,6 +522,30 @@ export class AttendanceService {
         throw new NotFoundException("لا يوجد سجل حضور لهذا التاريخ");
       }
       const row = record.rows[0];
+      if (!dto.requestedCheckIn && !dto.requestedCheckOut) {
+        throw new BadRequestException(
+          "يجب تحديد وقت حضور أو انصراف مطلوب تصحيحه",
+        );
+      }
+      const effectiveCheckIn = dto.requestedCheckIn
+        ? new Date(dto.requestedCheckIn)
+        : row.check_in_time
+          ? new Date(row.check_in_time)
+          : null;
+      const effectiveCheckOut = dto.requestedCheckOut
+        ? new Date(dto.requestedCheckOut)
+        : row.check_out_time
+          ? new Date(row.check_out_time)
+          : null;
+      if (
+        effectiveCheckIn &&
+        effectiveCheckOut &&
+        effectiveCheckOut.getTime() <= effectiveCheckIn.getTime()
+      ) {
+        throw new BadRequestException(
+          "وقت الانصراف يجب أن يكون بعد وقت الحضور",
+        );
+      }
       const result = await client.query(
         `INSERT INTO attendance_corrections
          (attendance_record_id, employee_id, branch_id, work_date,
@@ -343,7 +600,12 @@ export class AttendanceService {
              check_out_time = COALESCE($3, check_out_time),
              total_work_minutes = CASE
                WHEN COALESCE($3, check_out_time) IS NOT NULL
-               THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (COALESCE($3, check_out_time) - COALESCE($2, check_in_time))) / 60)::int)
+               THEN GREATEST(
+                 0,
+                 FLOOR(EXTRACT(EPOCH FROM (
+                   COALESCE($3, check_out_time) - COALESCE($2, check_in_time)
+                 )) / 60)::int - COALESCE(total_break_minutes, 0)
+               )
                ELSE total_work_minutes END,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1 AND branch_id = $4
@@ -371,10 +633,66 @@ export class AttendanceService {
         record.rows[0],
         updated.rows[0],
       );
+      await this.notifyCorrectionDecision(client, row, "approved");
       return {
         correctionId,
         attendance: updated.rows[0],
         status: "approved",
+      };
+    });
+  }
+
+  async rejectCorrection(
+    branchId: string,
+    correctionId: string,
+    reviewNotes: string | undefined,
+    user: AuthenticatedUser,
+  ) {
+    return this.db.transaction(async (client) => {
+      await this.assertBranch(client, branchId, user);
+      const correction = await client.query(
+        `SELECT * FROM attendance_corrections
+         WHERE id = $1 AND branch_id = $2 AND status = 'pending'
+         FOR UPDATE`,
+        [correctionId, branchId],
+      );
+      const row = correction.rows[0];
+      if (!row) {
+        throw new NotFoundException("طلب التصحيح غير موجود أو تمت معالجته");
+      }
+      const updated = await client.query(
+        `UPDATE attendance_corrections
+         SET status = 'rejected',
+             review_notes = $2,
+             reviewed_by_user_id = $3,
+             reviewed_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND branch_id = $4 AND status = 'pending'
+         RETURNING *`,
+        [correctionId, reviewNotes?.trim() || null, user.id, branchId],
+      );
+      if (!updated.rowCount) {
+        throw new ConflictException("تمت معالجة طلب التصحيح من مستخدم آخر");
+      }
+      await this.audit(
+        client,
+        user,
+        branchId,
+        row.attendance_record_id,
+        "UPDATE",
+        row,
+        updated.rows[0],
+      );
+      await this.notifyCorrectionDecision(
+        client,
+        row,
+        "rejected",
+        updated.rows[0].review_notes,
+      );
+      return {
+        correctionId,
+        status: "rejected",
+        correction: updated.rows[0],
       };
     });
   }

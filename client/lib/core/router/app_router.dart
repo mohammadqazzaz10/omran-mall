@@ -13,6 +13,10 @@ import '../../features/employee/employee_records_screen.dart';
 import '../../features/breaks/breaks_home_screen.dart';
 import '../../features/breaks/breaks_management_screen.dart';
 import '../../features/attendance/attendance_screen.dart';
+import '../../features/attendance/attendance_qr_display_screen.dart';
+import '../../features/attendance/attendance_qr_scanner_screen.dart';
+import '../../features/attendance/attendance_dashboard_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -76,6 +80,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (path == '/supervisor' && !hasRole(auth, 'SUPERVISOR')) {
         return homeFor(auth);
       }
+      if ((path == '/attendance/qr' || path == '/attendance/dashboard') &&
+          !hasRole(auth, 'SUPER_ADMIN') &&
+          !hasRole(auth, 'GENERAL_MANAGER') &&
+          !hasRole(auth, 'HR_MANAGER') &&
+          !hasRole(auth, 'HR_OFFICER') &&
+          !hasRole(auth, 'PERSONNEL_OFFICER') &&
+          !hasRole(auth, 'BRANCH_MANAGER') &&
+          !hasRole(auth, 'ASSISTANT_MANAGER') &&
+          !hasRole(auth, 'SUPERVISOR')) {
+        return homeFor(auth);
+      }
       if (path == '/breaks/manage' &&
           !hasRole(auth, 'SUPER_ADMIN') &&
           !hasRole(auth, 'GENERAL_MANAGER') &&
@@ -101,8 +116,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ChangePasswordScreen(),
       ),
       GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
         path: '/attendance',
         builder: (context, state) => const AttendanceScreen(),
+      ),
+      GoRoute(
+        path: '/attendance/scan',
+        builder: (context, state) => const AttendanceQrScannerScreen(),
+      ),
+      GoRoute(
+        path: '/attendance/qr',
+        builder: (context, state) => const AttendanceQrDisplayScreen(),
+      ),
+      GoRoute(
+        path: '/attendance/dashboard',
+        builder: (context, state) => const AttendanceDashboardScreen(),
       ),
       GoRoute(
         path: '/breaks',

@@ -55,6 +55,9 @@ jobs:
           npm run db:seed
           npm run db:seed
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/tests/schema_invariants.sql
+          PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_test -v ON_ERROR_STOP=1 -f ../database/tests/attendance_early_departure.sql
+          npx tsx scripts/attendance-checkout-integration.ts
+          node scripts/attendance-qr-concurrency.js
           PGPASSWORD=omran_test_password createdb -h 127.0.0.1 -U omran_test omran_existing_schema_test
           PGPASSWORD=omran_test_password psql -h 127.0.0.1 -U omran_test -d omran_existing_schema_test -v ON_ERROR_STOP=1 -c 'CREATE TABLE sentinel (id INTEGER PRIMARY KEY)'
           if output=$(DATABASE_URL=postgresql://omran_test:omran_test_password@127.0.0.1:5432/omran_existing_schema_test npm run db:migrate 2>&1); then
@@ -154,9 +157,18 @@ jobs:
     name: Android debug build
     needs: [flutter]
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('client/pubspec.lock') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.50.0
@@ -171,7 +183,7 @@ jobs:
       - run: flutter pub get --enforce-lockfile
         working-directory: client
       - name: Build Android Debug APK with verbose Gradle diagnostics
-        run: flutter build apk --debug --verbose
+        run: flutter build apk --debug --target-platform android-arm64 --verbose
         working-directory: client
       - uses: actions/upload-artifact@v6
         with:

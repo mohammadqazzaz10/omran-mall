@@ -1,0 +1,74 @@
+# Section 06 — Attendance, QR and Branch Geofence
+
+## Objective
+Record attendance using trusted server time, support branch QR verification and optional geofencing, and preserve correction history. A client device clock must never determine the authoritative attendance timestamp.
+
+## Existing baseline
+- Check-in and check-out APIs use PostgreSQL server time.
+- Attendance is tied to the employee, branch and published shift.
+- Duplicate daily attendance is blocked by a database uniqueness constraint.
+- Initial late-minute calculation uses the assigned shift and grace period.
+- Employee self-history and permission-scoped branch records exist.
+- Employees can request corrections; authorized branch users can approve them with audit history.
+
+## Implemented in this increment
+1. **Rotating signed QR:** The backend issues a branch-bound HMAC-SHA256 token with a 45-second lifetime. Signing uses a dedicated `ATTENDANCE_QR_SECRET` environment variable combined with the branch salt stored in PostgreSQL.
+2. **Atomic consistency:** QR consumption, attendance insertion, location persistence, and audit logging run in one PostgreSQL transaction; any failure rolls back the complete operation.
+3. **No plaintext token storage:** Only a SHA-256 digest of the nonce is stored.
+4. **Replay protection and database branch isolation:** A unique key records each employee's use of a challenge, with composite foreign keys ensuring that the challenge and employee belong to the same branch.
+5. **Branch binding:** Tokens from another branch, expired tokens, and invalid signatures are rejected.
+6. **Optional geofence:** When branch coordinates are configured, QR check-in requires latitude, longitude, and GPS accuracy of at most 100 meters. The backend computes distance from the configured branch center and checks the branch radius.
+7. **No geofence bypass:** Direct app check-in is rejected when branch geofencing is enabled; the QR route must be used.
+8. **Audit trail:** QR check-ins are recorded with method `qr_code` and verified coordinates, with an additional audit event.
+9. **Correction rejection:** A new endpoint rejects pending correction requests only, with optional reviewer notes, reviewer identity, decision timestamp, and audit history in one transaction.
+
+## API routes
+All routes are under `/branches/:branchId/attendance` and require an authenticated session, branch membership, and the listed permission.
+
+| Method | Path | Permission | Purpose |
+|---|---|---|---|
+| GET | `/qr/geofence` | `attendance.check_in.own` | Check whether location is required before requesting GPS permission |
+| POST | `/qr/challenges` | `attendance.qr.manage.branch` | Issue a 45-second QR token for branch display |
+| POST | `/check-in/qr` | `attendance.check_in.own` | QR check-in with location when geofence is enabled |
+| POST | `/check-in` | `attendance.check_in.own` | App check-in only when geofence is not enabled |
+| POST | `/check-out` | `attendance.check_out.own` | Server-timestamped check-out |
+| GET | `/me` | `attendance.view.own` | Employee attendance history |
+| GET | `/` | `attendance.view.branch` | Authorized branch attendance records |
+| POST | `/corrections` | `attendance.correct.own` | Request a correction |
+| POST | `/corrections/:correctionId/approve` | `attendance.approve.branch` | Approve a correction |
+| POST | `/corrections/:correctionId/reject` | `attendance.approve.branch` | Reject a correction with optional reviewer notes |
+
+## Required configuration
+- Generate an independent random value of at least 32 bytes for `ATTENDANCE_QR_SECRET` in each environment.
+- Never use the example value in `.env.example`; never commit the secret or embed it in Flutter or QR payloads.
+- Configure accurate branch coordinates and radius before enabling geofencing.
+- Actual production secret provisioning on Render is intentionally deferred to the final deployment stage.
+
+## Current limitations — Section 06 is not complete
+- Flutter supervisor UI now displays a server-issued QR and rotates it every 45 seconds; employee UI scans the QR and queries geofence status first; it requests location permission only when the branch requires it. Android/iOS camera and location permission declarations were added. All four CI checks passed for the current PR head, commit `545fb9560ce7ec39038fba890e7703d3bc4587c9` (Backend, Flutter analyze/tests, Android Debug APK, and Flutter Web Release). Android APK and Flutter Web Release artifacts were uploaded in [run 43682220221](https://github.com/mohammadqazzaz10/omran-mall/actions/runs/43682220221). Real-device acceptance remains pending.
+- Offline attendance recording and a trusted local queue are not supported. When disconnected, the UI explains that attendance cannot be recorded; it does not store QR tokens or create unverified local records. The employee can scan the current QR again after connectivity returns. Client timestamps are never authoritative.
+- GPS can be spoofed on some devices. Accuracy and distance checks alone do not prove device integrity; device attestation or another control must be evaluated before production use.
+- Correction rejection with optional reviewer notes and audit history is implemented. Overnight check-in is now assigned to the originating shift work date with after-midnight lateness calculation; check-out now calculates early departure against the assigned shift end and grace period, including overnight shifts. Holiday policy handling still requires implementation. A notification record is now inserted into the `notifications` table in the same transaction when a correction is approved or rejected, including reviewer notes on rejection. A backend API now lists the authenticated user's notifications and marks one or all as read, with every query/update scoped to the verified user ID. A bilingual Flutter inbox is linked from the employee home screen. Backend, Flutter analyze/tests, Android Debug, and Flutter Web Release all passed for current commit `545fb9560ce7ec39038fba890e7703d3bc4587c9`. FCM/APNs push delivery and verification while the app is closed remain outstanding. A deterministic PostgreSQL SQL regression executes the early-departure expression for regular, overnight, and after-shift cases. A new integration test also invokes AttendanceService.checkOut against PostgreSQL using an isolated schema and persisted branch, employee, shift, and attendance fixtures. It covers overnight shifts and regular shifts when the shift end remains on the same local date. The test is wired into CI and passed on commit `545fb9560ce7ec39038fba890e7703d3bc4587c9` in [run 43682220221](https://github.com/mohammadqazzaz10/omran-mall/actions/runs/43682220221). A Flutter branch dashboard now polls attendance records every 30 seconds; this is periodic refresh, not a WebSocket live stream.
+- Geofencing now also validates check-out: when branch coordinates are configured, the app sends location and accuracy; the server rejects locations outside the radius or accuracy worse than 100 meters and persists check-out coordinates. GPS is not requested when geofencing is disabled. This PR increment is pending CI and field acceptance; GPS alone is not anti-spoofing proof.
+- Composite PostgreSQL foreign keys and schema-invariant assertions now cover per-employee replay uniqueness and cross-branch use rejection. A parallel PostgreSQL uniqueness-race integration test has now been added and passed the Backend CI job on commit `711f913499a8bcd45a408430caed9dbb1f3f9d82` in [run 43676862335](https://github.com/mohammadqazzaz10/omran-mall/actions/runs/43676862335); real-device field acceptance remains required. Unit tests do not prove resistance to GPS spoofing.
+
+## Acceptance gate
+- [x] PostgreSQL server time is authoritative for existing check-in/out.
+- [x] Signed, short-lived, branch-bound QR token.
+- [x] Nonce digest stored instead of raw token.
+- [x] Per-employee challenge replay constraint.
+- [x] Geofence enforced when configured; direct app route cannot bypass it.
+- [x] Supervisor QR display and automatic 45-second rotation UI (all four CI checks passed; field acceptance remains pending).
+- [x] Employee QR scanner with optional location capture (all four CI checks passed; field acceptance remains pending).
+- [x] Reject a pending correction with optional reviewer notes and audit history.
+- [x] Persist a notification record for approved/rejected correction decisions, including rejection notes.
+- [x] Add an owner-scoped API/UI to list notifications and mark one or all as read; all four CI checks passed.
+- [ ] Integrate FCM/APNs and verify delivery on physical devices while the app is closed.
+- [x] Branch attendance dashboard with 30-second polling (not a WebSocket live stream).
+- [ ] Safe offline queue and conflict review without trusting client time.
+- [x] Pass the PostgreSQL schema-invariant and parallel uniqueness-race integration tests on a clean CI database in the Backend CI job for commit `711f913499a8bcd45a408430caed9dbb1f3f9d82`.
+- [x] Add a PostgreSQL integration test invoking AttendanceService.checkOut with persisted shift and attendance fixtures in an isolated schema; it passed Backend CI on the current PR head.
+- [ ] Real-device field test and independent security review.
+
+**Status: Partial.** All four CI checks passed for current PR head `545fb9560ce7ec39038fba890e7703d3bc4587c9` in [run 43682220221](https://github.com/mohammadqazzaz10/omran-mall/actions/runs/43682220221), including the PostgreSQL AttendanceService.checkOut integration test. CI does not cover holiday policy, FCM/APNs push delivery, real-device acceptance, or GPS anti-spoofing review. Offline queue and geofenced check-out are also not implemented; this is not production-ready.
+
