@@ -101,13 +101,8 @@ describe("AttendanceService", () => {
       };
       const responses = [
         { rows: [{ id: branchId }], rowCount: 1 },
-        {
-          rows: [{ id: employeeId, status: "active" }],
-          rowCount: 1,
-        },
-        {
-          rows: [{ work_date: "2026-11-15", local_time: "02:00" }],
-        },
+        { rows: [{ id: employeeId, status: "active" }], rowCount: 1 },
+        { rows: [{ work_date: "2026-11-15", local_time: "02:00" }] },
         {
           rows: [
             {
