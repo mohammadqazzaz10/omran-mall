@@ -270,9 +270,12 @@ export class ShiftsService {
       if (dto.requesterAssignmentId === dto.targetAssignmentId) throw new BadRequestException("لا يمكن تبديل الوردية مع نفس الإسناد");
       const assignments = await client.query<{
         id: string; employee_id: string; status: string; is_day_off: boolean;
+        employee_status: string;
       }>(
-        `SELECT id, employee_id, status, is_day_off FROM shift_assignments
-         WHERE id = ANY($1::uuid[]) AND branch_id = $2 FOR UPDATE`,
+        `SELECT sa.id, sa.employee_id, sa.status, sa.is_day_off, e.status AS employee_status
+         FROM shift_assignments sa
+         JOIN employees e ON e.id = sa.employee_id AND e.branch_id = sa.branch_id
+         WHERE sa.id = ANY($1::uuid[]) AND sa.branch_id = $2 FOR UPDATE OF sa, e`,
         [[dto.requesterAssignmentId, dto.targetAssignmentId], branchId],
       );
       if (assignments.rowCount !== 2) throw new NotFoundException("أحد إسنادي الوردية غير موجود");
@@ -280,6 +283,7 @@ export class ShiftsService {
       const target = assignments.rows.find((a) => a.id === dto.targetAssignmentId);
       if (own?.employee_id !== requester.rows[0].id) throw new ForbiddenException("لا يمكنك طلب تبديل إسناد لا يخصك");
       if (!target || target.employee_id === requester.rows[0].id) throw new BadRequestException("يجب اختيار إسناد موظف آخر");
+      if (target.employee_status !== "active") throw new ConflictException("الموظف المستهدف غير نشط ولا يمكنه الرد على طلب التبديل");
       if (own?.status !== "published" || target.status !== "published" || own.is_day_off || target.is_day_off) {
         throw new ConflictException("يمكن تبديل الورديات المنشورة فقط، ولا تشمل أيام العطلة");
       }
@@ -311,13 +315,14 @@ export class ShiftsService {
     return this.db.transaction(async (client) => {
       await this.assertBranch(client, branchId, user);
       const employee = await client.query(
-        "SELECT id FROM employees WHERE user_id = $1 AND branch_id = $2 AND status = 'active'",
+        "SELECT id FROM employees WHERE user_id = $1 AND branch_id = $2 AND status = 'active' AND deleted_at IS NULL",
         [user.id, branchId],
       );
       if (!employee.rowCount) throw new ForbiddenException("لا يوجد ملف موظف فعال لهذا الحساب");
       const result = await client.query(
         `UPDATE shift_swap_requests
          SET status = $3, target_responded_at = CURRENT_TIMESTAMP,
+             target_response_notes = $4,
              rejection_reason = CASE WHEN $3 = 'rejected' THEN $4 ELSE NULL END,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1 AND branch_id = $2 AND target_employee_id = $5
@@ -416,11 +421,11 @@ export class ShiftsService {
          SELECT e.user_id, $3, $4, 'request_update',
            jsonb_build_object('kind','shift_swap','swapId',$1,'status',$5)
          FROM employees e
-         WHERE e.id = ANY($2::uuid[]) AND e.user_id IS NOT NULL`,
+         WHERE e.id = ANY($2::uuid[]) AND e.branch_id = $6 AND e.user_id IS NOT NULL`,
         [swapId, [row.requester_employee_id, row.target_employee_id],
           dto.approve ? "تم اعتماد تبديل الوردية" : "تم رفض تبديل الوردية",
           dto.approve ? "تم اعتماد طلب التبديل وتحديث الجدول." : "تم رفض طلب التبديل.",
-          dto.approve ? "approved" : "rejected"],
+          dto.approve ? "approved" : "rejected", branchId],
       );
       return result.rows[0];
     });
