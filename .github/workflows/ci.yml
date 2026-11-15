@@ -155,9 +155,18 @@ jobs:
     name: Android debug build
     needs: [flutter]
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('client/android/**/*.gradle*', 'client/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.50.0
