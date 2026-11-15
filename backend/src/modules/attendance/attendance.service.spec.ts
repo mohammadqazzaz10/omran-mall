@@ -114,7 +114,7 @@ describe("AttendanceService", () => {
       { rows: [record], rowCount: 1 },
       { rows: [], rowCount: 1 },
     ];
-    const query = jest.fn(async () => responses.shift());
+    const query = jest.fn(async (..._args: any[]) => responses.shift());
     const client = { query };
     const { service } = serviceWithClient(client);
 
