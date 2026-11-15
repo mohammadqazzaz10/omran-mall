@@ -175,6 +175,48 @@ describe("AttendanceQrService", () => {
     expect(attendance.checkIn).not.toHaveBeenCalled();
   });
 
+
+  it("requires location for check-out when branch geofence is enabled", async () => {
+    const db = {
+      query: jest.fn().mockResolvedValueOnce({
+        rows: [{ latitude: "31.95", longitude: "35.91", geofence_radius_meters: 150 }],
+        rowCount: 1,
+      }),
+    };
+    const attendance = { checkOut: jest.fn() };
+    const service = new AttendanceQrService(db as any, attendance as any);
+    await expect(service.checkOutWithGeofence(branchId, {}, user)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(attendance.checkOut).not.toHaveBeenCalled();
+  });
+
+  it("rejects check-out outside the configured branch geofence", async () => {
+    const db = {
+      query: jest.fn().mockResolvedValueOnce({
+        rows: [{ latitude: "31.95", longitude: "35.91", geofence_radius_meters: 100 }],
+        rowCount: 1,
+      }),
+    };
+    const attendance = { checkOut: jest.fn() };
+    const service = new AttendanceQrService(db as any, attendance as any);
+    await expect(service.checkOutWithGeofence(branchId, {
+      latitude: 31.96, longitude: 35.91, accuracyMeters: 5,
+    }, user)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(attendance.checkOut).not.toHaveBeenCalled();
+  });
+
+  it("allows check-out without GPS when branch geofencing is disabled", async () => {
+    const db = {
+      query: jest.fn().mockResolvedValueOnce({
+        rows: [{ latitude: null, longitude: null, geofence_radius_meters: null }],
+        rowCount: 1,
+      }),
+    };
+    const attendance = { checkOut: jest.fn().mockResolvedValue({ id: "attendance-id" }) };
+    const service = new AttendanceQrService(db as any, attendance as any);
+    await expect(service.checkOutWithGeofence(branchId, {}, user)).resolves.toEqual({ id: "attendance-id" });
+    expect(attendance.checkOut).toHaveBeenCalledWith(branchId, user, null, null);
+  });
+
   it("fails closed without a QR signing secret", async () => {
     delete process.env.ATTENDANCE_QR_SECRET;
     const db = {
