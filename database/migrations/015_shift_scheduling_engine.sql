@@ -96,6 +96,7 @@ CREATE INDEX idx_shift_assignments_employee_date
 
 ALTER TABLE shift_swap_requests
   ADD COLUMN target_responded_at TIMESTAMPTZ,
+  ADD COLUMN target_response_notes VARCHAR(1000),
   ADD COLUMN manager_decided_at TIMESTAMPTZ,
   ADD COLUMN manager_notes VARCHAR(1000);
 
