@@ -376,7 +376,9 @@ export class AttendanceQrService {
         longitude,
       );
       if (distance > radius) {
-        throw new ForbiddenException("أنت خارج النطاق الجغرافي المسموح للفرع");
+        throw new ForbiddenException(
+          "أنت خارج النطاق الجغرافي المسموح للفرع",
+        );
       }
     }
 
