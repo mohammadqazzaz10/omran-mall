@@ -1,0 +1,30 @@
+name: temporary-attendance-qr-formatter
+on:
+  push:
+    branches:
+      - feature/section-06-attendance-verification
+permissions:
+  contents: read
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Format the two attendance QR TypeScript files and expose exact output
+        working-directory: backend
+        run: |
+          npm ci
+          npx prettier --write src/modules/attendance/attendance-qr.service.ts src/modules/attendance/attendance-qr.service.spec.ts
+          echo "ATTENDANCE_QR_SERVICE_BASE64_BEGIN"
+          base64 -w0 src/modules/attendance/attendance-qr.service.ts
+          echo
+          echo "ATTENDANCE_QR_SERVICE_BASE64_END"
+          echo "ATTENDANCE_QR_SPEC_BASE64_BEGIN"
+          base64 -w0 src/modules/attendance/attendance-qr.service.spec.ts
+          echo
+          echo "ATTENDANCE_QR_SPEC_BASE64_END"
