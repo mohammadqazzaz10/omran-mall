@@ -50,7 +50,8 @@ describe("AttendanceQrService", () => {
         enabled: false,
         radiusMeters: null,
       });
-  });
+    },
+  );
 
   it(
     "reports the configured geofence radius when branch location is enabled",
@@ -76,7 +77,8 @@ describe("AttendanceQrService", () => {
         enabled: true,
         radiusMeters: 200,
       });
-  });
+    },
+  );
 
   it(
     "issues a signed 45-second QR token and stores only the nonce digest",
@@ -108,7 +110,8 @@ describe("AttendanceQrService", () => {
       expect(db.query.mock.calls[1][0]).toContain("attendance_qr_challenges");
       expect(db.query.mock.calls[1][0]).toContain("nonce_hash");
       expect(db.query.mock.calls[1][1][1]).toMatch(/^[a-f0-9]{64}$/);
-  });
+    },
+  );
 
   it("rejects QR tokens issued for another branch", async () => {
     const db = { query: jest.fn(), transaction: jest.fn() };
@@ -141,7 +144,9 @@ describe("AttendanceQrService", () => {
         n: nonce,
         e: Math.floor(Date.now() / 1000) + 45,
       };
-      const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+      const encoded = Buffer.from(JSON.stringify(payload)).toString(
+        "base64url",
+      );
       const key = createHmac("sha256", process.env.ATTENDANCE_QR_SECRET!)
         .update("branch-salt")
         .digest();
@@ -181,7 +186,8 @@ describe("AttendanceQrService", () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(db.transaction).not.toHaveBeenCalled();
       expect(attendance.checkIn).not.toHaveBeenCalled();
-  });
+    },
+  );
 
   it(
     "requires location for check-out when branch geofence is enabled",
@@ -204,7 +210,8 @@ describe("AttendanceQrService", () => {
         service.checkOutWithGeofence(branchId, {}, user),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(attendance.checkOut).not.toHaveBeenCalled();
-  });
+    },
+  );
 
   it("rejects check-out outside the configured branch geofence", async () => {
     const db = {
@@ -255,7 +262,8 @@ describe("AttendanceQrService", () => {
         null,
         null,
       );
-  });
+    },
+  );
 
   it("fails closed without a QR signing secret", async () => {
     delete process.env.ATTENDANCE_QR_SECRET;
@@ -334,5 +342,6 @@ describe("AttendanceQrService", () => {
         null,
       );
       expect(db.transaction).not.toHaveBeenCalled();
-  });
+    },
+  );
 });
