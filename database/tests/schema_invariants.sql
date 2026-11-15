@@ -522,7 +522,7 @@ BEGIN
 
   DELETE FROM shift_assignments
   WHERE employee_id = v_employee_id
-    AND work_date BETWEEN v_work_date AND v_work_date + 1;
+    AND work_date BETWEEN v_work_date AND v_work_date + 2;
 
   INSERT INTO shifts (
     branch_id, code, name_ar, start_time, end_time, is_night_shift,
