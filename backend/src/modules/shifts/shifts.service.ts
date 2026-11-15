@@ -347,15 +347,29 @@ export class ShiftsService {
         if (assignments.rowCount !== 2) throw new ConflictException("أحد إسنادي الوردية لم يعد صالحاً للتبديل");
         await client.query("SET CONSTRAINTS uq_emp_shift_date, ex_shift_assignment_employee_time DEFERRED");
         await client.query(
-          `UPDATE shift_assignments
-           SET shift_id = CASE WHEN id = $1 THEN (SELECT shift_id FROM shift_assignments WHERE id = $2)
-                               ELSE (SELECT shift_id FROM shift_assignments WHERE id = $1) END,
-               scheduled_start_at = CASE WHEN id = $1 THEN (SELECT scheduled_start_at FROM shift_assignments WHERE id = $2)
-                                          ELSE (SELECT scheduled_start_at FROM shift_assignments WHERE id = $1) END,
-               scheduled_end_at = CASE WHEN id = $1 THEN (SELECT scheduled_end_at FROM shift_assignments WHERE id = $2)
-                                       ELSE (SELECT scheduled_end_at FROM shift_assignments WHERE id = $1) END,
+          `WITH current_assignments AS (
+             SELECT id, shift_id
+             FROM shift_assignments
+             WHERE id = ANY($3::uuid[]) AND branch_id = $4
+           ), exchanged AS (
+             SELECT source.id, target.shift_id AS new_shift_id
+             FROM current_assignments source
+             JOIN current_assignments target
+               ON target.id = CASE WHEN source.id = $1 THEN $2 ELSE $1 END
+           )
+           UPDATE shift_assignments assignment
+           SET shift_id = exchanged.new_shift_id,
+               scheduled_start_at = assignment.work_date + new_shift.start_time,
+               scheduled_end_at = assignment.work_date + new_shift.end_time
+                 + CASE WHEN new_shift.end_time <= new_shift.start_time
+                        THEN INTERVAL '1 day' ELSE INTERVAL '0' END,
                updated_at = CURRENT_TIMESTAMP
-           WHERE id = ANY($3::uuid[]) AND branch_id = $4`,
+           FROM exchanged
+           JOIN shifts new_shift
+             ON new_shift.id = exchanged.new_shift_id
+            AND new_shift.branch_id = $4
+           WHERE assignment.id = exchanged.id
+             AND assignment.branch_id = $4`,
           [row.requester_assignment_id, row.target_assignment_id,
             [row.requester_assignment_id, row.target_assignment_id], branchId],
         );
