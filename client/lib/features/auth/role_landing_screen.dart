@@ -42,6 +42,16 @@ class RoleLandingScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Card(
             child: ListTile(
+              leading: const Icon(Icons.schedule),
+              title: Text(isArabic(context) ? 'الورديات والجداول' : 'Shifts & schedules'),
+              subtitle: Text(isArabic(context) ? 'عرض جدول الفرع وإدارة الورديات' : 'View branch schedules and manage shifts'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/shifts'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: ListTile(
               leading: const Icon(Icons.access_time),
               title: Text(isArabic(context) ? 'الحضور والانصراف' : 'Attendance'),
               subtitle: Text(
