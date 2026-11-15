@@ -293,6 +293,16 @@ export class ShiftsService {
           dto.targetAssignmentId, branchId, dto.reason],
       );
       await this.audit(client, user, branchId, "shift_swap_requests", result.rows[0].id, "INSERT", result.rows[0]);
+      await client.query(
+        `INSERT INTO notifications (user_id, title, body, type, payload)
+         SELECT e.user_id, 'طلب تبديل وردية جديد',
+           'لديك طلب تبديل وردية بانتظار ردك.',
+           'request_update',
+           jsonb_build_object('kind','shift_swap','swapId',$1,'status','pending_colleague')
+         FROM employees e
+         WHERE e.id = $2 AND e.branch_id = $3 AND e.user_id IS NOT NULL`,
+        [result.rows[0].id, target.employee_id, branchId],
+      );
       return result.rows[0];
     });
   }
@@ -318,6 +328,18 @@ export class ShiftsService {
       );
       if (!result.rowCount) throw new NotFoundException("طلب التبديل غير موجود أو لا يخصك أو تمت معالجته");
       await this.audit(client, user, branchId, "shift_swap_requests", result.rows[0].id, "UPDATE", result.rows[0]);
+      await client.query(
+        `INSERT INTO notifications (user_id, title, body, type, payload)
+         SELECT e.user_id, $3, $4, 'request_update',
+           jsonb_build_object('kind','shift_swap','swapId',$1,'status',$5)
+         FROM employees e
+         JOIN shift_swap_requests sw ON sw.requester_employee_id = e.id
+         WHERE sw.id = $1 AND sw.branch_id = $2 AND e.user_id IS NOT NULL`,
+        [swapId, branchId,
+          dto.accept ? "وافق الموظف على طلب التبديل" : "رفض الموظف طلب التبديل",
+          dto.accept ? "أصبح الطلب بانتظار اعتماد المدير." : (dto.notes ?? "تم رفض طلب التبديل."),
+          dto.accept ? "pending_manager" : "rejected"],
+      );
       return result.rows[0];
     });
   }
@@ -346,7 +368,7 @@ export class ShiftsService {
         );
         if (assignments.rowCount !== 2) throw new ConflictException("أحد إسنادي الوردية لم يعد صالحاً للتبديل");
         await client.query("SET CONSTRAINTS uq_emp_shift_date, ex_shift_assignment_employee_time DEFERRED");
-        await client.query(
+        const swapped = await client.query(
           `WITH current_assignments AS (
              SELECT id, shift_id
              FROM shift_assignments
@@ -369,10 +391,16 @@ export class ShiftsService {
              ON new_shift.id = exchanged.new_shift_id
             AND new_shift.branch_id = $4
            WHERE assignment.id = exchanged.id
-             AND assignment.branch_id = $4`,
+             AND assignment.branch_id = $4
+           RETURNING assignment.id, assignment.employee_id, assignment.work_date,
+                     assignment.shift_id, assignment.scheduled_start_at,
+                     assignment.scheduled_end_at`,
           [row.requester_assignment_id, row.target_assignment_id,
             [row.requester_assignment_id, row.target_assignment_id], branchId],
         );
+        for (const assignment of swapped.rows) {
+          await this.audit(client, user, branchId, "shift_assignments", assignment.id, "UPDATE", assignment);
+        }
       }
       const result = await client.query(
         `UPDATE shift_swap_requests
