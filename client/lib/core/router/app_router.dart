@@ -16,6 +16,7 @@ import '../../features/attendance/attendance_screen.dart';
 import '../../features/attendance/attendance_qr_display_screen.dart';
 import '../../features/attendance/attendance_qr_scanner_screen.dart';
 import '../../features/attendance/attendance_dashboard_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -113,6 +114,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/change-password',
         builder: (context, state) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
         path: '/attendance',
