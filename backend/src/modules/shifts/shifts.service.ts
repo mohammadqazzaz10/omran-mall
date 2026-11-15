@@ -31,6 +31,26 @@ export class ShiftsService {
     if (!result.rowCount) throw new NotFoundException("الفرع غير موجود أو غير فعال");
   }
 
+  private async audit(
+    client: PoolClient,
+    user: AuthenticatedUser,
+    branchId: string,
+    tableName: string,
+    recordId: string,
+    action: "INSERT" | "UPDATE",
+    newValues: unknown,
+    oldValues: unknown = null,
+  ) {
+    await client.query(
+      `INSERT INTO audit_logs
+       (user_id, branch_id, table_name, record_id, action, old_values, new_values)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb)`,
+      [user.id, branchId, tableName, recordId, action,
+        oldValues == null ? null : JSON.stringify(oldValues),
+        newValues == null ? null : JSON.stringify(newValues)],
+    );
+  }
+
   private assertRange(from: string, to: string) {
     const start = Date.parse(from);
     const end = Date.parse(to);
@@ -82,6 +102,7 @@ export class ShiftsService {
           dto.description ?? null,
         ],
       );
+      await this.audit(client, user, branchId, "shifts", result.rows[0].id, "INSERT", result.rows[0]);
       return result.rows[0];
     });
   }
@@ -178,6 +199,7 @@ export class ShiftsService {
         [dto.employeeId, dto.isDayOff ? null : dto.shiftId, branchId, dto.workDate,
           dto.isDayOff ?? false, user.id, departmentId, dto.notes ?? null],
       );
+      await this.audit(client, user, branchId, "shift_assignments", result.rows[0].id, "INSERT", result.rows[0]);
       return result.rows[0];
     });
   }
@@ -195,12 +217,15 @@ export class ShiftsService {
          RETURNING id, employee_id, work_date`,
         [branchId, from, to],
       );
+      for (const assignment of result.rows) {
+        await this.audit(client, user, branchId, "shift_assignments", assignment.id, "UPDATE", assignment);
+      }
       if (result.rowCount) {
         await client.query(
           `INSERT INTO notifications (user_id, title, body, type, payload)
            SELECT DISTINCT e.user_id, 'تم نشر جدول الورديات',
              'تم نشر جدول الورديات للفترة المحددة. راجع جدولك الشخصي.',
-             'system', jsonb_build_object('kind','shift_schedule_published',
+             'shift_change', jsonb_build_object('kind','shift_schedule_published',
                'branchId',$1,'from',$2::date,'to',$3::date)
            FROM employees e
            JOIN shift_assignments sa ON sa.employee_id = e.id AND sa.branch_id = e.branch_id
@@ -267,6 +292,7 @@ export class ShiftsService {
         [requester.rows[0].id, dto.requesterAssignmentId, target.employee_id,
           dto.targetAssignmentId, branchId, dto.reason],
       );
+      await this.audit(client, user, branchId, "shift_swap_requests", result.rows[0].id, "INSERT", result.rows[0]);
       return result.rows[0];
     });
   }
@@ -291,6 +317,7 @@ export class ShiftsService {
           dto.notes ?? null, employee.rows[0].id],
       );
       if (!result.rowCount) throw new NotFoundException("طلب التبديل غير موجود أو لا يخصك أو تمت معالجته");
+      await this.audit(client, user, branchId, "shift_swap_requests", result.rows[0].id, "UPDATE", result.rows[0]);
       return result.rows[0];
     });
   }
@@ -341,6 +368,7 @@ export class ShiftsService {
          WHERE id = $1 AND branch_id = $2 RETURNING *`,
         [swapId, branchId, dto.approve ? "approved" : "rejected", user.id, dto.notes ?? null],
       );
+      await this.audit(client, user, branchId, "shift_swap_requests", result.rows[0].id, "UPDATE", result.rows[0]);
       await client.query(
         `INSERT INTO notifications (user_id, title, body, type, payload)
          SELECT e.user_id, $3, $4, 'request_update',
@@ -412,6 +440,7 @@ export class ShiftsService {
           dto.minimumStaff, dto.validFrom, dto.validTo ?? null, user.id],
       );
       if (!result.rowCount) throw new BadRequestException("القسم أو الوردية غير موجودة في هذا الفرع");
+      await this.audit(client, user, branchId, "shift_coverage_requirements", result.rows[0].id, "INSERT", result.rows[0]);
       return result.rows[0];
     });
   }
