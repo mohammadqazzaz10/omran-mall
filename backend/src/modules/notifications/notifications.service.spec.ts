@@ -24,7 +24,10 @@ describe("NotificationsService", () => {
   });
 
   it("marks a notification read only when it belongs to the user", async () => {
-    db.query.mockResolvedValue({ rowCount: 1, rows: [{ id: "notice-1", is_read: true }] });
+    db.query.mockResolvedValue({
+      rowCount: 1,
+      rows: [{ id: "notice-1", is_read: true }],
+    });
 
     const result = await service.markRead("user-1", "notice-1");
 
@@ -38,15 +41,17 @@ describe("NotificationsService", () => {
   it("does not reveal notifications owned by another user", async () => {
     db.query.mockResolvedValue({ rowCount: 0, rows: [] });
 
-    await expect(service.markRead("user-1", "other-users-notice")).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.markRead("user-1", "other-users-notice"),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it("marks all unread notifications for the authenticated user only", async () => {
     db.query.mockResolvedValue({ rowCount: 3, rows: [] });
 
-    await expect(service.markAllRead("user-1")).resolves.toEqual({ updatedCount: 3 });
+    await expect(service.markAllRead("user-1")).resolves.toEqual({
+      updatedCount: 3,
+    });
     expect(db.query).toHaveBeenCalledWith(
       expect.stringContaining("WHERE user_id = $1 AND is_read = FALSE"),
       ["user-1"],
