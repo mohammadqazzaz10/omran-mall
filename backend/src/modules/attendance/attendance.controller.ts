@@ -15,6 +15,7 @@ import { RequirePermission } from "../../common/decorators/permission.decorator"
 import { BranchIsolationGuard } from "../../common/guards/branch-isolation.guard";
 import { AuthenticatedUser } from "../auth/auth.types";
 import {
+  AttendanceCheckOutDto,
   AttendanceCorrectionDto,
   AttendanceCorrectionRejectionDto,
   AttendanceQrCheckInDto,
@@ -75,9 +76,10 @@ export class AttendanceController {
   @RequirePermission("attendance.check_out.own")
   checkOut(
     @Param("branchId", ParseUUIDPipe) branchId: string,
+    @Body() dto: AttendanceCheckOutDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.attendance.checkOut(branchId, req.user);
+    return this.attendanceQr.checkOutWithGeofence(branchId, dto, req.user);
   }
 
   @Get("me")
