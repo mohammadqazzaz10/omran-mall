@@ -6,6 +6,7 @@ import 'package:omran_mall/core/network/api_client.dart';
 import 'package:omran_mall/features/auth/auth_controller.dart';
 import 'package:omran_mall/features/auth/auth_repository.dart';
 import 'package:omran_mall/main.dart';
+import 'package:flutter/foundation.dart';
 
 class _SignedOutAuthRepository extends AuthRepository {
   _SignedOutAuthRepository()
@@ -40,6 +41,32 @@ void main() {
       Directionality.of(tester.element(loginText)),
       TextDirection.rtl,
     );
+  });
+
+  testWidgets('debug build can enter offline preview without signing in', (tester) async {
+    expect(kDebugMode, isTrue);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _testOverrides(),
+        child: const OmranMallApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final previewButton = find.text('استعراض التطبيق دون تسجيل الدخول');
+    expect(previewButton, findsOneWidget);
+    await tester.tap(previewButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('معاينة عمران مول'), findsOneWidget);
+    expect(find.text('استعراض أقسام النظام'), findsOneWidget);
+
+    // The module list is scrollable; move the lazily built attendance row
+    // into the viewport before asserting that it is present.
+    final attendanceModule = find.text('الحضور والانصراف و QR');
+    await tester.scrollUntilVisible(attendanceModule, 250);
+    expect(attendanceModule, findsOneWidget);
   });
 
   testWidgets('app can open in English with LTR direction', (tester) async {

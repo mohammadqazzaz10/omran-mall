@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import '../../features/auth/change_password_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/role_landing_screen.dart';
 import '../../features/auth/session_management_screen.dart';
+import '../../features/preview/preview_home_screen.dart';
 import '../../features/employee/employee_home_screen.dart';
 import '../../features/employee/employee_records_screen.dart';
 import '../../features/breaks/breaks_home_screen.dart';
@@ -47,6 +49,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authProvider);
       final path = state.uri.path;
 
+      // Preview is a local-only feature available in debug builds only.
+      if (path.startsWith('/preview')) return kDebugMode ? null : '/login';
       if (auth.isLoading) return null;
       if (!auth.isAuthenticated) {
         return path == '/login' ? null : '/login';
@@ -110,6 +114,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/preview',
+        builder: (context, state) => const PreviewHomeScreen(),
       ),
       GoRoute(
         path: '/change-password',
