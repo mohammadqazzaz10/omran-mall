@@ -293,7 +293,9 @@ describe("AttendanceQrService", () => {
         n: nonce,
         e: Math.floor(Date.now() / 1000) + 45,
       };
-      const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+      const encoded = Buffer.from(JSON.stringify(payload)).toString(
+        "base64url",
+      );
       const key = createHmac("sha256", process.env.ATTENDANCE_QR_SECRET!)
         .update("branch-salt")
         .digest();
