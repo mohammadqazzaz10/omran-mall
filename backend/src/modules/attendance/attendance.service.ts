@@ -19,6 +19,9 @@ type AttendanceRow = {
   check_in_time: string | null;
   check_out_time: string | null;
   status: string;
+  early_departure_minutes?: number;
+  total_work_minutes?: number;
+  total_break_minutes?: number;
 };
 
 @Injectable()
@@ -428,7 +431,8 @@ export class AttendanceService {
              ), 0),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1 AND branch_id = $2 AND employee_id = $3 AND check_out_time IS NULL
-         RETURNING id, employee_id, branch_id, work_date::text, check_in_time, check_out_time, status`,
+         RETURNING id, employee_id, branch_id, work_date::text, check_in_time, check_out_time, status,
+                   early_departure_minutes, total_work_minutes, total_break_minutes`,
         [record.id, branchId, employee.id],
       );
       await this.audit(
