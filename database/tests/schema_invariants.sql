@@ -424,3 +424,67 @@ BEGIN
     EXCEPTION WHEN foreign_key_violation THEN NULL;
     END;
 END;$$;
+
+
+-- Section 07 scheduling schema: verify branch-scoped constraints and permissions.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'shift_assignments'
+      AND column_name = 'scheduled_start_at'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'shift_assignments'
+      AND column_name = 'department_id'
+  ) THEN
+    RAISE EXCEPTION 'Section 07 schedule assignment columns are missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'ex_shift_assignment_employee_time'
+      AND contype = 'x' AND condeferrable = TRUE
+  ) THEN
+    RAISE EXCEPTION 'Employee shift overlap exclusion constraint is missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_shift_assignment_employee_branch'
+      AND contype = 'f'
+  ) THEN
+    RAISE EXCEPTION 'Shift assignment employee branch foreign key is missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_shift_assignment_department_branch'
+      AND contype = 'f'
+  ) THEN
+    RAISE EXCEPTION 'Shift assignment department branch foreign key is missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM roles r
+    JOIN role_permissions rp ON rp.role_id = r.id
+    JOIN permissions p ON p.id = rp.permission_id
+    WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+      AND r.code = 'BRANCH_MANAGER'
+      AND p.code = 'shifts.manage.branch'
+  ) THEN
+    RAISE EXCEPTION 'BRANCH_MANAGER is missing shift scheduling management permission';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM roles r
+    JOIN role_permissions rp ON rp.role_id = r.id
+    JOIN permissions p ON p.id = rp.permission_id
+    WHERE r.company_id = 'a0000000-0000-0000-0000-000000000001'
+      AND r.code = 'EMPLOYEE'
+      AND p.code = 'shifts.view.own'
+  ) THEN
+    RAISE EXCEPTION 'EMPLOYEE is missing personal shift schedule permission';
+  END IF;
+END;
+$$;
