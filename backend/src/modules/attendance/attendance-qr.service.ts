@@ -121,27 +121,81 @@ export class AttendanceQrService {
     return { enabled, radiusMeters: enabled ? (radius ?? 150) : null };
   }
 
-  async checkOutWithGeofence(branchId: string, dto: AttendanceCheckOutDto, user: AuthenticatedUser) {
-    const branch = await this.db.query<{ latitude: string | null; longitude: string | null; geofence_radius_meters: number | null }>(
-      `SELECT latitude::text, longitude::text, geofence_radius_meters FROM branches WHERE id = $1 AND company_id = $2 AND is_active = TRUE AND deleted_at IS NULL`,
+  async checkOutWithGeofence(
+    branchId: string,
+    dto: AttendanceCheckOutDto,
+    user: AuthenticatedUser,
+  ) {
+    const branch = await this.db.query<{
+      latitude: string | null;
+      longitude: string | null;
+      geofence_radius_meters: number | null;
+    }>(
+      `SELECT latitude::text, longitude::text, geofence_radius_meters
+       FROM branches
+       WHERE id = $1 AND company_id = $2
+         AND is_active = TRUE AND deleted_at IS NULL`,
       [branchId, user.companyId],
     );
-    if (!branch.rowCount) throw new NotFoundException('الفرع غير موجود أو غير فعال');
+    if (!branch.rowCount) {
+      throw new NotFoundException("الفرع غير موجود أو غير فعال");
+    }
+
     const fence = branch.rows[0];
     const configured = fence.latitude !== null || fence.longitude !== null;
-    if ((fence.latitude === null) !== (fence.longitude === null)) throw new ServiceUnavailableException('إعدادات النطاق الجغرافي للفرع غير مكتملة');
+    if ((fence.latitude === null) !== (fence.longitude === null)) {
+      throw new ServiceUnavailableException(
+        "إعدادات النطاق الجغرافي للفرع غير مكتملة",
+      );
+    }
+
     let latitude: number | null = null;
     let longitude: number | null = null;
     if (configured) {
-      if (dto.latitude === undefined || dto.longitude === undefined || dto.accuracyMeters === undefined) throw new ForbiddenException('يلزم إرسال موقعك للتحقق من نطاق الفرع عند الانصراف');
-      if (dto.accuracyMeters > 100 || !Number.isFinite(dto.latitude) || !Number.isFinite(dto.longitude)) throw new ForbiddenException('دقة الموقع غير كافية للتحقق من الانصراف');
+      if (
+        dto.latitude === undefined ||
+        dto.longitude === undefined ||
+        dto.accuracyMeters === undefined
+      ) {
+        throw new ForbiddenException(
+          "يلزم إرسال موقعك للتحقق من نطاق الفرع عند الانصراف",
+        );
+      }
+      if (
+        dto.accuracyMeters > 100 ||
+        !Number.isFinite(dto.latitude) ||
+        !Number.isFinite(dto.longitude)
+      ) {
+        throw new ForbiddenException(
+          "دقة الموقع غير كافية للتحقق من الانصراف",
+        );
+      }
+
       const radius = fence.geofence_radius_meters ?? 150;
-      if (!Number.isInteger(radius) || radius < 25 || radius > 1000) throw new ServiceUnavailableException('نصف قطر النطاق الجغرافي للفرع خارج الحدود المسموحة');
-      latitude = dto.latitude; longitude = dto.longitude;
-      if (this.distanceMeters(Number(fence.latitude), Number(fence.longitude), latitude, longitude) > radius) throw new ForbiddenException('أنت خارج النطاق الجغرافي المسموح للفرع');
+      if (!Number.isInteger(radius) || radius < 25 || radius > 1000) {
+        throw new ServiceUnavailableException(
+          "نصف قطر النطاق الجغرافي للفرع خارج الحدود المسموحة",
+        );
+      }
+
+      latitude = dto.latitude;
+      longitude = dto.longitude;
+      const distance = this.distanceMeters(
+        Number(fence.latitude),
+        Number(fence.longitude),
+        latitude,
+        longitude,
+      );
+      if (distance > radius) {
+        throw new ForbiddenException(
+          "أنت خارج النطاق الجغرافي المسموح للفرع",
+        );
+      }
     }
+
     return this.attendance.checkOut(branchId, user, latitude, longitude);
   }
+
   async createChallenge(branchId: string, user: AuthenticatedUser) {
     const branch = await this.db.query<{
       id: string;
