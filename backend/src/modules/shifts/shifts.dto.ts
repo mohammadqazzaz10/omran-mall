@@ -12,7 +12,7 @@ import {
   MinLength,
 } from "class-validator";
 
-const timePattern = /^([01]\\d|2[0-3]):[0-5]\\d$/;
+const timePattern = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
 export class CreateShiftDto {
   @IsString()
