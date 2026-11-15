@@ -372,7 +372,9 @@ describe("AttendanceService", () => {
       branchId,
     ]);
     expect(client.query.mock.calls[3][0]).toContain("audit_logs");
-    expect(client.query.mock.calls[4][0]).toContain("INSERT INTO notifications");
+    expect(client.query.mock.calls[4][0]).toContain(
+      "INSERT INTO notifications",
+    );
     expect(client.query.mock.calls[4][0]).toContain("e.user_id IS NOT NULL");
     expect(client.query.mock.calls[4][1]).toEqual([
       correctionId,
@@ -434,7 +436,9 @@ describe("AttendanceService", () => {
 
     const update = client.query.mock.calls[3];
     expect(update[0]).toContain("COALESCE(total_break_minutes, 0)");
-    expect(client.query.mock.calls[6][0]).toContain("INSERT INTO notifications");
+    expect(client.query.mock.calls[6][0]).toContain(
+      "INSERT INTO notifications",
+    );
     expect(client.query.mock.calls[6][1]).toEqual([
       correctionId,
       "66666666-6666-4666-8666-666666666666",
