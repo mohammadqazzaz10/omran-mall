@@ -304,6 +304,52 @@ describe("AttendanceService", () => {
   );
 
   it(
+    "calculates early departure using the assigned shift end and grace period",
+    async () => {
+      const employeeId = "66666666-6666-4666-8666-666666666666";
+      const attendanceId = "77777777-7777-4777-8777-777777777777";
+      const record = {
+        id: attendanceId,
+        employee_id: employeeId,
+        branch_id: branchId,
+        work_date: "2026-11-14",
+        check_in_time: "2026-11-14T05:00:00.000Z",
+        check_out_time: null,
+        status: "present",
+      };
+      const updated = {
+        ...record,
+        check_out_time: "2026-11-14T14:30:00.000Z",
+        early_departure_minutes: 20,
+      };
+      const client = {
+        query: jest
+          .fn()
+          .mockResolvedValueOnce({ rows: [{ id: branchId }], rowCount: 1 })
+          .mockResolvedValueOnce({
+            rows: [{ id: employeeId, status: "active" }],
+            rowCount: 1,
+          })
+          .mockResolvedValueOnce({ rows: [record], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [updated], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+      };
+      const { service, db } = serviceWithClient(client);
+
+      await expect(service.checkOut(branchId, user)).resolves.toEqual(updated);
+
+      const update = client.query.mock.calls[3];
+      expect(update[0]).toContain("early_departure_minutes");
+      expect(update[0]).toContain("grace_period_early_leave_minutes");
+      expect(update[0]).toContain("s.is_night_shift");
+      expect(update[0]).toContain("Asia/Amman");
+      expect(update[1]).toEqual([attendanceId, branchId, employeeId]);
+      expect(db.transaction).toHaveBeenCalledTimes(1);
+      expect(client.query.mock.calls[4][0]).toContain("audit_logs");
+    },
+  );
+
+  it(
     "rejects a pending correction with reviewer notes and an audit record",
     async () => {
       const correctionId = "99999999-9999-4999-8999-999999999999";
