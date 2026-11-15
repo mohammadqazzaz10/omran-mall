@@ -27,23 +27,23 @@ ALTER TABLE shift_assignments
   ADD COLUMN notes VARCHAR(1000),
   ADD COLUMN published_at TIMESTAMPTZ;
 
-UPDATE shift_assignments a
-SET department_id = e.department_id,
-    scheduled_start_at = CASE WHEN a.is_day_off THEN NULL ELSE a.work_date + s.start_time END,
-    scheduled_end_at = CASE
-      WHEN a.is_day_off THEN NULL
-      ELSE a.work_date + s.end_time
-        + CASE WHEN s.end_time <= s.start_time THEN INTERVAL '1 day' ELSE INTERVAL '0' END
-    END,
-    status = CASE WHEN a.is_published THEN 'published' ELSE 'draft' END,
-    published_at = CASE WHEN a.is_published THEN a.updated_at ELSE NULL END
-FROM employees e
-LEFT JOIN shifts s ON s.id = a.shift_id
-WHERE e.id = a.employee_id;
-
 UPDATE shift_assignments
 SET shift_id = NULL
 WHERE is_day_off = TRUE;
+
+UPDATE shift_assignments a
+SET department_id = e.department_id,
+    status = CASE WHEN a.is_published THEN 'published' ELSE 'draft' END,
+    published_at = CASE WHEN a.is_published THEN a.updated_at ELSE NULL END
+FROM employees e
+WHERE e.id = a.employee_id;
+
+UPDATE shift_assignments a
+SET scheduled_start_at = a.work_date + s.start_time,
+    scheduled_end_at = a.work_date + s.end_time
+      + CASE WHEN s.end_time <= s.start_time THEN INTERVAL '1 day' ELSE INTERVAL '0' END
+FROM shifts s
+WHERE s.id = a.shift_id AND a.is_day_off = FALSE;
 
 ALTER TABLE shift_assignments
   ALTER COLUMN department_id SET NOT NULL,
