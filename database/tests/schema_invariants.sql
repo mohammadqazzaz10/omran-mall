@@ -442,6 +442,14 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'shift_swap_requests'
+      AND column_name = 'target_response_notes'
+  ) THEN
+    RAISE EXCEPTION 'Colleague swap response notes column is missing';
+  END IF;
+
+  IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conname = 'ex_shift_assignment_employee_time'
       AND contype = 'x' AND condeferrable = TRUE
