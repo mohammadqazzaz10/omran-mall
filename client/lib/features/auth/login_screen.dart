@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -142,6 +144,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 )
                               : Text(strings.signInButton),
                         ),
+                        if (kDebugMode) ...[
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: () => context.go('/preview'),
+                            icon: const Icon(Icons.visibility_outlined),
+                            label: Text(
+                              isArabic
+                                  ? 'استعراض التطبيق دون تسجيل الدخول'
+                                  : 'Preview app without signing in',
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
