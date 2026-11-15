@@ -61,7 +61,12 @@ void main() {
 
     expect(find.text('معاينة عمران مول'), findsOneWidget);
     expect(find.text('استعراض أقسام النظام'), findsOneWidget);
-    expect(find.text('الحضور والانصراف و QR'), findsOneWidget);
+
+    // The module list is scrollable; move the lazily built attendance row
+    // into the viewport before asserting that it is present.
+    final attendanceModule = find.text('الحضور والانصراف و QR');
+    await tester.scrollUntilVisible(attendanceModule, 250);
+    expect(attendanceModule, findsOneWidget);
   });
 
   testWidgets('app can open in English with LTR direction', (tester) async {
