@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../auth/auth_controller.dart';
 import 'attendance_repository.dart';
@@ -64,6 +65,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     if (mounted) setState(() => _records = _load());
   }
 
+  Future<Position?> _currentPosition() async {
+    if (!await Geolocator.isLocationServiceEnabled()) return null;
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return null;
+    return Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high, timeLimit: const Duration(seconds: 12));
+  }
+
   Future<void> _record(bool checkIn) async {
     final branch = _branchId;
     if (branch == null || _busy) return;
@@ -73,7 +82,17 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       if (checkIn) {
         await repository.checkIn(branch);
       } else {
-        await repository.checkOut(branch);
+        final geofence = await repository.geofenceStatus(branch);
+        final position = geofence['enabled'] == true ? await _currentPosition() : null;
+        if (geofence['enabled'] == true && position == null) {
+          throw StateError(_t('يلزم تفعيل الموقع والسماح للتطبيق به لتسجيل الانصراف في هذا الفرع.', 'Enable location services and grant location permission to check out at this branch.'));
+        }
+        await repository.checkOut(
+          branch,
+          latitude: position?.latitude,
+          longitude: position?.longitude,
+          accuracyMeters: position?.accuracy,
+        );
       }
       _reload();
       if (!mounted) return;
